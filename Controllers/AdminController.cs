@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ONERI.Controllers
 {
+    [Authorize]
     public class AdminController : Controller
     {
         private readonly FabrikaContext _context;
@@ -19,11 +21,6 @@ namespace ONERI.Controllers
         // Görev 1: Listeleme (Index Metodu)
         public async Task<IActionResult> Index(string durum, string arama)
         {
-            if (string.IsNullOrEmpty(HttpContext.Session.GetString("GirisYapan")))
-            {
-                return RedirectToAction("Index", "Login");
-            }
-
             // Başlangıç sorgusu - veritabanından veri çekilmez.
             var onerilerSorgusu = _context.Oneriler.OrderByDescending(o => o.Tarih).AsQueryable();
 
@@ -184,4 +181,3 @@ namespace ONERI.Controllers
         }
     }
 }
-

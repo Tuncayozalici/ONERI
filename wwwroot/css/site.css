@@ -101,3 +101,91 @@ body {
   .sidebar {padding-top: 15px;}
   .sidebar a {font-size: 18px;}
 }
+
+/* =================================================================
+   MARWOOD PORTAL STYLES (Eklenen Stiller)
+   ================================================================= */
+
+body {
+    background-color: #F5F1ED; /* Hafif krem/bej tonu */
+    font-family: 'Outfit', sans-serif !important; /* !important to override inline styles if any */
+}
+
+/* "İkiz Kartlar" Stili */
+.twin-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2.5rem;
+    border-radius: 20px;
+    text-decoration: none;
+    height: 100%;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+.twin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
+    text-decoration: none;
+}
+
+.twin-card .icon-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    margin-right: 1.5rem;
+}
+
+.twin-card .content-wrapper {
+    flex-grow: 1;
+}
+
+.twin-card h3 {
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.twin-card p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+.twin-card .action-button {
+    margin-left: 1rem;
+    white-space: nowrap;
+}
+
+/* Alt Bilgi Panelleri */
+.info-panel {
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
+    height: 100%;
+}
+
+.info-panel .card-header {
+    background-color: transparent;
+    border-bottom: none;
+    padding: 0 0 1rem 0;
+    font-weight: 700;
+    color: #343a40;
+}
+
+.info-panel .list-group-item {
+    border: none;
+    padding: 0.75rem 0;
+}
+
+ .info-panel .list-group-item-action:hover {
+    color: #0d6efd; /* Bootstrap primary color */
+}
+

@@ -1,201 +1,110 @@
-@model IEnumerable<ONERI.Models.Oneri>
 @{
-    ViewData["Title"] = "Fikir Atölyesi";
-
-    // Helper functions are no longer needed for this view as the table is removed.
+    ViewData["Title"] = "Portal Ana Sayfa";
 }
 
 <style>
-    body {
-        font-family: 'Outfit', sans-serif;
-    }
-
-    .marwood-header {
-        background-color: #F5F1ED; /* Sıcak Krem */
-        border-left: 5px solid #C5A065; /* Ahşap/Hardal */
-        padding: 2rem 2rem;
-    }
-
-    .marwood-header h1 {
-        font-weight: 900;
-        color: #212529;
-    }
-
-    .marwood-header h1 span {
-        font-weight: 300;
-        color: #6c757d;
-    }
-    
-    .marwood-header p.text-muted {
-        font-style: italic;
-    }
-    
-    .stat-card {
-        border: none;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
-        border-radius: 20px; /* Daha yuvarlak */
-    }
-
-    .stat-card-icon {
-        width: 50px; /* Büyütülmüş */
-        height: 50px; /* Büyütülmüş */
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background-color: #ffc1071c;
-        color: #ffc107;
-        font-size: 1.5rem; /* İkonu da büyütelim */
-        flex-shrink: 0; /* Küçülmesini engelle */
-    }
-    
-    /* Kartlara özel ikon renkleri */
-    .stat-card-pending .stat-card-icon {
-        background-color: #FFE5D0; /* Yumuşak Şeftali */
-        color: #E67E22;
-    }
-    
-    .stat-card-approved .stat-card-icon {
-        background-color: #D1E7DD; /* Adaçayı Yeşili */
-        color: #146c43;
-    }
-    
-    .stat-card-rejected .stat-card-icon {
-        background-color: #ffebeb; /* Uçuk Kırmızı */
-        color: #dc3545; /* Kırmızı */
-    }
-
-    /* Yeni Aksiyon Kartları Stilleri */
-    .action-card {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 3rem;
-        border-radius: 20px;
-        text-decoration: none;
-        height: 100%;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    .welcome-header {
         text-align: center;
+        margin: 2.5rem 0; /* Boşluk azaltıldı */
     }
-    .action-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
-    }
-    .action-card-cream {
-        background-color: #F5F1ED;
-        color: #333;
-        border: 1px solid #e0d9d3;
-    }
-    .action-card-light {
-        background-color: #fff;
-        color: #212529;
-        border: 1px solid #dee2e6;
-    }
-    .action-card .icon-wrapper {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 1.5rem;
-        font-size: 2.2rem;
-    }
-    .action-card h3 {
+
+    .welcome-header h1 {
         font-weight: 700;
+        color: #343a40; /* Koyu Gri (Antrasit) */
+    }
+
+    .welcome-header p {
+        font-style: italic;
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    .info-panel .list-group-item {
+        padding-bottom: 0.5rem;
         margin-bottom: 0.5rem;
     }
-    .action-card p {
-        color: #6c757d;
-    }
-
 </style>
 
-<div class="container mt-4">
-
-    <!-- 1. Blok: Karşılama Alanı (Header) -->
-    <div class="marwood-header mb-5">
-        <h1>Marwood <span>Fikir Atölyesi</span></h1>
-        <p class="text-muted">Let's design for a better office mood, together.</p>
+<div class="container">
+    <!-- 1. Karşılama Alanı -->
+    <div class="welcome-header">
+        <h1>Merhaba!</h1>
+        <p>Yönetim ve veri akışı tek ekranda.</p>
+        <p class="text-muted small" id="current-date"></p>
     </div>
 
-    <!-- 2. Blok: İstatistik Kartları -->
-    <div class="row mb-5">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="stat-card-icon">
-                        <i class="bi bi-lightbulb"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title text-muted mb-0">Toplam</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.ToplamSayi</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-pending p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                         <i class="bi bi-hourglass-split"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title text-muted mb-0">Beklemede</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Bekleyen</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-approved p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                        <i class="bi bi-check-lg"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title text-muted mb-0">Onaylanan</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Onaylanan</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-rejected p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                         <i class="bi bi-x-lg"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title text-muted mb-0">Reddedilen</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Red</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Blok: Yeni Aksiyon Butonları -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <a href="@Url.Action("Yeni", "Oneri")" class="action-card action-card-cream">
-                <div class="icon-wrapper bg-dark text-white">
+    <!-- 2. Ana Menü: "İkiz Kartlar" -->
+    <div class="row g-4 mb-5">
+        <!-- Kart 1: Fikir Atölyesi -->
+        <div class="col-lg-6">
+            <a href="@Url.Action("Index", "FikirAtolyesi")" class="twin-card">
+                <div class="icon-wrapper" style="background-color: #e3f2fd; color: #0d6efd;">
                     <i class="bi bi-lightbulb"></i>
                 </div>
-                <h3>Yeni Fikir Paylaş</h3>
-                <p>Aklındaki projeyi yönetime ilet.</p>
+                <div class="content-wrapper">
+                    <h3>Fikir Atölyesi</h3>
+                    <p>Yeni fikirlerinizi paylaşın ve şirketin gelişimine katkıda bulunun.</p>
+                </div>
+                <div class="action-button">
+                     <span class="btn btn-primary">Giriş</span>
+                </div>
             </a>
         </div>
-        <div class="col-md-6 mb-4">
-            <a href="@Url.Action("Sorgula", "Oneri")" class="action-card action-card-light">
-                <div class="icon-wrapper bg-light text-dark">
-                    <i class="bi bi-search"></i>
+
+        <!-- Kart 2: Günlük Veriler -->
+        <div class="col-lg-6">
+            <a href="@Url.Action("GunlukVeriler", "Home")" class="twin-card">
+                <div class="icon-wrapper" style="background-color: #fff0c2; color: #ff9800;">
+                    <i class="bi bi-bar-chart-line"></i>
                 </div>
-                <h3>Durum Sorgula</h3>
-                <p>Takip numaranla sürecini izle.</p>
+                <div class="content-wrapper">
+                    <h3>Günlük Veriler</h3>
+                    <p>Üretim, sevkiyat ve enerji verilerini anlık grafiklerle takip edin.</p>
+                </div>
+                 <div class="action-button">
+                    <span class="btn btn-outline-secondary">İncele</span>
+                </div>
             </a>
         </div>
     </div>
 
+    <!-- 3. Alt Bölüm (Duyurular & Linkler) -->
+    <div class="row g-4">
+        <!-- Sol Sütun (Şirket Duyuruları) -->
+        <div class="col-md-7">
+            <div class="info-panel" style="min-height: 220px;">
+                <div class="card-header">
+                    <i class="bi bi-megaphone"></i> Şirket Duyuruları
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><span class="text-primary">📢</span> Yıllık izin planlamaları haftaya başlayacaktır.</li>
+                    <li class="list-group-item"><span class="text-info">ℹ️</span> Portalın Fikir Atölyesi modülü yayına alındı!</li>
+                    <li class="list-group-item"><span class="text-success">🎉</span> Yeni portal tasarımına geçiş yapılmıştır.</li>
+                </ul>
+            </div>
+        </div>
+        <!-- Sağ Sütun (Hızlı Erişim / Faydalı Linkler) -->
+        <div class="col-md-5">
+            <div class="info-panel" style="min-height: 220px;">
+                <div class="card-header">
+                    <i class="bi bi-link-45deg"></i> Faydalı Linkler
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action">Şirket Web Sitesi</a>
+                    <a href="#" class="list-group-item list-group-item-action">LinkedIn Sayfası</a>
+                    <a href="#" class="list-group-item list-group-item-action">Yemek Listesi (PDF)</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        function updateDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('tr-TR', options);
+        }
+        updateDate();
+    </script>
+}

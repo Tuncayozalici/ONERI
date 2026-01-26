@@ -1,0 +1,201 @@
+@model IEnumerable<ONERI.Models.Oneri>
+@{
+    ViewData["Title"] = "Fikir Atölyesi";
+
+    // Helper functions are no longer needed for this view as the table is removed.
+}
+
+<style>
+    body {
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .marwood-header {
+        background-color: #F5F1ED; /* Sıcak Krem */
+        border-left: 5px solid #C5A065; /* Ahşap/Hardal */
+        padding: 2rem 2rem;
+    }
+
+    .marwood-header h1 {
+        font-weight: 900;
+        color: #212529;
+    }
+
+    .marwood-header h1 span {
+        font-weight: 300;
+        color: #6c757d;
+    }
+    
+    .marwood-header p.text-muted {
+        font-style: italic;
+    }
+    
+    .stat-card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+        border-radius: 20px; /* Daha yuvarlak */
+    }
+
+    .stat-card-icon {
+        width: 50px; /* Büyütülmüş */
+        height: 50px; /* Büyütülmüş */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: #ffc1071c;
+        color: #ffc107;
+        font-size: 1.5rem; /* İkonu da büyütelim */
+        flex-shrink: 0; /* Küçülmesini engelle */
+    }
+    
+    /* Kartlara özel ikon renkleri */
+    .stat-card-pending .stat-card-icon {
+        background-color: #FFE5D0; /* Yumuşak Şeftali */
+        color: #E67E22;
+    }
+    
+    .stat-card-approved .stat-card-icon {
+        background-color: #D1E7DD; /* Adaçayı Yeşili */
+        color: #146c43;
+    }
+    
+    .stat-card-rejected .stat-card-icon {
+        background-color: #ffebeb; /* Uçuk Kırmızı */
+        color: #dc3545; /* Kırmızı */
+    }
+
+    /* Yeni Aksiyon Kartları Stilleri */
+    .action-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 3rem;
+        border-radius: 20px;
+        text-decoration: none;
+        height: 100%;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        text-align: center;
+    }
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+    .action-card-cream {
+        background-color: #F5F1ED;
+        color: #333;
+        border: 1px solid #e0d9d3;
+    }
+    .action-card-light {
+        background-color: #fff;
+        color: #212529;
+        border: 1px solid #dee2e6;
+    }
+    .action-card .icon-wrapper {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        font-size: 2.2rem;
+    }
+    .action-card h3 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .action-card p {
+        color: #6c757d;
+    }
+
+</style>
+
+<div class="container mt-4">
+
+    <!-- 1. Blok: Karşılama Alanı (Header) -->
+    <div class="marwood-header mb-5">
+        <h1>Marwood <span>Fikir Atölyesi</span></h1>
+        <p class="text-muted">Let's design for a better office mood, together.</p>
+    </div>
+
+    <!-- 2. Blok: İstatistik Kartları -->
+    <div class="row mb-5">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-card-icon">
+                        <i class="bi bi-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Toplam</h5>
+                        <p class="fs-2 fw-bold mb-0">@ViewBag.ToplamSayi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card stat-card-pending p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                     <div class="stat-card-icon">
+                         <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Beklemede</h5>
+                        <p class="fs-2 fw-bold mb-0">@ViewBag.Bekleyen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card stat-card-approved p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                     <div class="stat-card-icon">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Onaylanan</h5>
+                        <p class="fs-2 fw-bold mb-0">@ViewBag.Onaylanan</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card stat-card-rejected p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                     <div class="stat-card-icon">
+                         <i class="bi bi-x-lg"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Reddedilen</h5>
+                        <p class="fs-2 fw-bold mb-0">@ViewBag.Red</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Blok: Yeni Aksiyon Butonları -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <a href="@Url.Action("Yeni", "Oneri")" class="action-card action-card-light">
+                <div class="icon-wrapper bg-light text-dark">
+                    <i class="bi bi-lightbulb"></i>
+                </div>
+                <h3>Yeni Fikir Paylaş</h3>
+                <p>Aklındaki projeyi yönetime ilet.</p>
+            </a>
+        </div>
+        <div class="col-md-6 mb-4">
+            <a href="@Url.Action("Sorgula", "Oneri")" class="action-card action-card-light">
+                <div class="icon-wrapper bg-light text-dark">
+                    <i class="bi bi-search"></i>
+                </div>
+                <h3>Durum Sorgula</h3>
+                <p>Takip numaranla sürecini izle.</p>
+            </a>
+        </div>
+    </div>
+
+</div>

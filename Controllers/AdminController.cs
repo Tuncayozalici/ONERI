@@ -153,6 +153,14 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
+            // İlişkili öneri olup olmadığını kontrol et
+            var iliskiliOneriVar = await _context.Oneriler.AnyAsync(o => o.Bolum == yonetici.BolumAdi);
+            if (iliskiliOneriVar)
+            {
+                TempData["YoneticiHata"] = $"'{yonetici.BolumAdi}' bölümüne ait öneriler bulunduğu için yönetici silinemez.";
+                return RedirectToAction(nameof(BolumYoneticileri));
+            }
+
             _context.BolumYoneticileri.Remove(yonetici);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(BolumYoneticileri));

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using ONERI.Data;
 using ONERI.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ONERI.Controllers
 {
@@ -16,30 +17,10 @@ namespace ONERI.Controllers
         }
 
         // GET: Oneri/Index
-        // Bu metot, öneri formunu göstermek için kullanılır.
+        // Bu metot, kullanıcıyı doğrudan yeni öneri oluşturma formuna yönlendirir.
         public IActionResult Index()
         {
-            return View();
-        }
-
-        // POST: Oneri/Index
-        // Form gönderildiğinde bu metot çalışır.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(Oneri oneri)
-        {
-            // Modelin kurallara uygun olup olmadığını kontrol et (örn: zorunlu alanlar doldurulmuş mu?)
-            if (ModelState.IsValid)
-            {
-                // Yeni öneriyi veritabanına ekle
-                _context.Add(oneri);
-                // Değişiklikleri kaydet
-                await _context.SaveChangesAsync();
-                // Kullanıcıyı bir teşekkürler sayfasına yönlendir.
-                return RedirectToAction(nameof(Tesekkurler));
-            }
-            // Eğer model geçerli değilse, formu aynı verilerle tekrar göster.
-            return View(oneri);
+            return RedirectToAction(nameof(Yeni));
         }
 
         // GET: Oneri/Tesekkurler
@@ -57,41 +38,43 @@ namespace ONERI.Controllers
                                          .Distinct()
                                          .ToListAsync();
             ViewBag.Bolumler = new SelectList(bolumler);
-            return View();
+            var model = new OneriCreateViewModel();
+            return View(model);
         }
 
         // POST: Oneri/Yeni
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Yeni(Oneri oneri)
+        public async Task<IActionResult> Yeni(OneriCreateViewModel viewModel)
         {
             if (ModelState.IsValid)
             {
-                oneri.Tarih = DateTime.Now;
-                oneri.Durum = ONERI.Models.OneriDurum.Beklemede; // 0: Beklemede
+                // Haritalama: ViewModel'den ana modele veri aktarımı
+                var oneri = new Oneri
+                {
+                    OnerenKisi = viewModel.OnerenKisi,
+                    CalistigiBolum = viewModel.CalistigiBolum,
+                    AltBolum = viewModel.AltBolum,
+                    Bolum = viewModel.Bolum,
+                    Konu = viewModel.Konu,
+                    Aciklama = viewModel.Aciklama,
+                    // Bu alanlar sunucu tarafından, güvenli bir şekilde atanır
+                    Tarih = DateTime.Now,
+                    Durum = OneriDurum.Beklemede 
+                };
 
                 _context.Add(oneri);
                 await _context.SaveChangesAsync();
 
-                // 4. Büyük Bağlantı: Sistem Bunu Nasıl Kullanacak? (Logic)
-                // Kayıt işleminden sonra ilgili bölüm yöneticisinin emailini bul.
+                // İlgili bölüm yöneticisine e-posta gönderme mantığı...
                 var yonetici = await _context.BolumYoneticileri
                                              .FirstOrDefaultAsync(y => y.BolumAdi.ToLower() == (oneri.Bolum ?? "").ToLower());
 
                 if (yonetici != null)
                 {
-                    var yoneticiEmail = yonetici.YoneticiEmail;
-                    // TODO: İleride bu adrese mail gönderecek fonksiyon yazılacak.
-                    // System.Diagnostics.Debug.WriteLine($"Mail gönderilecek: {yoneticiEmail}");
-                }
-                else
-                {
-                    // TODO: Bu bölüm için yönetici bulunamazsa ne yapılacağı belirlenecek.
-                    // Varsayılan olarak Genel Müdür'e mail atılabilir.
-                    // System.Diagnostics.Debug.WriteLine($"Yönetici bulunamadı: {oneri.Bolum}");
+                    // E-posta gönderme işlemi burada yapılabilir
                 }
 
-                // Pass the saved object (which now has an ID) to the 'Tesekkurler' view.
                 return View("Tesekkurler", oneri);
             }
             
@@ -101,7 +84,7 @@ namespace ONERI.Controllers
                                          .Distinct()
                                          .ToListAsync();
             ViewBag.Bolumler = new SelectList(bolumler);
-            return View(oneri);
+            return View(viewModel);
         }
 
         // Görev 1: Arama Kutusunu Gösterme (GET Metodu)
@@ -140,6 +123,7 @@ namespace ONERI.Controllers
 
         // 2. Değerlendirme Sayfasını Hazırla (Backend - GET)
         [HttpGet]
+        [Authorize(Roles = "Yönetici")]
         public async Task<IActionResult> Degerlendir(int id)
         {
             if (id <= 0)
@@ -173,6 +157,7 @@ namespace ONERI.Controllers
         // 4. Karar Mekanizması (Backend - POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Yönetici")]
         public async Task<IActionResult> Degerlendir(Degerlendirme degerlendirme)
         {
             // ModelState.IsValid kontrolü, modeldeki zorunlu alanların (varsa) dolu geldiğini doğrular.

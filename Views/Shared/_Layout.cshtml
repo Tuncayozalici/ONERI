@@ -39,7 +39,7 @@
                         @if (User.Identity.IsAuthenticated)
                         {
                             <li class="nav-item ms-3">
-                                <span class="navbar-text">Hoş geldin, @(User.FindFirst("AdSoyad")?.Value ?? User.Identity.Name)</span>
+                                <span class="navbar-text">Hoş geldin, @(User.FindFirst("AdSoyad")?.Value ?? User.Identity?.Name ?? "Kullanıcı")</span>
                             </li>
                             <li class="nav-item ms-3">
                                 <a class="btn btn-outline-danger btn-sm" asp-area="" asp-controller="Login" asp-action="Logout">Çıkış Yap</a>

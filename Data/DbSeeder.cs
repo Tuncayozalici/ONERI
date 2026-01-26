@@ -32,8 +32,8 @@ namespace ONERI.Data
                     Email = "admin@marwood.com",
                     AdSoyad = "Admin"
                 };
-                // Şifre politikasına uygun (En az 6 karakter, rakam içeren)
-                var result = await userManager.CreateAsync(newAdminUser, "123456"); 
+                // Şifre politikasına uygun, daha güvenli bir başlangıç şifresi
+                var result = await userManager.CreateAsync(newAdminUser, "Qwerty.1234"); 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newAdminUser, "Yönetici");

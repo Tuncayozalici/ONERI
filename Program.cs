@@ -15,12 +15,12 @@ builder.Services.AddSession();
 // Identity servislerini ve ayarlarını ekle
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
     {
-        // Şifre gereksinimlerini basitleştir (opsiyonel)
-        options.Password.RequireDigit = true; // Rakam zorunlu olsun
-        options.Password.RequiredLength = 6; // En az 6 karakter
-        options.Password.RequireLowercase = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireNonAlphanumeric = false;
+        // Güçlü şifre politikası
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
     })
     .AddEntityFrameworkStores<FabrikaContext>();
 

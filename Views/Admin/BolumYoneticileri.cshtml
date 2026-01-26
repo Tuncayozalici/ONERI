@@ -1,0 +1,116 @@
+@model IEnumerable<ONERI.Models.BolumYonetici>
+
+@{
+    ViewData["Title"] = "Bölüm Yöneticileri";
+}
+
+<div class="container mt-4">
+
+    <!-- Page Header -->
+    <div class="page-header mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="fw-bold">Bölüm Yöneticileri</h1>
+            <p class="text-muted mb-0">Öneri gönderildiğinde bildirim alacak kişileri yönetin.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left me-1"></i> Gelen Önerilere Dön
+        </a>
+    </div>
+
+    <div class="row g-5">
+        <!-- Add Manager Form -->
+        <div class="col-lg-4">
+            <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-4">Yeni Sorumlu Ekle</h5>
+                    <form asp-action="YoneticiEkle" method="post">
+                        @Html.AntiForgeryToken()
+                        
+                        @if (TempData["YoneticiHata"] != null)
+                        {
+                            <div class="alert alert-danger small">@TempData["YoneticiHata"]</div>
+                        }
+
+                        <div class="mb-3">
+                            <label for="BolumAdi" class="form-label">Bölüm</label>
+                            <select name="BolumAdi" id="BolumAdi" class="form-select" required>
+                                <option value="" disabled selected>Seçiniz...</option>
+                                <option value="Modüler">Modüler</option>
+                                <option value="Döşeme">Döşeme</option>
+                                <option value="Kaynak">Kaynak</option>
+                                <option value="Lojistik">Lojistik</option>
+                                <option value="İnsan Kaynakları">İnsan Kaynakları</option>
+                                <option value="Muhasebe">Muhasebe</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="YoneticiAdi" class="form-label">Adı Soyadı</label>
+                            <input type="text" name="YoneticiAdi" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="YoneticiEmail" class="form-label">E-posta Adresi</label>
+                            <input type="email" name="YoneticiEmail" class="form-control" required />
+                        </div>
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-dark"><i class="bi bi-plus-lg me-1"></i> Ekle</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Managers List -->
+        <div class="col-lg-8">
+             <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Bölüm Adı</th>
+                                    <th>Yönetici Adı</th>
+                                    <th>Yönetici E-posta</th>
+                                    <th class="text-end">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td>@item.BolumAdi</td>
+                                        <td>@item.YoneticiAdi</td>
+                                        <td>@item.YoneticiEmail</td>
+                                        <td class="text-end">
+                                            <form asp-action="YoneticiSil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Bu yöneticiyi silmek istediğinizden emin misiniz?');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!Model.Any())
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center p-4">Kayıtlı yönetici bulunamadı.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        border-left: 5px solid #e9ecef;
+        padding-left: 1.5rem;
+    }
+    .table thead th {
+        border-bottom-width: 1px;
+        color: #6c757d;
+        font-weight: 500;
+    }
+</style>

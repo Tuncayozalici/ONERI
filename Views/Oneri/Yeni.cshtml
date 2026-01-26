@@ -1,0 +1,127 @@
+@model ONERI.Models.Oneri
+
+@{
+    ViewData["Title"] = "Yeni Fikir Paylaş";
+}
+
+<div class="container mt-4">
+    
+    <!-- Page Header -->
+    <div class="page-header mb-5">
+        <h1 class="fw-bold">Yeni Fikir Paylaş</h1>
+        <p class="text-muted">Fabrikamızın gelişimi için değerli fikirlerinizi bizimle paylaşın.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card p-4 p-md-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+                <form asp-action="Yeni" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Bolum" class="form-label fw-semibold">İlgili Bölüm</label>
+                        <select asp-for="Bolum" asp-items="@ViewBag.Bolumler" class="form-select">
+                            <option value="" disabled selected>Lütfen bir bölüm seçiniz...</option>
+                        </select>
+                        <span asp-validation-for="Bolum" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Konu" class="form-label fw-semibold">Öneri Konusu</label>
+                        <input asp-for="Konu" class="form-control" placeholder="Önerinizin başlığını kısaca yazınız" />
+                        <span asp-validation-for="Konu" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Aciklama" class="form-label fw-semibold">Açıklama</label>
+                        <textarea asp-for="Aciklama" class="form-control" rows="6" placeholder="Önerinizi detaylandırın..."></textarea>
+                        <span asp-validation-for="Aciklama" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="CalistigiBolum" class="form-label fw-semibold">Çalıştığınız Bölüm</label>
+                        <select asp-for="CalistigiBolum" id="anaBolum" class="form-select">
+                            <option value="">Lütfen Bölüm Seçiniz...</option>
+                            <option value="InsanKaynaklari">İnsan Kaynakları</option>
+                            <option value="Panel">Panel Bölümü</option>
+                            <option value="Metal">Metal Bölümü</option>
+                            <option value="Muhasebe">Muhasebe</option>
+                            <option value="IT">IT</option>
+                        </select>
+                        <span asp-validation-for="CalistigiBolum" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div id="altBolumKapsayici" style="display: none;" class="mb-4">
+                        <label asp-for="AltBolum" class="form-label fw-semibold">Alt Birim</label>
+                        <select asp-for="AltBolum" id="altBolum" class="form-select">
+                        </select>
+                        <span asp-validation-for="AltBolum" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="OnerenKisi" class="form-label fw-semibold">Öneren Kişi <small class="text-muted">(İsteğe Bağlı)</small></label>
+                        <input asp-for="OnerenKisi" class="form-control" placeholder="Adınız Soyadınız" />
+                        <span asp-validation-for="OnerenKisi" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-end">
+                        <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary me-2">Vazgeç</a>
+                        <button type="submit" class="btn btn-dark px-4">
+                            <i class="bi bi-send me-1"></i> Gönder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add a generic page header style -->
+<style>
+    .page-header {
+        border-left: 5px solid #e9ecef;
+        padding-left: 1.5rem;
+    }
+</style>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const anaBolumSelect = document.getElementById('anaBolum');
+            const altBolumKapsayici = document.getElementById('altBolumKapsayici');
+            const altBolumSelect = document.getElementById('altBolum');
+
+            const altBolumler = {
+                Panel: ['CNC', 'PVC', 'Ebatlama', 'Keson'],
+                Metal: ['Boya', 'Metal Imalat']
+            };
+
+            anaBolumSelect.addEventListener('change', function () {
+                const secilenBolum = this.value;
+                
+                // Önce alt bölümü temizle ve gizle
+                altBolumSelect.innerHTML = '';
+                altBolumKapsayici.style.display = 'none';
+                altBolumSelect.value = '';
+
+
+                if (secilenBolum in altBolumler) {
+                    // İlgili alt bölümleri ekle
+                    altBolumKapsayici.style.display = 'block';
+                    altBolumSelect.innerHTML = '<option value="">Lütfen alt birim seçiniz...</option>';
+                    
+                    altBolumler[secilenBolum].forEach(function(birim) {
+                        const option = document.createElement('option');
+                        option.value = birim.replace(/\s+/g, ''); // Boşlukları kaldır
+                        option.textContent = birim;
+                        altBolumSelect.appendChild(option);
+                    });
+                }
+            });
+        });
+    </script>
+}

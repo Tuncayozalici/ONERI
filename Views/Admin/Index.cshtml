@@ -1,0 +1,264 @@
+@model IEnumerable<ONERI.Models.Oneri>
+@using ONERI.Models
+
+@{
+    ViewData["Title"] = "Yönetim Paneli";
+
+    // Statistics Calculation
+    var bekleyenSayisi = Model.Count(o => o.Durum == OneriDurum.Beklemede);
+    var onaylananSayisi = Model.Count(o => o.Durum == OneriDurum.Onaylandi);
+    var bugunGelenSayisi = Model.Count(o => o.Tarih.Date == DateTime.Today);
+    var toplamOneriSayisi = Model.Count();
+}
+
+<div class="container mt-4">
+
+    <!-- Step 1: Dashboard Header -->
+    <div class="page-header mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="fw-bold display-6">Yönetim Paneli</h1>
+            <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
+        </div>
+        <a asp-action="BolumYoneticileri" class="btn btn-dark">
+            <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
+        </a>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light border-0 h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-warning-emphasis">Bekleyen</h5>
+                    <p class="card-text fs-2 fw-bold">@bekleyenSayisi</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-0 h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-info-emphasis">Onaylanan</h5>
+                    <p class="card-text fs-2 fw-bold">@onaylananSayisi</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-0 h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary-emphasis">Bugün Gelen</h5>
+                    <p class="card-text fs-2 fw-bold">@bugunGelenSayisi</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-0 h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-secondary">Toplam</h5>
+                    <p class="card-text fs-2 fw-bold">@toplamOneriSayisi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Step 2: Control Bar -->
+    <div class="card shadow-sm mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-body">
+            <form asp-controller="Admin" asp-action="Index" method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+                <!-- Search Input -->
+                <div class="input-group" style="max-width: 350px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" name="arama" class="form-control border-start-0" placeholder="Konu veya açıklamada ara..." value="@ViewData["MevcutArama"]">
+                </div>
+
+                <!-- Filter Dropdown -->
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label text-muted mb-0">Durum:</label>
+                    <select name="durum" class="form-select" style="min-width: 180px;" onchange="this.form.submit()">
+                        <option value="Tümü" selected="@(ViewData["MevcutDurum"] as string == "Tümü")">Tümü</option>
+                        <option value="Bekleyen" selected="@(ViewData["MevcutDurum"] as string == "Bekleyen")">Bekleyen</option>
+                        <option value="Onaylanan" selected="@(ViewData["MevcutDurum"] as string == "Onaylanan")">Onaylanan</option>
+                        <option value="Reddedilen" selected="@(ViewData["MevcutDurum"] as string == "Reddedilen")">Reddedilen</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel-fill me-1"></i> Filtrele
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Temizle
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Step 3 & 4: "Smart List" Table -->
+    <div class="card shadow-sm" style="border-radius: 1.25rem; border: none;">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-borderless align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th scope="col" class="text-uppercase text-muted small p-3">Tarih</th>
+                            <th scope="col" class="text-uppercase text-muted small p-3">Bölüm</th>
+                            <th scope="col" class="text-uppercase text-muted small p-3">Konu</th>
+                            <th scope="col" class="text-uppercase text-muted small p-3">Durum</th>
+                            <th scope="col" class="text-uppercase text-muted small p-3 text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="p-3">
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-semibold">@item.Tarih.ToString("dd MMM yyyy")</span>
+                                        <small class="text-muted">@item.Tarih.ToString("HH:mm")</small>
+                                    </div>
+                                </td>
+                                <td class="p-3">
+                                    <span class="badge bg-light text-dark border">@(item.CalistigiBolum != null ? item.CalistigiBolum : "Belirtilmemiş")</span>
+                                </td>
+                                <td class="p-3">
+                                    <div class="d-flex flex-column">
+                                        <a href="#" class="text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#aciklamaModal-@item.Id">
+                                            @item.Konu
+                                        </a>
+                                        <small class="text-muted">@Truncate(item.Aciklama, 70)...</small>
+                                    </div>
+                                </td>
+                                <td class="p-3">
+                                    <span class="badge rounded-pill @GetBadgeClass(item.Durum)">@GetStatusName(item.Durum)</span>
+                                </td>
+                                <td class="p-3 text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-light" type="button" id="dropdownMenuButton-@item.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-@item.Id">
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Admin" asp-action="Detay" asp-route-id="@item.Id">
+                                                    <i class="bi bi-eye me-2"></i>İncele
+                                                </a>
+                                            </li>
+                                            @if (item.Durum == OneriDurum.Beklemede)
+                                            {
+                                                <li>
+                                                    <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi bi-check-lg text-success me-2"></i>Hızlı Onayla
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi bi-x-lg text-danger me-2"></i>Hızlı Reddet
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
+                                            @if (item.Durum == OneriDurum.Onaylandi)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" asp-controller="Oneri" asp-action="Degerlendir" asp-route-id="@item.Id">
+                                                        <i class="bi bi-pencil-square me-2"></i>Kurula Gönder
+                                                    </a>
+                                                </li>
+                                            }
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form asp-controller="Admin" asp-action="Sil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Silmek istediğine emin misin?');">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="bi bi-trash me-2"></i>Sil
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Modal for details -->
+                            <div class="modal fade" id="aciklamaModal-@item.Id" tabindex="-1" aria-labelledby="modalLabel-@item.Id" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: 15px;">
+                                        <div class="modal-header border-0">
+                                            <h5 class="modal-title" id="modalLabel-@item.Id">@item.Konu</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4">
+                                            <p><strong>Öneren:</strong> @(string.IsNullOrEmpty(item.OnerenKisi) ? "Anonim" : item.OnerenKisi)</p>
+                                            <p><strong>Bölüm:</strong> @(item.CalistigiBolum ?? "Belirtilmemiş")</p>
+                                            <p><strong>Tarih:</strong> @item.Tarih.ToString("f")</p>
+                                            <hr>
+                                            <p class="mt-3">@item.Aciklama</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusName(OneriDurum durum)
+    {
+        return durum switch
+        {
+            OneriDurum.Beklemede => "Beklemede",
+            OneriDurum.Onaylandi => "Onaylanan",
+            OneriDurum.KabulEdildi => "Kabul Edildi",
+            OneriDurum.Reddedildi => "Reddedilen",
+            OneriDurum.PuanlamaRed => "Puanlama Red",
+            _ => "Bilinmiyor"
+        };
+    }
+
+    string GetBadgeClass(OneriDurum durum)
+    {
+        return durum switch
+        {
+            OneriDurum.Beklemede => "bg-warning text-dark",
+            OneriDurum.Onaylandi => "bg-info text-dark",
+            OneriDurum.KabulEdildi => "bg-success",
+            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+        {
+            return value;
+        }
+        return value.Substring(0, maxLength);
+    }
+}
+
+<style>
+    .page-header {
+        padding-left: 0;
+    }
+
+    /* YENİ EKLENECEK KISIM: Tablo Menü Taşma Sorunu Çözümü */
+    .table-responsive {
+        overflow-x: auto; /* Yatayda kaydırmaya izin ver */
+        overflow-y: visible !important; /* Dikeyde menünün dışarı taşmasına izin ver */
+    }
+    
+    /* Eğer tablo çok kısaysa menünün açılacağı kadar yer aç */
+    .table-responsive {
+        min-height: 300px; 
+    }
+</style>

@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ONERI", "ONERI.csproj", "{BFFE399C-2BDB-13E5-C12C-0C595EFA004C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BFFE399C-2BDB-13E5-C12C-0C595EFA004C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFFE399C-2BDB-13E5-C12C-0C595EFA004C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFFE399C-2BDB-13E5-C12C-0C595EFA004C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFFE399C-2BDB-13E5-C12C-0C595EFA004C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E347F1E0-6CA6-49C9-BC5F-6D954870258D}
+	EndGlobalSection
+EndGlobal

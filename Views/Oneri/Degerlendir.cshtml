@@ -1,0 +1,147 @@
+@model ONERI.Models.Degerlendirme
+@{
+    ViewData["Title"] = "Kurul Değerlendirmesi";
+    var oneri = ViewData["Oneri"] as ONERI.Models.Oneri;
+}
+
+<div class="container mt-4">
+
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <h1 class="fw-bold">Kurul Değerlendirmesi</h1>
+        <p class="text-muted">Öneriyi puanlayarak ve yorum ekleyerek değerlendirme sürecini tamamlayın.</p>
+    </div>
+
+    <!-- Suggestion Details -->
+    @if (oneri != null)
+    {
+        <div class="p-4 rounded mb-4" style="background-color: #f8f9fa;">
+            <div class="d-flex justify-content-between align-items-start">
+                <h5 class="mb-0">Öneri Detayları (#@oneri.Id)</h5>
+                <span class="badge rounded-pill bg-secondary">@oneri.Durum.ToString()</span>
+            </div>
+            <hr>
+            <dl class="row mb-0">
+                <dt class="col-sm-2">Konu</dt>
+                <dd class="col-sm-10">@oneri.Konu</dd>
+
+                <dt class="col-sm-2">Bölüm</dt>
+                <dd class="col-sm-10">@oneri.Bolum</dd>
+
+                <dt class="col-sm-2">Açıklama</dt>
+                <dd class="col-sm-10">@oneri.Aciklama</dd>
+
+                <dt class="col-sm-2">Öneren</dt>
+                <dd class="col-sm-4 mb-0">@(oneri.OnerenKisi ?? "Anonim")</dd>
+
+                <dt class="col-sm-2">Tarih</dt>
+                <dd class="col-sm-4 mb-0">@oneri.Tarih.ToString("dd MMMM yyyy")</dd>
+            </dl>
+        </div>
+    }
+
+    <!-- Evaluation Form -->
+    <div class="card p-4" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+        <div class="card-body">
+            <form asp-action="Degerlendir" method="post">
+                <input type="hidden" asp-for="OneriId" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <h5 class="mb-4">Puanlama (Her biri 25 puan üzerinden)</h5>
+
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <label asp-for="GayretPuani" class="form-label">Gayret</label>
+                        <input asp-for="GayretPuani" class="form-control score-input" type="number" min="0" max="25" />
+                        <span asp-validation-for="GayretPuani" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="OrijinallikPuani" class="form-label">Orijinallik</label>
+                        <input asp-for="OrijinallikPuani" class="form-control score-input" type="number" min="0" max="25" />
+                        <span asp-validation-for="OrijinallikPuani" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="EtkiPuani" class="form-label">Etki</label>
+                        <input asp-for="EtkiPuani" class="form-control score-input" type="number" min="0" max="25" />
+                        <span asp-validation-for="EtkiPuani" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="UygulanabilirlikPuani" class="form-label">Uygulanabilirlik</label>
+                        <input asp-for="UygulanabilirlikPuani" class="form-control score-input" type="number" min="0" max="25" />
+                        <span asp-validation-for="UygulanabilirlikPuani" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <label asp-for="KurulYorumu" class="form-label">Kurul Yorumu (Opsiyonel)</label>
+                        <textarea asp-for="KurulYorumu" class="form-control" rows="4" placeholder="Değerlendirme ile ilgili notlarınızı buraya yazın..."></textarea>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <label asp-for="ToplamPuan" class="form-label">Toplam Puan</label>
+                        <input asp-for="ToplamPuan" id="total-score" class="form-control form-control-lg text-center display-4 fw-bold p-0" readonly style="border:none; background:none;">
+                        <div id="decision" class="fw-bold mt-2 fs-5"></div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="text-end">
+                    <a asp-action="Index" asp-controller="Admin" class="btn btn-outline-secondary me-2">Vazgeç</a>
+                    <button type="submit" class="btn btn-dark px-4"><i class="bi bi-check-circle me-1"></i> Değerlendirmeyi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        border-left: 5px solid #e9ecef;
+        padding-left: 1.5rem;
+    }
+</style>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const scoreInputs = document.querySelectorAll('.score-input');
+            const totalScoreEl = document.getElementById('total-score');
+            const decisionEl = document.getElementById('decision');
+
+            function calculateTotal() {
+                let total = 0;
+                scoreInputs.forEach(input => {
+                    const value = parseInt(input.value, 10);
+                    if (!isNaN(value)) {
+                        total += value;
+                    }
+                });
+                totalScoreEl.value = total;
+                updateDecision(total);
+            }
+
+            function updateDecision(total) {
+                if (total >= 60) {
+                    decisionEl.textContent = "KABUL";
+                    decisionEl.className = 'fw-bold mt-2 fs-5 text-success';
+                    totalScoreEl.className = 'form-control form-control-lg text-center display-4 fw-bold p-0 text-success';
+                } else {
+                    decisionEl.textContent = "RED";
+                    decisionEl.className = 'fw-bold mt-2 fs-5 text-danger';
+                    totalScoreEl.className = 'form-control form-control-lg text-center display-4 fw-bold p-0 text-danger';
+                }
+            }
+
+            scoreInputs.forEach(input => {
+                input.addEventListener('input', calculateTotal);
+            });
+
+            // Initial calculation on page load.
+            calculateTotal();
+        });
+    </script>
+}

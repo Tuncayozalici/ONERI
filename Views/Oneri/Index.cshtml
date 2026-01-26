@@ -1,0 +1,47 @@
+@model ONERI.Models.Oneri
+
+@{
+    ViewData["Title"] = "Yeni Öneri";
+}
+
+<h1>Yeni Öneri Formu</h1>
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Index">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="Bolum" class="control-label"></label>
+                <input asp-for="Bolum" class="form-control" />
+                <span asp-validation-for="Bolum" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="Konu" class="control-label"></label>
+                <input asp-for="Konu" class="form-control" />
+                <span asp-validation-for="Konu" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="Aciklama" class="control-label"></label>
+                <textarea asp-for="Aciklama" class="form-control" rows="5"></textarea>
+                <span asp-validation-for="Aciklama" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="OnerenKisi" class="control-label">Öneren Kişi (İsteğe Bağlı)</label>
+                <input asp-for="OnerenKisi" class="form-control" />
+                <span asp-validation-for="OnerenKisi" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group">
+                <input type="submit" value="Gönder" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

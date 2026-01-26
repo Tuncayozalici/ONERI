@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Teşekkürler";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center p-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075); background-color: white;">
+                
+                <div class="mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+
+                <h1 class="fw-bold">Teşekkür Ederiz!</h1>
+                <p class="lead text-muted">Değerli fikriniz başarıyla sistemimize kaydedilmiştir.</p>
+                <p>Lütfen aşağıdaki takip numarasını daha sonra önerinizin durumunu sorgulamak için saklayınız.</p>
+
+                <div class="my-4 p-3 rounded" style="background-color: #f8f9fa;">
+                    <p class="text-muted mb-1">Takip Numaranız</p>
+                    <p class="h2 fw-bold text-dark">@ViewBag.OneriId</p>
+                </div>
+
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <a asp-controller="Oneri" asp-action="Sorgula" asp-route-id="@ViewBag.OneriId" class="btn btn-dark btn-lg px-4 gap-3">Durumu Sorgula</a>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-lg px-4">Ana Sayfaya Dön</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

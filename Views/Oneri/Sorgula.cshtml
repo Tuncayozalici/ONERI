@@ -1,0 +1,113 @@
+@model ONERI.Models.Oneri
+
+@{
+    ViewData["Title"] = "Öneri Durum Sorgula";
+
+    // Helper function to get badge color based on status
+    string GetBadgeClass(OneriDurum durum)
+    {
+        return durum switch
+        {
+            OneriDurum.Beklemede => "bg-warning text-dark",
+            OneriDurum.Onaylandi => "bg-info text-dark",
+            OneriDurum.KabulEdildi => "bg-success",
+            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+<div class="container mt-4">
+    <!-- Page Header -->
+    <div class="page-header mb-5">
+        <h1 class="fw-bold">Öneri Durum Sorgula</h1>
+        <p class="text-muted">Takip numaranızı kullanarak önerinizin güncel durumunu öğrenin.</p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card p-4 mb-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+                <form asp-action="Sorgula" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label for="id" class="form-label fw-semibold">Takip Numaranız</label>
+                        <div class="input-group">
+                            <input type="number" name="id" class="form-control" placeholder="Örn: 12345" required>
+                            <button class="btn btn-dark" type="submit"><i class="bi bi-search me-1"></i> Sorgula</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if (ViewBag.Hata != null)
+                {
+                    <div class="alert alert-warning mt-3">@ViewBag.Hata</div>
+                }
+            </div>
+
+            <!-- Search Result -->
+            @if (Model != null)
+            {
+                <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0">Sonuç: Öneri #@Model.Id</h5>
+                        <span class="badge rounded-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Gönderim Tarihi</label>
+                            <p class="fw-semibold">@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Öneri Konusu</label>
+                            <p class="fw-semibold">@Model.Konu</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small text-muted">Açıklama</label>
+                            <p class="text-body" style="white-space: pre-wrap;">@Model.Aciklama</p>
+                        </div>
+
+                        @if (Model.Degerlendirmeler != null && Model.Degerlendirmeler.Any())
+                        {
+                            var degerlendirme = Model.Degerlendirmeler.First();
+                            <div class="p-3 rounded mb-4" style="background-color: #f8f9fa;">
+                                <h6 class="border-bottom pb-2 mb-3">Kurul Değerlendirmesi</h6>
+                                @if (!string.IsNullOrEmpty(degerlendirme.KurulYorumu))
+                                {
+                                    <blockquote class="blockquote blockquote-footer bg-white p-2 rounded">
+                                        @degerlendirme.KurulYorumu
+                                    </blockquote>
+                                }
+                                <div class="row text-center">
+                                    <div class="col">
+                                        <div class="small text-muted">Gayret</div><div class="fw-bold">@degerlendirme.GayretPuani</div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="small text-muted">Orijinallik</div><div class="fw-bold">@degerlendirme.OrijinallikPuani</div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="small text-muted">Etki</div><div class="fw-bold">@degerlendirme.EtkiPuani</div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="small text-muted">Toplam</div><div class="fw-bold fs-5 text-success">@degerlendirme.ToplamPuan</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add a generic page header style -->
+<style>
+    .page-header {
+        border-left: 5px solid #e9ecef;
+        padding-left: 1.5rem;
+    }
+</style>

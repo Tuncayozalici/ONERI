@@ -76,7 +76,7 @@ namespace ONERI.Controllers
                 // 4. Büyük Bağlantı: Sistem Bunu Nasıl Kullanacak? (Logic)
                 // Kayıt işleminden sonra ilgili bölüm yöneticisinin emailini bul.
                 var yonetici = await _context.BolumYoneticileri
-                                             .FirstOrDefaultAsync(y => y.BolumAdi == oneri.Bolum);
+                                             .FirstOrDefaultAsync(y => y.BolumAdi.ToLower() == (oneri.Bolum ?? "").ToLower());
 
                 if (yonetici != null)
                 {

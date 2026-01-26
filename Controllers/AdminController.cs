@@ -107,6 +107,13 @@ namespace ONERI.Controllers
             return View(yoneticiler);
         }
 
+        // B. Yeni Sorumlu Ekleme (GET)
+        [HttpGet]
+        public IActionResult YoneticiEkle()
+        {
+            return View();
+        }
+
         // B. Yeni Sorumlu Ekleme (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -114,7 +121,10 @@ namespace ONERI.Controllers
         {
             if (ModelState.IsValid)
             {
-                var existing = await _context.BolumYoneticileri.FirstOrDefaultAsync(y => y.BolumAdi.ToLower() == bolumYonetici.BolumAdi.ToLower());
+                // Null kontrolü ile güvenli karşılaştırma
+                var existing = await _context.BolumYoneticileri
+                    .FirstOrDefaultAsync(y => y.BolumAdi.ToLower() == (bolumYonetici.BolumAdi ?? "").ToLower());
+                
                 if (existing != null)
                 {
                     // Redirecting will lose the error message, but it's the simplest approach without a ViewModel.
@@ -128,9 +138,8 @@ namespace ONERI.Controllers
                 return RedirectToAction(nameof(BolumYoneticileri));
             }
 
-            // If model state is invalid (e.g. required field missing), redirect back.
-            // Again, specific errors are lost.
-            return RedirectToAction(nameof(BolumYoneticileri));
+            // Hata durumunda formu kendi view'ında tekrar göster
+            return View(bolumYonetici);
         }
 
         // C. Sorumlu Silme

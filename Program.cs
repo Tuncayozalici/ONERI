@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
+// EPPlus 8 için Lisans Tanımlaması (Ticari Olmayan Kişisel Kullanım)
+OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("Tuncay");
 
 // Add services to the container.
 builder.Services.AddDbContext<FabrikaContext>(options =>
@@ -39,7 +42,20 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await DbSeeder.SeedIdentityData(services);
+    try
+    {
+        var context = services.GetRequiredService<FabrikaContext>();
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+        }
+        await DbSeeder.SeedIdentityData(services);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Veritabanı oluşturulurken veya seed data eklenirken bir hata oluştu.");
+    }
 }
 
 

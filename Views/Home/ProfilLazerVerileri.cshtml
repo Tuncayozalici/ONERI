@@ -1,0 +1,199 @@
+@model ONERI.Models.GunlukVerilerViewModel
+@{
+    ViewData["Title"] = "Profil Lazer Verileri";
+}
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+}
+
+<div class="container">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="display-6">Profil Lazer Üretim Raporu</h2>
+        </div>
+        <div class="col-md-6">
+            <form asp-action="ProfilLazerVerileri" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+                <div class="form-group">
+                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
+                    <input type="date" id="raporTarihi" name="raporTarihi" value="@Model.RaporTarihi.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-success">Filtrele</button>
+            </form>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h4 class="text-muted">@Model.RaporTarihi.ToString("dd MMMM yyyy")</h4>
+        </div>
+    </div>
+
+    <!-- KPI Kartları -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Üretim</h5>
+                    <p class="card-text">@Model.GunlukToplamUretim.ToString("N0") adet</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-clock me-2"></i>Toplam Süre</h5>
+                    <p class="card-text">@Model.GunlukToplamSure.ToString("N0") dk</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Süre</h5>
+                    <p class="card-text">@Model.OrtalamaIslemSuresi.ToString("F2") dk/adet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="row g-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Profil Tipine Göre Bugünün Üretim Dağılımı
+                </div>
+                <div class="card-body">
+                    <canvas id="pastaGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    Son 7 Günlük Üretim Trendi
+                </div>
+                <div class="card-body">
+                    <canvas id="cizgiGrafigi"></canvas>
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Profil Tipine Göre Süre Dağılımı
+                </div>
+                <div class="card-body">
+                    <canvas id="urunSureGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Pasta Grafik
+            const pastaCtx = document.getElementById('pastaGrafigi').getContext('2d');
+            if (@Model.ProfilIsimleri.Count > 0) {
+                new Chart(pastaCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.ProfilIsimleri)),
+                        datasets: [{
+                            label: 'Üretim Adedi',
+                            data: @Html.Raw(Json.Serialize(Model.ProfilUretimAdetleri)),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.9)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Çizgi Grafik
+            const cizgiCtx = document.getElementById('cizgiGrafigi').getContext('2d');
+            if (@Model.Son7GunTarihleri.Count > 0) {
+                new Chart(cizgiCtx, {
+                    type: 'line',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.Son7GunTarihleri)),
+                        datasets: [{
+                            label: 'Günlük Üretim Adedi',
+                            data: @Html.Raw(Json.Serialize(Model.GunlukUretimSayilari)),
+                            fill: false,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            const urunSureCtx = document.getElementById('urunSureGrafigi').getContext('2d');
+            if (@Model.UrunIsimleri.Count > 0) {
+                new Chart(urunSureCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.UrunIsimleri)),
+                        datasets: [{
+                            label: 'Süre Yüzdesi (%)',
+                            data: @Html.Raw(Json.Serialize(Model.UrunHarcananSure)),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.9)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

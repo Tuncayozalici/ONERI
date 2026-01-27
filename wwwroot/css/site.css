@@ -9,7 +9,7 @@ html {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #2c3e50; /* Navy Blue */
 }
 
 html {
@@ -18,98 +18,46 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f9; /* Light Gray */
+    font-family: 'Roboto', sans-serif;
     transition: background-color .5s;
     margin-bottom: 60px;
 }
 
-/* The sidebar menu */
-.sidebar {
-  height: 100%; 
-  width: 0; 
-  position: fixed; 
-  z-index: 2; 
-  top: 0;
-  left: 0;
-  background-color: #111; 
-  overflow-x: hidden; 
-  padding-top: 60px; 
-  transition: 0.5s; 
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 300; /* Lighter headings */
 }
 
-/* Sidebar links */
-.sidebar a {
-  padding: 8px 8px 8px 32px;
-  text-decoration: none;
-  font-size: 20px;
-  color: #818181;
-  display: block;
-  transition: 0.3s;
+.card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
 }
 
-/* When you mouse over the navigation links, change their color */
-.sidebar a:hover {
-  color: #f1f1f1;
+/* KPI Card Style */
+.kpi-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-left: 5px solid #2c3e50; /* Navy Blue */
+    border-radius: 0.25rem;
 }
 
-/* Position and style the close button (top right corner) */
-.sidebar .closebtn {
-  position: absolute;
-  top: 0;
-  right: 25px;
-  font-size: 36px;
-  margin-left: 50px;
+.kpi-card .card-body {
+    padding: 1.5rem;
 }
 
-/* The button used to open the sidebar */
-.openbtn {
-  font-size: 20px;
-  cursor: pointer;
-  background-color: #111;
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
+.kpi-card .card-title {
+    font-weight: 500;
+    color: #6c757d;
 }
 
-.openbtn:hover {
-  background-color: #444;
-}
-
-/* Style page content - use this if you want to push the page content to the right when you open the side navigation */
-#main {
-  transition: margin-left .5s;
-  padding: 20px;
-}
-
-.sidebar-brand {
-    font-size: 24px !important;
-    color: #f1f1f1 !important;
-}
-
-.sidebar hr {
-    border-top: 1px solid rgba(255,255,255,.1);
-    margin: 1rem 1rem;
-}
-
-.sidebar a i {
-    margin-right: 10px;
-}
-
-/* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
-@media screen and (max-height: 450px) {
-  .sidebar {padding-top: 15px;}
-  .sidebar a {font-size: 18px;}
+.kpi-card .card-text {
+    font-size: 2rem;
+    font-weight: 700;
 }
 
 /* =================================================================
-   MARWOOD PORTAL STYLES (Eklenen Stiller)
+   MARWOOD PORTAL STYLES (Existing)
    ================================================================= */
-
-body {
-    background-color: #F5F1ED; /* Hafif krem/bej tonu */
-    font-family: 'Outfit', sans-serif !important; /* !important to override inline styles if any */
-}
 
 /* "İkiz Kartlar" Stili */
 .twin-card {
@@ -186,6 +134,69 @@ body {
 }
 
  .info-panel .list-group-item-action:hover {
-    color: #0d6efd; /* Bootstrap primary color */
+    color: #2c3e50; /* Updated accent color */
 }
 
+.custom-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.custom-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.custom-card-disabled {
+    background-color: #f8f9fa;
+}
+
+/* Navigation Tile Style */
+.nav-tile {
+    display: block;
+    padding: 2rem;
+    border-radius: 15px;
+    text-decoration: none;
+    height: 100%;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-tile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
+    text-decoration: none;
+}
+
+.nav-tile .icon {
+    font-size: 3rem;
+    color: #2c3e50; /* Navy Blue */
+    margin-bottom: 1rem;
+}
+
+.nav-tile h5 {
+    font-weight: 500;
+    color: #212529;
+}
+
+.nav-tile p {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.nav-tile .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+.nav-tile .status-dot.active {
+    background-color: #28a745; /* Green */
+}
+
+.nav-tile .status-dot.inactive {
+    background-color: #6c757d; /* Gray */
+}

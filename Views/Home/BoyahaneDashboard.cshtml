@@ -1,0 +1,101 @@
+
+@model ONERI.Models.BoyaDashboardViewModel
+@{
+    ViewData["Title"] = "Boyahane Verileri";
+}
+
+<div class="container">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="display-6">Boyahane Üretim Raporu</h2>
+        </div>
+        <div class="col-md-6">
+            <form asp-action="BoyahaneDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+                <div class="form-group">
+                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
+                    <input type="date" id="raporTarihi" name="raporTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-success">Filtrele</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- KPI Kartları -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Boyanan</h5>
+                    <p class="card-text">@Model.GunlukToplamBoyama.ToString("N0") adet</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-x-circle me-2"></i>Toplam Hatalı</h5>
+                    <p class="card-text">@Model.GunlukHataSayisi.ToString("N0") adet</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-trash me-2"></i>Fire Oranı</h5>
+                    <p class="card-text">@Model.FireOrani.ToString("F2") %</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="row g-5">
+        <div class="col-lg-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Hata Nedenlerine Göre Dağılım
+                </div>
+                <div class="card-body">
+                    <canvas id="hataGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const hataCtx = document.getElementById('hataGrafigi').getContext('2d');
+            if (@Model.HataNedenleriListesi.Count > 0) {
+                new Chart(hataCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.HataNedenleriListesi)),
+                        datasets: [{
+                            label: 'Hatalı Adet',
+                            data: @Html.Raw(Json.Serialize(Model.HataSayilariListesi)),
+                            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,8 +1,71 @@
 @{
-    ViewData["Title"] = "Günlük Veriler";
+    ViewData["Title"] = "Günlük Veriler Panosu";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Günlük Veriler</h1>
-    <p>Bu sayfa yapım aşamasındadır.</p>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="display-6 text-center">Fabrika Veri Panosu</h2>
+        </div>
+    </div>
+
+    <!-- Genel Özet Alanı (Gelecekte Eklenecek) -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Genel Fabrika Özeti
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Genel Özet Grafikleri Yakında Eklenecektir</h5>
+                    <p class="card-text">Bu alanda tüm bölümlerin birleşik verimlilik ve üretim metrikleri yer alacaktır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bölüm Navigasyon Kartları -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="nav-tile">
+                <div class="status-dot active"></div>
+                <div class="text-center">
+                    <div class="icon">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <h5>Profil Lazer Bölümü</h5>
+                    <p>Günlük üretim, verimlilik ve trend analizleri.</p>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-4">
+            <a href="@Url.Action("BoyahaneDashboard", "Home")" class="nav-tile">
+                <div class="status-dot active"></div>
+                <div class="text-center">
+                    <div class="icon">
+                        <i class="bi bi-paint-bucket"></i>
+                    </div>
+                    <h5>Boyahane Bölümü</h5>
+                    <p>Günlük boyama, fire ve hata analizleri.</p>
+                </div>
+            </a>
+        </div>
+
+         <div class="col-md-4">
+            <div class="nav-tile">
+                <div class="status-dot inactive"></div>
+                <div class="text-center">
+                    <div class="icon">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                    <h5>Montaj Bölümü</h5>
+                    <p>Yakında Eklenecek</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">

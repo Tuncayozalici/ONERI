@@ -3,6 +3,14 @@
 }
 
 <style>
+    .home-page {
+        background: radial-gradient(1200px 400px at 20% -10%, #e9f2ff 0%, rgba(233, 242, 255, 0) 60%),
+                    radial-gradient(900px 300px at 90% 10%, #fff3da 0%, rgba(255, 243, 218, 0) 55%),
+                    linear-gradient(180deg, #f7f8fa 0%, #ffffff 40%);
+        padding: 1.5rem 0 2.5rem;
+        border-radius: 24px;
+    }
+
     .welcome-header {
         text-align: center;
         margin: 2.5rem 0; /* Boşluk azaltıldı */
@@ -11,6 +19,9 @@
     .welcome-header h1 {
         font-weight: 700;
         color: #343a40; /* Koyu Gri (Antrasit) */
+        letter-spacing: -0.5px;
+        font-family: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+        font-size: clamp(2.2rem, 2.8vw, 3rem);
     }
 
     .welcome-header p {
@@ -18,18 +29,93 @@
         color: #6c757d;
         font-size: 1.1rem;
     }
+
+    .date-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(52, 58, 64, 0.06);
+        color: #495057;
+        font-weight: 500;
+    }
+
+    .twin-card {
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .twin-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 36px rgba(16, 24, 40, 0.12);
+    }
+
+    .card-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(13, 110, 253, 0.08);
+        color: #0d6efd;
+        margin-bottom: 0.35rem;
+    }
+
+    .card-badge.secondary {
+        background: rgba(255, 152, 0, 0.12);
+        color: #c16d00;
+    }
+
+    .icon-wrapper {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 1.5rem;
+    }
+
+    .info-panel {
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        overflow: hidden;
+    }
+
+    .info-panel .card-header {
+        background: transparent;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        font-weight: 600;
+    }
+
+    .info-panel .list-group-item {
+        border: 0;
+    }
+
     .info-panel .list-group-item {
         padding-bottom: 0.5rem;
         margin-bottom: 0.5rem;
     }
 </style>
 
-<div class="container">
+<div class="home-page">
+    <div class="container">
     <!-- 1. Karşılama Alanı -->
     <div class="welcome-header">
         <h1>Merhaba!</h1>
         <p>Yönetim ve veri akışı tek ekranda.</p>
-        <p class="text-muted small" id="current-date"></p>
+        <div class="date-pill">
+            <i class="bi bi-calendar3"></i>
+            <span id="current-date"></span>
+        </div>
     </div>
 
     <!-- 2. Ana Menü: "İkiz Kartlar" -->
@@ -41,6 +127,7 @@
                     <i class="bi bi-lightbulb"></i>
                 </div>
                 <div class="content-wrapper">
+                    <div class="card-badge"><i class="bi bi-stars"></i> Yeni</div>
                     <h3>Fikir Atölyesi</h3>
                     <p>Yeni fikirlerinizi paylaşın ve şirketin gelişimine katkıda bulunun.</p>
                 </div>
@@ -57,6 +144,7 @@
                     <i class="bi bi-bar-chart-line"></i>
                 </div>
                 <div class="content-wrapper">
+                    <div class="card-badge secondary"><i class="bi bi-activity"></i> Güncel</div>
                     <h3>Günlük Veriler</h3>
                     <p>Üretim, sevkiyat ve enerji verilerini anlık grafiklerle takip edin.</p>
                 </div>
@@ -95,6 +183,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </div>
 

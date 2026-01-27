@@ -17,25 +17,37 @@
     }
 }
 
+<div class="status-page">
 <div class="container mt-4">
     <!-- Page Header -->
-    <div class="page-header mb-5">
-        <h1 class="fw-bold">Öneri Durum Sorgula</h1>
-        <p class="text-muted">Takip numaranızı kullanarak önerinizin güncel durumunu öğrenin.</p>
+    <div class="status-hero mb-5">
+        <div class="status-hero-inner">
+            <div>
+                <div class="hero-kicker"><i class="bi bi-search"></i> Takip Merkezi</div>
+                <h1>Öneri Durum Sorgula</h1>
+                <p>Takip numaranızı kullanarak önerinizin güncel durumunu öğrenin.</p>
+            </div>
+            <div class="hero-chip">
+                <i class="bi bi-shield-check"></i>
+                Gizli ve güvenli sorgu
+            </div>
+        </div>
     </div>
 
     <!-- Search Form -->
-    <div class="row justify-content-center">
+    <div class="row g-4 justify-content-center">
         <div class="col-lg-8">
-            <div class="card p-4 mb-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+            <div class="search-card mb-4">
                 <form asp-action="Sorgula" method="post">
                     @Html.AntiForgeryToken()
-                    <div class="mb-3">
+                    <div class="input-wrap">
                         <label for="id" class="form-label fw-semibold">Takip Numaranız</label>
-                        <div class="input-group">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
                             <input type="number" name="id" class="form-control" placeholder="Örn: 12345" required>
                             <button class="btn btn-dark" type="submit"><i class="bi bi-search me-1"></i> Sorgula</button>
                         </div>
+                        <small class="text-muted">Takip numaranız teşekkür sayfasında size verilmiştir.</small>
                     </div>
                 </form>
 
@@ -48,32 +60,36 @@
             <!-- Search Result -->
             @if (Model != null)
             {
-                <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
-                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0">Sonuç: Öneri #@Model.Id</h5>
-                        <span class="badge rounded-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
+                <div class="result-card">
+                    <div class="result-header">
+                        <div>
+                            <div class="result-title">Sonuç</div>
+                            <h5>Öneri #@Model.Id</h5>
+                        </div>
+                        <span class="status-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
                     </div>
                     <div class="card-body p-4">
                         
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Gönderim Tarihi</label>
-                            <p class="fw-semibold">@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</p>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Öneri Konusu</label>
-                            <p class="fw-semibold">@Model.Konu</p>
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <label>Gönderim Tarihi</label>
+                                <div>@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</div>
+                            </div>
+                            <div class="meta-item">
+                                <label>Öneri Konusu</label>
+                                <div>@Model.Konu</div>
+                            </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label small text-muted">Açıklama</label>
-                            <p class="text-body" style="white-space: pre-wrap;">@Model.Aciklama</p>
+                            <div class="desc-box">@Model.Aciklama</div>
                         </div>
 
                         @if (Model.Degerlendirmeler != null && Model.Degerlendirmeler.Any())
                         {
                             var degerlendirme = Model.Degerlendirmeler.First();
-                            <div class="p-3 rounded mb-4" style="background-color: #f8f9fa;">
+                            <div class="p-3 rounded mb-4 review-box">
                                 <h6 class="border-bottom pb-2 mb-3">Kurul Değerlendirmesi</h6>
                                 @if (!string.IsNullOrEmpty(degerlendirme.KurulYorumu))
                                 {
@@ -103,11 +119,128 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Add a generic page header style -->
 <style>
-    .page-header {
-        border-left: 5px solid #e9ecef;
-        padding-left: 1.5rem;
+    .status-page {
+        background: radial-gradient(1200px 350px at 15% -10%, #f1f4ff 0%, rgba(241, 244, 255, 0) 60%),
+                    radial-gradient(900px 300px at 85% 5%, #fff1da 0%, rgba(255, 241, 218, 0) 55%);
+        padding-bottom: 2.5rem;
+    }
+
+    .status-hero {
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 1.75rem 2rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+    }
+
+    .status-hero-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .status-hero h1 {
+        font-family: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+        margin-bottom: 0.25rem;
+    }
+
+    .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #5b6b8c;
+        margin-bottom: 0.35rem;
+    }
+
+    .hero-chip {
+        background: #f8f9fa;
+        border-radius: 999px;
+        padding: 0.5rem 0.85rem;
+        font-weight: 600;
+        color: #495057;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .search-card {
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        background: #fff;
+        padding: 1.5rem;
+    }
+
+    .input-wrap label {
+        margin-bottom: 0.5rem;
+    }
+
+    .result-card {
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+        background: #fff;
+    }
+
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .result-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6c757d;
+    }
+
+    .status-pill {
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .meta-item label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.3rem;
+    }
+
+    .desc-box {
+        white-space: pre-wrap;
+        background: #f8f9fb;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+    }
+
+    .review-box {
+        background: #f8f9fa;
+    }
+
+    @@media (max-width: 768px) {
+        .meta-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>

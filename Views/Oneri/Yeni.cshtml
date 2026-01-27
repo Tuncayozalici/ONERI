@@ -4,58 +4,97 @@
     ViewData["Title"] = "Yeni Fikir Paylaş";
 }
 
-<div class="container mt-4">
-    
-    <!-- Page Header -->
-    <div class="page-header mb-5">
-        <h1 class="fw-bold">Yeni Fikir Paylaş</h1>
-        <p class="text-muted">Fabrikamızın gelişimi için değerli fikirlerinizi bizimle paylaşın.</p>
-    </div>
+<div class="idea-page">
+    <div class="container mt-4">
+        <!-- Page Header -->
+        <div class="idea-hero mb-5">
+            <div class="idea-hero-inner">
+                <div>
+                    <div class="hero-kicker"><i class="bi bi-lightbulb"></i> Fikir Atölyesi</div>
+                    <h1>Yeni Fikir Paylaş</h1>
+                    <p>Fabrikamızın gelişimi için değerli fikirlerinizi bizimle paylaşın.</p>
+                </div>
+                <div class="hero-badge">
+                    <div class="badge-circle"><i class="bi bi-rocket-takeoff"></i></div>
+                    <div>
+                        <div class="badge-title">Fikirler değerlidir</div>
+                        <div class="badge-sub">Kısa ve net anlatım, hızlı değerlendirme.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card p-4 p-md-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
-                <form asp-action="Yeni" method="post">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="helper-card">
+                    <h5>İpucu</h5>
+                    <ul>
+                        <li>Başlığı kısa ve net yaz.</li>
+                        <li>Mevcut sorunu ve önerini ayrı belirt.</li>
+                        <li>Beklenen etkiyi 1–2 cümleyle özetle.</li>
+                    </ul>
+                    <div class="helper-mini">
+                        <i class="bi bi-shield-check"></i>
+                        <div>
+                            <strong>Gizlilik</strong>
+                            <div>Bilgiler yalnızca yetkili ekiple paylaşılır.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="helper-card mt-4">
+                    <h5>Adımlar</h5>
+                    <ol>
+                        <li>Bölüm seç</li>
+                        <li>Fikri yaz</li>
+                        <li>Gönder</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="form-card">
+                    <form asp-action="Yeni" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                    <div class="mb-4">
-                        <label asp-for="Bolum" class="form-label fw-semibold">İlgili Bölüm</label>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Bolum" class="form-label fw-semibold">İlgili Bölüm <span class="req">*</span></label>
                         <select asp-for="Bolum" asp-items="@ViewBag.Bolumler" class="form-select">
                             <option value="" disabled selected>Lütfen bir bölüm seçiniz...</option>
                         </select>
                         <span asp-validation-for="Bolum" class="text-danger mt-1 d-block"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CalistigiBolum" class="form-label fw-semibold">Çalıştığınız Bölüm <span class="req">*</span></label>
+                            <select asp-for="CalistigiBolum" id="anaBolum" class="form-select">
+                                <option value="">Lütfen Bölüm Seçiniz...</option>
+                                <option value="InsanKaynaklari">İnsan Kaynakları</option>
+                                <option value="Panel">Panel Bölümü</option>
+                                <option value="Metal">Metal Bölümü</option>
+                                <option value="Muhasebe">Muhasebe</option>
+                                <option value="IT">IT</option>
+                            </select>
+                            <span asp-validation-for="CalistigiBolum" class="text-danger mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <div id="altBolumKapsayici" class="mb-4 alt-birim">
+                        <label asp-for="AltBolum" class="form-label fw-semibold">Alt Birim</label>
+                        <select asp-for="AltBolum" id="altBolum" class="form-select">
+                        </select>
+                        <span asp-validation-for="AltBolum" class="text-danger mt-1 d-block"></span>
                     </div>
 
                     <div class="mb-4">
-                        <label asp-for="Konu" class="form-label fw-semibold">Öneri Konusu</label>
+                        <label asp-for="Konu" class="form-label fw-semibold">Öneri Konusu <span class="req">*</span></label>
                         <input asp-for="Konu" class="form-control" placeholder="Önerinizin başlığını kısaca yazınız" />
                         <span asp-validation-for="Konu" class="text-danger mt-1 d-block"></span>
                     </div>
 
                     <div class="mb-4">
-                        <label asp-for="Aciklama" class="form-label fw-semibold">Açıklama</label>
+                        <label asp-for="Aciklama" class="form-label fw-semibold">Açıklama <span class="req">*</span></label>
                         <textarea asp-for="Aciklama" class="form-control" rows="6" placeholder="Önerinizi detaylandırın..."></textarea>
                         <span asp-validation-for="Aciklama" class="text-danger mt-1 d-block"></span>
-                    </div>
-
-                    <div class="mb-4">
-                        <label asp-for="CalistigiBolum" class="form-label fw-semibold">Çalıştığınız Bölüm</label>
-                        <select asp-for="CalistigiBolum" id="anaBolum" class="form-select">
-                            <option value="">Lütfen Bölüm Seçiniz...</option>
-                            <option value="InsanKaynaklari">İnsan Kaynakları</option>
-                            <option value="Panel">Panel Bölümü</option>
-                            <option value="Metal">Metal Bölümü</option>
-                            <option value="Muhasebe">Muhasebe</option>
-                            <option value="IT">IT</option>
-                        </select>
-                        <span asp-validation-for="CalistigiBolum" class="text-danger mt-1 d-block"></span>
-                    </div>
-
-                    <div id="altBolumKapsayici" style="display: none;" class="mb-4">
-                        <label asp-for="AltBolum" class="form-label fw-semibold">Alt Birim</label>
-                        <select asp-for="AltBolum" id="altBolum" class="form-select">
-                        </select>
-                        <span asp-validation-for="AltBolum" class="text-danger mt-1 d-block"></span>
                     </div>
 
                     <div class="mb-4">
@@ -66,13 +105,17 @@
 
                     <hr class="my-4">
 
-                    <div class="text-end">
-                        <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary me-2">Vazgeç</a>
-                        <button type="submit" class="btn btn-dark px-4">
-                            <i class="bi bi-send me-1"></i> Gönder
-                        </button>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="text-muted small">* işaretli alanlar zorunludur.</div>
+                        <div>
+                            <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary me-2">Vazgeç</a>
+                            <button type="submit" class="btn btn-dark btn-lg px-4">
+                                <i class="bi bi-send me-1"></i> Gönder
+                            </button>
+                        </div>
                     </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -80,9 +123,133 @@
 
 <!-- Add a generic page header style -->
 <style>
-    .page-header {
-        border-left: 5px solid #e9ecef;
-        padding-left: 1.5rem;
+    .idea-page {
+        background: radial-gradient(1200px 400px at 10% -10%, #f4e9d9 0%, rgba(244, 233, 217, 0) 60%),
+                    radial-gradient(900px 300px at 90% 10%, #e7f0ff 0%, rgba(231, 240, 255, 0) 60%);
+        padding-bottom: 2.5rem;
+    }
+
+    .idea-hero {
+        background: #fff8ef;
+        border-radius: 22px;
+        padding: 1.75rem 2rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+    }
+
+    .idea-hero-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .idea-hero h1 {
+        font-family: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #8a6a3f;
+        margin-bottom: 0.35rem;
+    }
+
+    .hero-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: #fff;
+        border-radius: 16px;
+        padding: 0.75rem 1rem;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .badge-circle {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #f4e1c3;
+        display: grid;
+        place-items: center;
+        color: #8a6a3f;
+    }
+
+    .badge-title {
+        font-weight: 600;
+    }
+
+    .badge-sub {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .helper-card {
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        padding: 1.25rem;
+    }
+
+    .helper-card h5 {
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .helper-card ul,
+    .helper-card ol {
+        padding-left: 1.2rem;
+        margin-bottom: 0;
+        color: #495057;
+    }
+
+    .helper-mini {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.75rem;
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 12px;
+    }
+
+    .form-card {
+        background: #fff;
+        border-radius: 22px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+        padding: 2rem 2rem;
+    }
+
+    .req {
+        color: #d63384;
+        font-weight: 700;
+    }
+
+    .alt-birim {
+        display: none;
+    }
+
+    .alt-birim.is-visible {
+        display: block;
+        animation: fadeInUp 0.2s ease;
+    }
+
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @@media (max-width: 991px) {
+        .form-card {
+            padding: 1.5rem;
+        }
     }
 </style>
 
@@ -105,13 +272,13 @@
                 
                 // Önce alt bölümü temizle ve gizle
                 altBolumSelect.innerHTML = '';
-                altBolumKapsayici.style.display = 'none';
+                altBolumKapsayici.classList.remove('is-visible');
                 altBolumSelect.value = '';
 
 
                 if (secilenBolum in altBolumler) {
                     // İlgili alt bölümleri ekle
-                    altBolumKapsayici.style.display = 'block';
+                    altBolumKapsayici.classList.add('is-visible');
                     altBolumSelect.innerHTML = '<option value="">Lütfen alt birim seçiniz...</option>';
                     
                     altBolumler[secilenBolum].forEach(function(birim) {

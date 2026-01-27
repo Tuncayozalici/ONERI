@@ -1,0 +1,303 @@
+@model ONERI.Models.PvcDashboardViewModel
+@{
+    ViewData["Title"] = "PVC Verileri";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/boyahane.css" />
+}
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+}
+
+<div class="container">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="display-6">PVC Üretim Raporu</h2>
+        </div>
+        <div class="col-md-6">
+            <form asp-action="PvcDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+                <div class="form-group">
+                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
+                    <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="ay" class="visually-hidden">Ay Seç</label>
+                    <select id="ay" name="ay" class="form-select">
+                        <option value="">Ay Seçin</option>
+                        <option value="1">Ocak</option>
+                        <option value="2">Şubat</option>
+                        <option value="3">Mart</option>
+                        <option value="4">Nisan</option>
+                        <option value="5">Mayıs</option>
+                        <option value="6">Haziran</option>
+                        <option value="7">Temmuz</option>
+                        <option value="8">Ağustos</option>
+                        <option value="9">Eylül</option>
+                        <option value="10">Ekim</option>
+                        <option value="11">Kasım</option>
+                        <option value="12">Aralık</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="yil" class="visually-hidden">Yıl Seç</label>
+                    <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
+                </div>
+                <button type="submit" class="btn btn-success">Filtrele</button>
+                <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Üretim (Metraj)</h5>
+                    <p class="card-text">@Model.ToplamUretimMetraj.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-collection me-2"></i>Toplam Parça</h5>
+                    <p class="card-text">@Model.ToplamParcaSayisi.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Toplam Duraklama (dk)</h5>
+                    <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Fiili Çalışma</h5>
+                    <p class="card-text">@Model.OrtalamaFiiliCalismaOrani.ToString("F2") %</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.UretimTrendTitle ?? "Üretim Trendi (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="uretimTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Makine Bazlı Üretim (Metraj)
+                </div>
+                <div class="card-body">
+                    <canvas id="makineUretimGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Duraklama Nedenleri
+                </div>
+                <div class="card-body">
+                    <canvas id="duraklamaNedenGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.FiiliCalismaTrendTitle ?? "Fiili Çalışma Oranı (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="fiiliCalismaGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.KayipSureTrendTitle ?? "Kayıp Süre (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="kayipSureGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const dateInput = document.getElementById('raporTarihi');
+            const monthInput = document.getElementById('ay');
+            const yearInput = document.getElementById('yil');
+            const clearButton = document.getElementById('clearFilter');
+
+            function toggleFilters() {
+                if (monthInput.value) {
+                    dateInput.disabled = true;
+                    dateInput.value = '';
+                } else {
+                    dateInput.disabled = false;
+                }
+
+                if (dateInput.value) {
+                    monthInput.disabled = true;
+                    yearInput.disabled = true;
+                    monthInput.value = '';
+                    yearInput.value = '@DateTime.Now.Year';
+                } else {
+                    monthInput.disabled = false;
+                    yearInput.disabled = false;
+                }
+            }
+
+            function setDefaultDate() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${year}-${month}-${day}`;
+            }
+
+            if (dateInput) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const raporTarihi = urlParams.get('raporTarihi');
+                const ay = urlParams.get('ay');
+                const yil = urlParams.get('yil');
+                const clear = urlParams.get('clear');
+
+                if (clear === '1') {
+                    dateInput.value = '';
+                    monthInput.value = '';
+                    yearInput.value = '@DateTime.Now.Year';
+                } else if (raporTarihi) {
+                    dateInput.value = raporTarihi;
+                } else if (ay && yil) {
+                    monthInput.value = ay;
+                    yearInput.value = yil;
+                    dateInput.value = '';
+                } else {
+                    setDefaultDate();
+                }
+            }
+
+            toggleFilters();
+
+            monthInput.addEventListener('change', toggleFilters);
+            dateInput.addEventListener('input', toggleFilters);
+
+            clearButton.addEventListener('click', function() {
+                monthInput.value = '';
+                yearInput.value = '@DateTime.Now.Year';
+                dateInput.value = '';
+                toggleFilters();
+                window.location.href = '/Home/PvcDashboard?clear=1';
+            });
+
+            const uretimTrendCtx = document.getElementById('uretimTrendGrafigi').getContext('2d');
+            new Chart(uretimTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.UretimTrendLabels)),
+                    datasets: [{
+                        label: 'Metraj',
+                        data: @Html.Raw(Json.Serialize(Model.UretimTrendData)),
+                        borderColor: 'rgba(54, 162, 235, 0.9)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            const makineUretimCtx = document.getElementById('makineUretimGrafigi').getContext('2d');
+            new Chart(makineUretimCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.MakineLabels)),
+                    datasets: [{
+                        label: 'Metraj',
+                        data: @Html.Raw(Json.Serialize(Model.MakineUretimData)),
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            const duraklamaCtx = document.getElementById('duraklamaNedenGrafigi').getContext('2d');
+            if (@Model.DuraklamaNedenLabels.Count > 0) {
+                new Chart(duraklamaCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.DuraklamaNedenLabels)),
+                        datasets: [{
+                            label: 'Duraklama (dk)',
+                            data: @Html.Raw(Json.Serialize(Model.DuraklamaNedenData)),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+
+            const fiiliCtx = document.getElementById('fiiliCalismaGrafigi').getContext('2d');
+            new Chart(fiiliCtx, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.FiiliCalismaLabels)),
+                    datasets: [{
+                        label: 'Fiili Çalışma (%)',
+                        data: @Html.Raw(Json.Serialize(Model.FiiliCalismaData)),
+                        borderColor: 'rgba(153, 102, 255, 0.9)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            const kayipCtx = document.getElementById('kayipSureGrafigi').getContext('2d');
+            new Chart(kayipCtx, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.KayipSureLabels)),
+                    datasets: [{
+                        label: 'Kayıp Süre (%)',
+                        data: @Html.Raw(Json.Serialize(Model.KayipSureData)),
+                        borderColor: 'rgba(255, 159, 64, 0.9)',
+                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: { responsive: true }
+            });
+        });
+    </script>
+}

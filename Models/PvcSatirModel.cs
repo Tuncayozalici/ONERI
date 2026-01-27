@@ -1,0 +1,23 @@
+using System;
+
+namespace ONERI.Models
+{
+    public class PvcSatirModel
+    {
+        public DateTime Tarih { get; set; }
+        public string? Makine { get; set; }
+        public double UretimMetraj { get; set; }
+        public double ParcaSayisi { get; set; }
+        public string? CalismaKosulu { get; set; }
+        public double Duraklama1 { get; set; }
+        public string? DuraklamaNedeni1 { get; set; }
+        public double Duraklama2 { get; set; }
+        public string? DuraklamaNedeni2 { get; set; }
+        public double Duraklama3 { get; set; }
+        public string? DuraklamaNedeni3 { get; set; }
+        public string? Aciklama { get; set; }
+        public double UretimOrani { get; set; }
+        public double KayipSure { get; set; }
+        public double FiiliCalismaOrani { get; set; }
+    }
+}

@@ -445,8 +445,163 @@ namespace ONERI.Controllers
             
 
         }
-            
 
+        public IActionResult PvcDashboard(DateTime? raporTarihi, int? ay, int? yil)
+        {
+            var islenecekTarih = raporTarihi ?? DateTime.Today;
+
+            var viewModel = new PvcDashboardViewModel
+            {
+                RaporTarihi = islenecekTarih
+            };
+
+            string rootPath = _hostingEnvironment.WebRootPath;
+            string filePath = Path.Combine(rootPath, "EXCELS", "PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm");
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                ViewBag.ErrorMessage = "Excel dosyası bulunamadı: " + filePath;
+                return View(viewModel);
+            }
+
+            var excelData = new List<PvcSatirModel>();
+
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            {
+                var worksheet = package.Workbook.Worksheets["KAYIT"];
+                if (worksheet == null)
+                {
+                    ViewBag.ErrorMessage = "'KAYIT' sayfası bulunamadı.";
+                    return View(viewModel);
+                }
+
+                int rowCount = worksheet.Dimension.Rows;
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    try
+                    {
+                        var dateValue = worksheet.Cells[row, 1].Value;
+                        var dateString = dateValue?.ToString() ?? string.Empty;
+
+                        excelData.Add(new PvcSatirModel
+                        {
+                            Tarih = ParseTurkishDate(dateString),
+                            Makine = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
+                            UretimMetraj = ParseDoubleCell(worksheet.Cells[row, 3].Value),
+                            ParcaSayisi = ParseDoubleCell(worksheet.Cells[row, 4].Value),
+                            CalismaKosulu = worksheet.Cells[row, 5].Value?.ToString()?.Trim(),
+                            Duraklama1 = ParseDoubleCell(worksheet.Cells[row, 6].Value),
+                            DuraklamaNedeni1 = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
+                            Duraklama2 = ParseDoubleCell(worksheet.Cells[row, 8].Value),
+                            DuraklamaNedeni2 = worksheet.Cells[row, 9].Value?.ToString()?.Trim(),
+                            Duraklama3 = ParseDoubleCell(worksheet.Cells[row, 10].Value),
+                            DuraklamaNedeni3 = worksheet.Cells[row, 11].Value?.ToString()?.Trim(),
+                            Aciklama = worksheet.Cells[row, 12].Value?.ToString()?.Trim(),
+                            UretimOrani = ParsePercentCell(worksheet.Cells[row, 13].Value),
+                            KayipSure = ParsePercentCell(worksheet.Cells[row, 14].Value),
+                            FiiliCalismaOrani = ParsePercentCell(worksheet.Cells[row, 15].Value)
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"PVC Excel, Satır {row} okunurken hata: {ex.Message}");
+                    }
+                }
+            }
+
+            excelData = excelData.Where(x => x.Tarih != DateTime.MinValue).ToList();
+
+            var filtreliVeri = excelData.AsQueryable();
+            if (ay.HasValue && yil.HasValue)
+            {
+                filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+                ViewBag.UretimTrendTitle = "Üretim Trendi (Aylık)";
+                ViewBag.FiiliCalismaTrendTitle = "Fiili Çalışma Oranı (Aylık)";
+                ViewBag.KayipSureTrendTitle = "Kayıp Süre (Aylık)";
+            }
+            else
+            {
+                filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+                ViewBag.UretimTrendTitle = "Üretim Trendi (Son 7 Gün)";
+                ViewBag.FiiliCalismaTrendTitle = "Fiili Çalışma Oranı (Son 7 Gün)";
+                ViewBag.KayipSureTrendTitle = "Kayıp Süre (Son 7 Gün)";
+            }
+
+            viewModel.ToplamUretimMetraj = filtreliVeri.Sum(x => x.UretimMetraj);
+            viewModel.ToplamParcaSayisi = filtreliVeri.Sum(x => x.ParcaSayisi);
+            viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
+            viewModel.OrtalamaFiiliCalismaOrani = filtreliVeri.Any() ? filtreliVeri.Average(x => x.FiiliCalismaOrani) : 0;
+
+            DateTime trendBaslangic;
+            DateTime trendBitis;
+            if (ay.HasValue && yil.HasValue)
+            {
+                trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
+                trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
+            }
+            else
+            {
+                var referansTarih = raporTarihi ?? DateTime.Today;
+                trendBaslangic = referansTarih.AddDays(-6);
+                trendBitis = referansTarih;
+            }
+
+            var tumTarihler = Enumerable.Range(0, (trendBitis.Date - trendBaslangic.Date).Days + 1)
+                .Select(offset => trendBaslangic.Date.AddDays(offset))
+                .ToList();
+
+            var uretimGunluk = excelData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.UretimMetraj));
+
+            viewModel.UretimTrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+            viewModel.UretimTrendData = tumTarihler.Select(t => uretimGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+
+            var fiiliGunluk = excelData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Average(x => x.FiiliCalismaOrani));
+
+            viewModel.FiiliCalismaLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+            viewModel.FiiliCalismaData = tumTarihler.Select(t => fiiliGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+
+            var kayipGunluk = excelData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Average(x => x.KayipSure));
+
+            viewModel.KayipSureLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+            viewModel.KayipSureData = tumTarihler.Select(t => kayipGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+
+            var makineGruplari = filtreliVeri
+                .GroupBy(x => x.Makine ?? "Bilinmeyen")
+                .Select(g => new { Makine = g.Key, Metraj = g.Sum(x => x.UretimMetraj) })
+                .OrderByDescending(x => x.Metraj)
+                .ToList();
+
+            viewModel.MakineLabels = makineGruplari.Select(x => x.Makine).ToList();
+            viewModel.MakineUretimData = makineGruplari.Select(x => x.Metraj).ToList();
+
+            var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in filtreliVeri)
+            {
+                AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni1, row.Duraklama1);
+                AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni2, row.Duraklama2);
+                AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni3, row.Duraklama3);
+            }
+
+            var duraklamaList = duraklamaNedenleri
+                .OrderByDescending(x => x.Value)
+                .ToList();
+
+            viewModel.DuraklamaNedenLabels = duraklamaList.Select(x => x.Key).ToList();
+            viewModel.DuraklamaNedenData = duraklamaList.Select(x => x.Value).ToList();
+
+            return View(viewModel);
+        }
+            
+            
             
             
             
@@ -690,6 +845,83 @@ namespace ONERI.Controllers
 
             _logger.LogError($"Tarih çevirme hatası: '{dateString}'. Hata: format tanınamadı");
             return DateTime.MinValue;
+        }
+
+        private static double ParseDoubleCell(object? value)
+        {
+            if (value == null)
+            {
+                return 0;
+            }
+
+            if (value is double d)
+            {
+                return d;
+            }
+
+            var text = value.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            var trCulture = new System.Globalization.CultureInfo("tr-TR");
+            if (double.TryParse(text, System.Globalization.NumberStyles.Any, trCulture, out var result))
+            {
+                return result;
+            }
+
+            if (double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out result))
+            {
+                return result;
+            }
+
+            return 0;
+        }
+
+        private static double ParsePercentCell(object? value)
+        {
+            if (value == null)
+            {
+                return 0;
+            }
+
+            var text = value.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            text = text.Replace("%", "");
+            var trCulture = new System.Globalization.CultureInfo("tr-TR");
+            if (double.TryParse(text, System.Globalization.NumberStyles.Any, trCulture, out var result))
+            {
+                return result;
+            }
+
+            if (double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out result))
+            {
+                return result;
+            }
+
+            return 0;
+        }
+
+        private static void AddDuraklama(Dictionary<string, double> toplamlar, string? neden, double dakika)
+        {
+            if (string.IsNullOrWhiteSpace(neden) || dakika <= 0)
+            {
+                return;
+            }
+
+            if (toplamlar.ContainsKey(neden))
+            {
+                toplamlar[neden] += dakika;
+            }
+            else
+            {
+                toplamlar[neden] = dakika;
+            }
         }
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
             

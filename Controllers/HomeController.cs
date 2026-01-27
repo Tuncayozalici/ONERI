@@ -36,7 +36,7 @@ namespace ONERI.Controllers
             return View();
         }
 
-        public IActionResult ProfilLazerVerileri(DateTime? raporTarihi)
+        public IActionResult ProfilLazerVerileri(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
 
@@ -98,7 +98,16 @@ namespace ONERI.Controllers
             }
 
             // Adım 2.2: Hesaplama (KPI'lar için)
-            var gununVerileri = excelData.Where(x => x.Tarih.Date == islenecekTarih.Date).ToList();
+            var gununVerileri = excelData.AsQueryable();
+
+            if (ay.HasValue && yil.HasValue)
+            {
+                gununVerileri = gununVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            }
+            else
+            {
+                gununVerileri = gununVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            }
 
             viewModel.GunlukToplamUretim = gununVerileri.Sum(x => x.UretimAdedi);
             viewModel.GunlukToplamSure = gununVerileri.Sum(x => x.CalismaSuresi);
@@ -131,24 +140,43 @@ namespace ONERI.Controllers
                 .Select(x => toplamSureTumUrunler > 0 ? (int)Math.Round(x.ToplamSure / toplamSureTumUrunler * 100) : 0)
                 .ToList();
 
-            // Adım 2.3: Gruplama (Çizgi Grafik için) - Bu kısım seçilen tarihten bağımsız olarak son 7 günü gösterir
-            var son7GunVerileri = excelData
-                .Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today)
+            DateTime trendBaslangic;
+            DateTime trendBitis;
+
+            if (ay.HasValue && yil.HasValue)
+            {
+                trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
+                trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
+                ViewBag.TrendTitle = "Aylık Üretim Trendi";
+            }
+            else
+            {
+                var referansTarih = raporTarihi ?? DateTime.Today;
+                trendBaslangic = referansTarih.AddDays(-6);
+                trendBitis = referansTarih;
+                ViewBag.TrendTitle = "Son 7 Günlük Üretim Trendi";
+            }
+
+            var trendVerileri = excelData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
                 .GroupBy(x => x.Tarih.Date)
                 .Select(g => new { Tarih = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
                 .OrderBy(x => x.Tarih)
+                .ToDictionary(x => x.Tarih, x => x.ToplamUretim);
+
+            var tumTarihler = Enumerable.Range(0, (trendBitis.Date - trendBaslangic.Date).Days + 1)
+                .Select(offset => trendBaslangic.Date.AddDays(offset))
                 .ToList();
 
-            viewModel.Son7GunTarihleri = son7GunVerileri.Select(x => x.Tarih.ToString("dd.MM")).ToList();
-            
-                        viewModel.GunlukUretimSayilari = son7GunVerileri.Select(x => x.ToplamUretim).ToList();
+            viewModel.Son7GunTarihleri = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+            viewModel.GunlukUretimSayilari = tumTarihler.Select(t => trendVerileri.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
             
                         return View(viewModel);
                     }
             
 
             
-        public IActionResult BoyahaneDashboard(DateTime? raporTarihi)
+        public IActionResult BoyahaneDashboard(DateTime? raporTarihi, int? ay, int? yil)
             
         {
             
@@ -296,9 +324,19 @@ namespace ONERI.Controllers
             
             // KPI'ları Hesapla
             
-            var gununUretimVerileri = uretimListesi.Where(x => x.Tarih.Date == islenecekTarih.Date).ToList();
-            
-            var gununHataVerileri = hataListesi.Where(x => x.Tarih.Date == islenecekTarih.Date).ToList();
+            var gununUretimVerileri = uretimListesi.AsQueryable();
+            var gununHataVerileri = hataListesi.AsQueryable();
+
+            if (ay.HasValue && yil.HasValue)
+            {
+                gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+                gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            }
+            else
+            {
+                gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+                gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            }
 
             viewModel.PanelToplamBoyama = gununUretimVerileri.Sum(x => x.PanelAdet);
             viewModel.DosemeToplamBoyama = gununUretimVerileri.Sum(x => x.DosemeAdet);
@@ -320,7 +358,7 @@ namespace ONERI.Controllers
             
             // Grafik Verilerini Hazırla
             
-            // Hata Nedenleri (Pasta Grafik) - Bugün
+            // Hata Nedenleri (Pasta Grafik)
             var hataGruplari = gununHataVerileri
                 .GroupBy(x => x.HataNedeni)
                 .Select(g => new { Neden = g.Key, Toplam = g.Sum(x => x.HataliAdet) })
@@ -332,10 +370,33 @@ namespace ONERI.Controllers
             viewModel.HataNedenleriListesi = hataGruplari.Select(x => x.Neden).Where(n => n != null).ToList()!;
             viewModel.HataSayilariListesi = hataGruplari.Select(x => x.Toplam).ToList();
 
+            DateTime trendBaslangic;
+            DateTime trendBitis;
+            if (ay.HasValue && yil.HasValue)
+            {
+                trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
+                trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
+                ViewBag.UretimDagilimiTitle = "Aylık Üretim Dağılımı (Panel vs Döşeme)";
+                ViewBag.KaliteTrendTitle = "Kalite Trendi (Aylık)";
+                ViewBag.UretimTrendTitle = "Üretim Trendi (Aylık)";
+            }
+            else
+            {
+                var referansTarih = raporTarihi ?? DateTime.Today;
+                trendBaslangic = referansTarih.AddDays(-6);
+                trendBitis = referansTarih;
+                ViewBag.UretimDagilimiTitle = "Üretim Dağılımı (Panel vs Döşeme)";
+                ViewBag.KaliteTrendTitle = "Kalite Trendi (Son 7 Gün)";
+                ViewBag.UretimTrendTitle = "Üretim Trendi (Son 7 Gün)";
+            }
 
-            // Üretim Dağılımı (Stacked Bar) - Son 7 gün
-            var son7GunUretimDagilimi = uretimListesi
-                .Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today)
+            var tumTarihler = Enumerable.Range(0, (trendBitis.Date - trendBaslangic.Date).Days + 1)
+                .Select(offset => trendBaslangic.Date.AddDays(offset))
+                .ToList();
+
+            // Üretim Dağılımı (Stacked Bar)
+            var uretimDagilimi = uretimListesi
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
                 .GroupBy(x => x.Tarih.Date)
                 .Select(g => new {
                     Tarih = g.Key,
@@ -343,45 +404,40 @@ namespace ONERI.Controllers
                     Doseme = g.Sum(x => x.DosemeAdet)
                 })
                 .OrderBy(x => x.Tarih)
-                .ToList();
+                .ToDictionary(x => x.Tarih, x => x);
 
-            viewModel.UretimDagilimi.Labels = son7GunUretimDagilimi.Select(x => x.Tarih.ToString("dd.MM")).ToList();
-            viewModel.UretimDagilimi.PanelData = son7GunUretimDagilimi.Select(x => x.Panel).ToList();
-            viewModel.UretimDagilimi.DosemeData = son7GunUretimDagilimi.Select(x => x.Doseme).ToList();
+            viewModel.UretimDagilimi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+            viewModel.UretimDagilimi.PanelData = tumTarihler.Select(t =>
+                uretimDagilimi.TryGetValue(t, out var v) ? v.Panel : 0
+            ).ToList();
+            viewModel.UretimDagilimi.DosemeData = tumTarihler.Select(t =>
+                uretimDagilimi.TryGetValue(t, out var v) ? v.Doseme : 0
+            ).ToList();
 
-
-            var tumTarihler = uretimListesi
-                .Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today)
-                .Select(x => x.Tarih.Date)
-                .Union(hataListesi.Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today).Select(x => x.Tarih.Date))
-                .Distinct()
-                .OrderBy(t => t)
-                .ToList();
-
-            // Kalite Trendi (Çizgi Grafik) - Son 7 gün
-            var son7GunHata = hataListesi
-                .Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today)
+            // Kalite Trendi (Çizgi Grafik)
+            var hataDagilimi = hataListesi
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
                 .GroupBy(x => x.Tarih.Date)
                 .Select(g => new { Tarih = g.Key, ToplamHata = g.Sum(x => x.HataliAdet) })
                 .OrderBy(x => x.Tarih)
-                .ToList();
+                .ToDictionary(x => x.Tarih, x => x.ToplamHata);
 
             viewModel.KaliteTrendi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-            viewModel.KaliteTrendi.Data = tumTarihler.Select(t => 
-                son7GunHata.FirstOrDefault(h => h.Tarih == t)?.ToplamHata ?? 0
+            viewModel.KaliteTrendi.Data = tumTarihler.Select(t =>
+                hataDagilimi.TryGetValue(t, out var toplam) ? toplam : 0
             ).ToList();
 
-            // Üretim Trendi (Çizgi Grafik) - Son 7 gün
-            var son7GunUretim = uretimListesi
-                .Where(x => x.Tarih.Date >= DateTime.Today.AddDays(-6) && x.Tarih.Date <= DateTime.Today)
+            // Üretim Trendi (Çizgi Grafik)
+            var uretimTrend = uretimListesi
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
                 .GroupBy(x => x.Tarih.Date)
                 .Select(g => new { Tarih = g.Key, ToplamUretim = g.Sum(x => x.PanelAdet + x.DosemeAdet) })
                 .OrderBy(x => x.Tarih)
-                .ToList();
+                .ToDictionary(x => x.Tarih, x => x.ToplamUretim);
             
             viewModel.UretimTrendi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
             viewModel.UretimTrendi.Data = tumTarihler.Select(t =>
-                son7GunUretim.FirstOrDefault(u => u.Tarih == t)?.ToplamUretim ?? 0
+                uretimTrend.TryGetValue(t, out var toplam) ? toplam : 0
             ).ToList();
             
 
@@ -552,218 +608,90 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
         private DateTime ParseTurkishDate(string dateString)
-            
+        {
+            if (string.IsNullOrWhiteSpace(dateString))
+            {
+                return DateTime.MinValue;
+            }
 
-            
+            var trimmed = dateString.Trim();
+            var trCulture = new System.Globalization.CultureInfo("tr-TR");
+
+            if (double.TryParse(trimmed, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double oaDate))
+            {
+                return DateTime.FromOADate(oaDate).Date;
+            }
+
+            if (DateTime.TryParse(trimmed, trCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var parsedDate))
+            {
+                return parsedDate.Date;
+            }
+
+            if (DateTime.TryParse(trimmed, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out parsedDate))
+            {
+                return parsedDate.Date;
+            }
+
+            var monthMap = new Dictionary<string, int>
+            {
+                { "ocak", 1 }, { "şubat", 2 }, { "mart", 3 }, { "nisan", 4 },
+                { "mayıs", 5 }, { "haziran", 6 }, { "temmuz", 7 }, { "ağustos", 8 },
+                { "eylül", 9 }, { "ekim", 10 }, { "kasım", 11 }, { "aralık", 12 },
+                { "subat", 2 }, { "mayis", 5 }, { "agustos", 8 }, { "eylul", 9 }, { "kasim", 11 }
+            };
+
+            var dayNames = new[] { "pazartesi", "salı", "çarşamba", "perşembe", "cuma", "cumartesi", "pazar" };
+
+            var cleanString = trimmed.ToLower(trCulture)
+                .Replace(",", " ")
+                .Replace(".", " ")
+                .Replace("/", " ")
+                .Replace("-", " ");
+
+            foreach (var dayName in dayNames)
+            {
+                cleanString = cleanString.Replace(dayName, string.Empty);
+            }
+
+            var parts = cleanString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                if (!int.TryParse(parts[0], out var day))
+                {
+                    return DateTime.MinValue;
+                }
+
+                var monthToken = parts[1];
+                if (!monthMap.TryGetValue(monthToken, out var month))
+                {
+                    return DateTime.MinValue;
+                }
+
+                var year = DateTime.Today.Year;
+                for (int i = 2; i < parts.Length; i++)
+                {
+                    if (int.TryParse(parts[i], out var parsedYear))
                     {
-            
-
-            
-                        if (string.IsNullOrWhiteSpace(dateString))
-            
-
-            
-                        {
-            
-
-            
-                            return DateTime.MinValue;
-            
-
-            
-                        }
-            
-
-            
-            
-            
-
-            
-                        var monthMap = new Dictionary<string, int>
-            
-
-            
-                        {
-            
-
-            
-                            { "ocak", 1 }, { "şubat", 2 }, { "mart", 3 }, { "nisan", 4 },
-            
-
-            
-                            { "mayıs", 5 }, { "haziran", 6 }, { "temmuz", 7 }, { "ağustos", 8 },
-            
-
-            
-                            { "eylül", 9 }, { "ekim", 10 }, { "kasım", 11 }, { "aralık", 12 }
-            
-
-            
-                        };
-            
-
-            
-            
-            
-
-            
-                        var dayNames = new[] { "pazartesi", "salı", "çarşamba", "perşembe", "cuma", "cumartesi", "pazar" };
-            
-
-            
-            
-            
-
-            
-                        var cleanString = dateString.ToLowerInvariant();
-            
-
-            
-                        foreach (var dayName in dayNames)
-            
-
-            
-                        {
-            
-
-            
-                            cleanString = cleanString.Replace(dayName, string.Empty);
-            
-
-            
-                        }
-            
-
-            
-            
-            
-
-            
-                        var parts = cleanString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            
-
-            
-                        if (parts.Length < 3)
-            
-
-            
-                        {
-            
-
-            
-                             // Eğer format OA Date ise, doğrudan çevirmeyi dene
-            
-
-            
-                            if (double.TryParse(dateString, out double oaDate))
-            
-
-            
-                            {
-            
-
-            
-                                return DateTime.FromOADate(oaDate);
-            
-
-            
-                            }
-            
-
-            
-                            return DateTime.MinValue; // Veya bir hata fırlat
-            
-
-            
-                        }
-            
-
-            
-            
-            
-
-            
-                        try
-            
-
-            
-                        {
-            
-
-            
-                            var day = int.Parse(parts[0]);
-            
-
-            
-                            var month = monthMap[parts[1]];
-            
-
-            
-                            var year = int.Parse(parts[2]);
-            
-
-            
-            
-            
-
-            
-                            return new DateTime(year, month, day);
-            
-
-            
-                        }
-            
-
-            
-                        catch (Exception ex)
-            
-
-            
-                        {
-            
-
-            
-                            _logger.LogError($"Tarih çevirme hatası: '{dateString}'. Hata: {ex.Message}");
-            
-
-            
-                            // Tarih çevrilemezse, OA Date formatını dene
-            
-
-            
-                            if (double.TryParse(dateString, out double oaDate))
-            
-
-            
-                            {
-            
-
-            
-                                return DateTime.FromOADate(oaDate);
-            
-
-            
-                            }
-            
-
-            
-                            return DateTime.MinValue; // Veya uygun bir varsayılan değer
-            
-
-            
-                        }
-            
-
-            
+                        year = parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+                        break;
                     }
-            
+                }
 
-            
-            
-            
+                try
+                {
+                    return new DateTime(year, month, day);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Tarih çevirme hatası: '{dateString}'. Hata: {ex.Message}");
+                    return DateTime.MinValue;
+                }
+            }
 
-            
-                    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+            _logger.LogError($"Tarih çevirme hatası: '{dateString}'. Hata: format tanınamadı");
+            return DateTime.MinValue;
+        }
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
             
 
             

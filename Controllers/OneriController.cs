@@ -23,17 +23,31 @@ namespace ONERI.Controllers
             return RedirectToAction(nameof(Yeni));
         }
 
-        // GET: Oneri/Tesekkurler
+        // GET: Oneri/Tesekkurler/{id}
         // Başarılı bir gönderim sonrası gösterilecek sayfa.
-        public IActionResult Tesekkurler()
+        public async Task<IActionResult> Tesekkurler(int id)
         {
-            return View();
+            if (id <= 0)
+            {
+                return RedirectToAction(nameof(Yeni));
+            }
+
+            var oneri = await _context.Oneriler
+                                      .AsNoTracking()
+                                      .FirstOrDefaultAsync(o => o.Id == id);
+            if (oneri == null)
+            {
+                return RedirectToAction(nameof(Yeni));
+            }
+
+            return View(oneri);
         }
 
         // GET: Oneri/Yeni
         public async Task<IActionResult> Yeni()
         {
             var bolumler = await _context.BolumYoneticileri
+                                         .AsNoTracking()
                                          .Select(b => b.BolumAdi)
                                          .Distinct()
                                          .ToListAsync();
@@ -67,19 +81,21 @@ namespace ONERI.Controllers
                 await _context.SaveChangesAsync();
 
                 // İlgili bölüm yöneticisine e-posta gönderme mantığı...
+                var bolum = (oneri.Bolum ?? "").ToLower();
                 var yonetici = await _context.BolumYoneticileri
-                                             .FirstOrDefaultAsync(y => y.BolumAdi.ToLower() == (oneri.Bolum ?? "").ToLower());
+                                             .FirstOrDefaultAsync(y => y.BolumAdi != null && y.BolumAdi.ToLower() == bolum);
 
                 if (yonetici != null)
                 {
                     // E-posta gönderme işlemi burada yapılabilir
                 }
 
-                return View("Tesekkurler", oneri);
+                return RedirectToAction(nameof(Tesekkurler), new { id = oneri.Id });
             }
             
             // ModelState geçerli değilse, formu yeniden gösterirken Bölüm listesini tekrar doldur.
             var bolumler = await _context.BolumYoneticileri
+                                         .AsNoTracking()
                                          .Select(b => b.BolumAdi)
                                          .Distinct()
                                          .ToListAsync();
@@ -107,6 +123,7 @@ namespace ONERI.Controllers
 
             // İlgili öneriyi ve varsa değerlendirmelerini birlikte çekiyoruz.
             var oneri = await _context.Oneriler
+                                      .AsNoTracking()
                                       .Include(o => o.Degerlendirmeler) // Degerlendirmeler'i dahil et
                                       .FirstOrDefaultAsync(o => o.Id == id);
 
@@ -139,6 +156,13 @@ namespace ONERI.Controllers
                 // kullanıcıyı bilgilendir veya anasayfaya yönlendir.
                 // TempData ile bir mesaj göstermek iyi bir yaklaşım olabilir.
                 TempData["Hata"] = "Değerlendirmeye uygun bir öneri bulunamadı.";
+                return RedirectToAction("Index", "Admin");
+            }
+
+            var mevcutDegerlendirme = await _context.Degerlendirmeler.AnyAsync(d => d.OneriId == oneri.Id);
+            if (mevcutDegerlendirme)
+            {
+                TempData["Hata"] = "Bu öneri daha önce değerlendirilmiş.";
                 return RedirectToAction("Index", "Admin");
             }
 
@@ -182,6 +206,13 @@ namespace ONERI.Controllers
             if (oneri == null)
             {
                 return NotFound(); // Öneri bulunamadıysa hata döndür.
+            }
+
+            var mevcutDegerlendirme = await _context.Degerlendirmeler.AnyAsync(d => d.OneriId == oneri.Id);
+            if (mevcutDegerlendirme)
+            {
+                TempData["Hata"] = "Bu öneri daha önce değerlendirilmiş.";
+                return RedirectToAction("Index", "Admin");
             }
 
             // BÜYÜK KARAR (İf-Else)

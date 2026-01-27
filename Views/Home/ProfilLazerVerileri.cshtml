@@ -3,6 +3,10 @@
     ViewData["Title"] = "Profil Lazer Verileri";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/boyahane.css" />
+}
+
 @if (ViewBag.ErrorMessage != null)
 {
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
@@ -17,7 +21,7 @@
             <form asp-action="ProfilLazerVerileri" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
                 <div class="form-group">
                     <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
-                    <input type="date" id="raporTarihi" name="raporTarihi" value="@Model.RaporTarihi.ToString("yyyy-MM-dd")" class="form-control" />
+                    <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
                 </div>
                 <button type="submit" class="btn btn-success">Filtrele</button>
             </form>
@@ -31,7 +35,7 @@
 
     <!-- KPI Kartları -->
     <div class="row g-4 mb-5">
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Üretim</h5>
@@ -39,7 +43,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-clock me-2"></i>Toplam Süre</h5>
@@ -47,7 +51,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-12">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Süre</h5>
@@ -94,11 +98,21 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Set the date input to today's date
+            const dateInput = document.getElementById('raporTarihi');
+            if (dateInput) {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${year}-${month}-${day}`;
+            }
+
             // Pasta Grafik
             const pastaCtx = document.getElementById('pastaGrafigi').getContext('2d');
             if (@Model.ProfilIsimleri.Count > 0) {
                 new Chart(pastaCtx, {
-                    type: 'pie',
+                    type: 'doughnut',
                     data: {
                         labels: @Html.Raw(Json.Serialize(Model.ProfilIsimleri)),
                         datasets: [{

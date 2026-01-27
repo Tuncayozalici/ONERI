@@ -1,4 +1,4 @@
-@model ONERI.Models.BoyaDashboardViewModel
+@model ONERI.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Boyahane Verileri";
 }
@@ -10,10 +10,10 @@
 <div class="container">
     <div class="row mb-4 align-items-center">
         <div class="col-md-6">
-            <h2 class="display-6">Boyahane Üretim Raporu</h2>
+            <h2 class="display-6">Yeni Boyahane Raporu</h2>
         </div>
         <div class="col-md-6">
-            <form asp-action="BoyahaneDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+            <form asp-action="NewDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
                 <div class="form-group">
                     <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
                     <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
@@ -23,7 +23,6 @@
         </div>
     </div>
 
-    <!-- KPI Kartları -->
     <div class="row g-4 mb-5">
         <div class="col-lg col-md-6">
             <div class="kpi-card h-100">
@@ -61,13 +60,12 @@
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-trash me-2"></i>Fire/Hata Oranı</h5>
-                    <p class="card-text">@Model.FireOrani.ToString("F2") %</p>
+                    <p class="card-text">@Model.FireHataOrani.ToString("F2") %</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Grafikler -->
     <div class="row g-5">
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
@@ -167,14 +165,14 @@
 
             // Hata Nedenleri (Doughnut)
             const hataCtx = document.getElementById('hataGrafigi').getContext('2d');
-            if (@Model.HataNedenleriListesi.Count > 0) {
+            if (@Model.HataNedenleri.Data.Count > 0) {
                 new Chart(hataCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: @Html.Raw(Json.Serialize(Model.HataNedenleriListesi)),
+                        labels: @Html.Raw(Json.Serialize(Model.HataNedenleri.Labels)),
                         datasets: [{
                             label: 'Hatalı Adet',
-                            data: @Html.Raw(Json.Serialize(Model.HataSayilariListesi)),
+                            data: @Html.Raw(Json.Serialize(Model.HataNedenleri.Data)),
                             backgroundColor: [
                                 'rgba(255, 99, 132, 0.8)',
                                 'rgba(54, 162, 235, 0.8)',

@@ -65,42 +65,64 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
+        @{
+            var path = Context.Request.Path.Value?.ToLowerInvariant() ?? "";
+            var gunlukActive = path.StartsWith("/home/gunlukveriler")
+                || path.StartsWith("/home/profillazerverileri")
+                || path.StartsWith("/home/boyahanedashboard");
+            var fikirActive = path.StartsWith("/fikiratolyesi")
+                || path.StartsWith("/oneri/yeni")
+                || path.StartsWith("/oneri/sorgula");
+            var isAdmin = User.Identity?.IsAuthenticated == true && User.IsInRole("Yönetici");
+        }
         <p class="text-muted small">MODÜLLER</p>
         <div class="list-group list-group-flush">
-            <a asp-controller="Home" asp-action="ProfilLazerVerileri" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-speedometer2 fs-5 me-2"></i> Profil Lazer
-                </span>
-            </a>
-            <a asp-controller="Home" asp-action="BoyahaneDashboard" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-paint-bucket fs-5 me-2"></i> Boyahane Dashboard
-                </span>
-            </a>
-            <a asp-controller="Dashboard" asp-action="Index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-graph-up fs-5 me-2"></i> Yeni Dashboard
-                </span>
-            </a>
-            @if(User.Identity != null && User.Identity.IsAuthenticated)
+            <div class="list-group-item p-0 border-0">
+                <div class="d-flex align-items-center">
+                    <a asp-controller="Home" asp-action="GunlukVeriler" class="flex-grow-1 d-flex align-items-center gap-2 px-3 py-2 text-dark text-decoration-none">
+                        <i class="bi bi-calendar2-week fs-5"></i> Günlük Veriler
+                    </a>
+                    <button class="btn btn-link text-dark px-3" type="button" data-bs-toggle="collapse" data-bs-target="#gunlukMenu" aria-expanded="@gunlukActive.ToString().ToLowerInvariant()" aria-controls="gunlukMenu">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div id="gunlukMenu" class="collapse @(gunlukActive ? "show" : "")">
+                    <div class="list-group list-group-flush">
+                        <a asp-controller="Home" asp-action="ProfilLazerVerileri" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-speedometer2 me-2"></i> Profil Lazer Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="BoyahaneDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-paint-bucket me-2"></i> Boyahane Bölümü
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="list-group-item p-0 border-0">
+                <div class="d-flex align-items-center">
+                    <a asp-controller="FikirAtolyesi" asp-action="Index" class="flex-grow-1 d-flex align-items-center gap-2 px-3 py-2 text-dark text-decoration-none">
+                        <i class="bi bi-lightbulb fs-5"></i> Fikir Atölyesi
+                    </a>
+                    <button class="btn btn-link text-dark px-3" type="button" data-bs-toggle="collapse" data-bs-target="#fikirMenu" aria-expanded="@fikirActive.ToString().ToLowerInvariant()" aria-controls="fikirMenu">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div id="fikirMenu" class="collapse @(fikirActive ? "show" : "")">
+                    <div class="list-group list-group-flush">
+                        <a asp-controller="Oneri" asp-action="Yeni" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-plus-circle me-2"></i> Yeni Öneri
+                        </a>
+                        <a asp-controller="Oneri" asp-action="Sorgula" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-search me-2"></i> Öneri Sorgula
+                        </a>
+                    </div>
+                </div>
+            </div>
+            @if (isAdmin)
             {
-                <a asp-controller="Admin" asp-action="Index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="bi bi-shield-lock fs-5 me-2"></i> Yönetim Paneli
-                    </span>
+                <a asp-controller="Admin" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-lock fs-5"></i> Yönetim Paneli
                 </a>
             }
-            <a asp-controller="FikirAtolyesi" asp-action="Index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-lightbulb fs-5 me-2"></i> Fikir Atölyesi
-                </span>
-            </a>
-            <a asp-controller="Oneri" asp-action="Yeni" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                <i class="bi bi-plus-circle"></i> Yeni Öneri
-            </a>
-            <a asp-controller="Oneri" asp-action="Sorgula" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                <i class="bi bi-search"></i> Öneri Sorgula
-            </a>
         </div>
       </div>
     </div>

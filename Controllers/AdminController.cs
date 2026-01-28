@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
 using Microsoft.AspNetCore.Authorization;
+using OfficeOpenXml;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ONERI.Controllers
 {
@@ -12,10 +15,12 @@ namespace ONERI.Controllers
     public class AdminController : Controller
     {
         private readonly FabrikaContext _context;
+        private readonly IWebHostEnvironment _hostingEnvironment;
 
-        public AdminController(FabrikaContext context)
+        public AdminController(FabrikaContext context, IWebHostEnvironment hostingEnvironment)
         {
             _context = context;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         // Görev 1: Listeleme (Index Metodu)
@@ -195,6 +200,116 @@ namespace ONERI.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Veri Yükle Sayfası
+        [HttpGet]
+        public IActionResult VeriYukle()
+        {
+            return View(new VeriYukleViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult VeriYukle(VeriYukleViewModel model)
+        {
+            var results = new List<VeriYukleResult>();
+
+            string rootPath = _hostingEnvironment.WebRootPath;
+            string excelPath = Path.Combine(rootPath, "EXCELS");
+            Directory.CreateDirectory(excelPath);
+
+            var fileMap = new Dictionary<string, (string TargetPath, string SheetName)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MARWOOD Profil Lazer Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Profil Lazer Veri Ekranı.xlsm"), "LAZER KAYIT"),
+                ["YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"), "VERİ KAYIT"),
+                ["BOYA HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "BOYA HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT"),
+                ["PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
+                ["METAL HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "METAL HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT")
+            };
+
+            foreach (var file in model.Dosyalar ?? new List<IFormFile>())
+            {
+                if (file == null || file.Length == 0)
+                {
+                    continue;
+                }
+
+                var fileName = Path.GetFileName(file.FileName);
+                if (!fileMap.TryGetValue(fileName, out var info))
+                {
+                    results.Add(new VeriYukleResult
+                    {
+                        DosyaAdi = fileName,
+                        SayfaAdi = "-",
+                        SatirSayisi = null,
+                        Mesaj = "Bu dosya adı tanımlı değil."
+                    });
+                    continue;
+                }
+
+                HandleUpload(file, info.TargetPath, info.SheetName, results);
+            }
+
+            model.Results = results;
+            return View(model);
+        }
+
+        private void HandleUpload(IFormFile? file, string targetPath, string sheetName, List<VeriYukleResult> results)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                using (var stream = new FileStream(targetPath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+
+                int? rowCount = null;
+                string? message = null;
+
+                try
+                {
+                    using (var package = new ExcelPackage(new FileInfo(targetPath)))
+                    {
+                        var worksheet = package.Workbook.Worksheets[sheetName];
+                        if (worksheet == null)
+                        {
+                            message = $"'{sheetName}' sayfası bulunamadı.";
+                        }
+                        else
+                        {
+                            rowCount = worksheet.Dimension?.Rows > 1 ? worksheet.Dimension.Rows - 1 : 0;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    message = $"Dosya okunamadı: {ex.Message}";
+                }
+
+                results.Add(new VeriYukleResult
+                {
+                    DosyaAdi = Path.GetFileName(targetPath),
+                    SayfaAdi = sheetName,
+                    SatirSayisi = rowCount,
+                    Mesaj = message ?? "Yüklendi"
+                });
+            }
+            catch (Exception ex)
+            {
+                results.Add(new VeriYukleResult
+                {
+                    DosyaAdi = Path.GetFileName(targetPath),
+                    SayfaAdi = sheetName,
+                    SatirSayisi = null,
+                    Mesaj = $"Yükleme hatası: {ex.Message}"
+                });
+            }
         }
     }
 }

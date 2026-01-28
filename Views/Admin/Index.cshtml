@@ -21,9 +21,14 @@
             <h1 class="fw-bold display-6 mb-1">Yönetim Paneli</h1>
             <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
         </div>
-        <a asp-action="BolumYoneticileri" class="btn btn-dark">
-            <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
-        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="VeriYukle" class="btn btn-outline-dark">
+                <i class="bi bi-upload me-1"></i> Veri Yükle
+            </a>
+            <a asp-action="BolumYoneticileri" class="btn btn-dark">
+                <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
+            </a>
+        </div>
     </div>
 
     <!-- Stat Cards -->

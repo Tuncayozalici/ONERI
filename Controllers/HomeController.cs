@@ -48,7 +48,11 @@ namespace ONERI.Controllers
                 Son7GunTarihleri = new List<string>(),
                 GunlukUretimSayilari = new List<int>(),
                 UrunIsimleri = new List<string>(),
-                UrunHarcananSure = new List<int>()
+                UrunHarcananSure = new List<int>(),
+                HataNedenleri = new List<string>(),
+                HataNedenAdetleri = new List<int>(),
+                HataUrunSonuclari = new List<string>(),
+                HataUrunSonucAdetleri = new List<int>()
             };
 
             string rootPath = _hostingEnvironment.WebRootPath;
@@ -85,14 +89,54 @@ namespace ONERI.Controllers
                             Tarih = ParseTurkishDate(dateString),
                             MusteriAdi = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
                             ProfilTipi = worksheet.Cells[row, 4].Value?.ToString()?.ToUpper().Trim(),
-                            UretimAdedi = Convert.ToInt32(worksheet.Cells[row, 5].Value),
-                            CalismaSuresi = Convert.ToInt32(worksheet.Cells[row, 6].Value)
+                            UretimAdedi = ParseUretimAdedi(worksheet.Cells[row, 5].Value),
+                            CalismaSuresi = ParseCalismaSuresiDakika(worksheet.Cells[row, 6].Value)
                         });
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError($"Satır {row} okunurken hata: {ex.Message}");
                         // Hatalı satırları atla veya bir hata mesajı göster
+                    }
+                }
+            }
+
+            // Profil Lazer Hatalı Parça Verileri
+            var hataExcelData = new List<ProfilHataSatir>();
+            string hataFilePath = Path.Combine(rootPath, "EXCELS", "METAL HATALI  PARÇA GİRİŞİ.xlsm");
+            if (System.IO.File.Exists(hataFilePath))
+            {
+                using (var package = new ExcelPackage(new FileInfo(hataFilePath)))
+                {
+                    var worksheet = package.Workbook.Worksheets["VERİ KAYIT"];
+                    if (worksheet != null)
+                    {
+                        int rowCount = worksheet.Dimension.Rows;
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            try
+                            {
+                                var dateValue = worksheet.Cells[row, 1].Value;
+                                var dateString = dateValue?.ToString() ?? string.Empty;
+                                var bolumAdi = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                                var hataUrunSonucu = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+                                var hataNedeni = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
+                                var adetValue = worksheet.Cells[row, 5].Value;
+
+                                hataExcelData.Add(new ProfilHataSatir
+                                {
+                                    Tarih = ParseTurkishDate(dateString),
+                                    BolumAdi = bolumAdi,
+                                    HataUrunSonucu = hataUrunSonucu,
+                                    HataNedeni = hataNedeni,
+                                    Adet = ParseUretimAdedi(adetValue)
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError($"Hata Excel, Satır {row} okunurken hata: {ex.Message}");
+                            }
+                        }
                     }
                 }
             }
@@ -115,6 +159,48 @@ namespace ONERI.Controllers
             viewModel.OrtalamaIslemSuresi = viewModel.GunlukToplamUretim > 0 
                 ? (double)viewModel.GunlukToplamSure / viewModel.GunlukToplamUretim 
                 : 0;
+
+            // Hatalı ürün KPI + Hata nedenleri grafik verisi
+            var profilHataVerileri = hataExcelData
+                .Where(x => x.Tarih != DateTime.MinValue)
+                .Where(x =>
+                {
+                    var bolum = (x.BolumAdi ?? "").ToLowerInvariant();
+                    return bolum.Contains("metal") || bolum.Contains("profil") || bolum.Contains("lazer");
+                })
+                .AsQueryable();
+
+            if (ay.HasValue && yil.HasValue)
+            {
+                profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            }
+            else
+            {
+                profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            }
+
+            viewModel.HataliUrunAdedi = profilHataVerileri.Sum(x => x.Adet);
+            viewModel.HurdaAdedi = profilHataVerileri
+                .Where(x => (x.HataUrunSonucu ?? "").ToLowerInvariant().Contains("hurda"))
+                .Sum(x => x.Adet);
+
+            var hataNedenGruplari = profilHataVerileri
+                .GroupBy(x => NormalizeLabel(x.HataNedeni))
+                .Select(g => new { Neden = g.Key, Toplam = g.Sum(x => x.Adet) })
+                .OrderByDescending(x => x.Toplam)
+                .ToList();
+
+            viewModel.HataNedenleri = hataNedenGruplari.Select(x => x.Neden).ToList();
+            viewModel.HataNedenAdetleri = hataNedenGruplari.Select(x => x.Toplam).ToList();
+
+            var hataUrunGruplari = profilHataVerileri
+                .GroupBy(x => NormalizeLabel(x.HataUrunSonucu))
+                .Select(g => new { Sonuc = g.Key, Toplam = g.Sum(x => x.Adet) })
+                .OrderByDescending(x => x.Toplam)
+                .ToList();
+
+            viewModel.HataUrunSonuclari = hataUrunGruplari.Select(x => x.Sonuc).ToList();
+            viewModel.HataUrunSonucAdetleri = hataUrunGruplari.Select(x => x.Toplam).ToList();
 
             // Adım 2.3: Gruplama (Pasta Grafik için)
             var pastaGrafikData = gununVerileri
@@ -170,6 +256,19 @@ namespace ONERI.Controllers
 
             viewModel.Son7GunTarihleri = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
             viewModel.GunlukUretimSayilari = tumTarihler.Select(t => trendVerileri.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
+
+            var hataTrendVerileri = hataExcelData
+                .Where(x => x.Tarih != DateTime.MinValue)
+                .Where(x =>
+                {
+                    var bolum = (x.BolumAdi ?? "").ToLowerInvariant();
+                    return bolum.Contains("metal") || bolum.Contains("profil") || bolum.Contains("lazer");
+                })
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
+
+            viewModel.GunlukHataliUrunSayilari = tumTarihler.Select(t => hataTrendVerileri.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
             
                         return View(viewModel);
                     }
@@ -571,17 +670,17 @@ namespace ONERI.Controllers
                 .GroupBy(x => x.Tarih.Date)
                 .ToDictionary(g => g.Key, g => g.Average(x => x.KayipSure));
 
-            viewModel.KayipSureLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
             viewModel.KayipSureData = tumTarihler.Select(t => kayipGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
             var makineGruplari = filtreliVeri
                 .GroupBy(x => x.Makine ?? "Bilinmeyen")
-                .Select(g => new { Makine = g.Key, Metraj = g.Sum(x => x.UretimMetraj) })
+                .Select(g => new { Makine = g.Key, Metraj = g.Sum(x => x.UretimMetraj), Parca = g.Sum(x => x.ParcaSayisi) })
                 .OrderByDescending(x => x.Metraj)
                 .ToList();
 
             viewModel.MakineLabels = makineGruplari.Select(x => x.Makine).ToList();
             viewModel.MakineUretimData = makineGruplari.Select(x => x.Metraj).ToList();
+            viewModel.MakineParcaData = makineGruplari.Select(x => x.Parca).ToList();
 
             var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in filtreliVeri)
@@ -612,7 +711,17 @@ namespace ONERI.Controllers
 
             if (double.TryParse(trimmed, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double oaDate))
             {
-                return DateTime.FromOADate(oaDate).Date;
+                if (oaDate >= -657435 && oaDate <= 2958465)
+                {
+                    try
+                    {
+                        return DateTime.FromOADate(oaDate).Date;
+                    }
+                    catch
+                    {
+                        return DateTime.MinValue;
+                    }
+                }
             }
 
             if (DateTime.TryParse(trimmed, trCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var parsedDate))
@@ -623,6 +732,14 @@ namespace ONERI.Controllers
             if (DateTime.TryParse(trimmed, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out parsedDate))
             {
                 return parsedDate.Date;
+            }
+
+            if (trimmed.Length == 8 && long.TryParse(trimmed, out _))
+            {
+                if (DateTime.TryParseExact(trimmed, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out parsedDate))
+                {
+                    return parsedDate.Date;
+                }
             }
 
             var monthMap = new Dictionary<string, int>
@@ -745,6 +862,131 @@ namespace ONERI.Controllers
             return 0;
         }
 
+        private int ParseUretimAdedi(object? value)
+        {
+            if (value == null)
+            {
+                return 0;
+            }
+
+            if (value is int i)
+            {
+                return i;
+            }
+
+            if (value is double d)
+            {
+                return (int)Math.Round(d, MidpointRounding.AwayFromZero);
+            }
+
+            if (value is DateTime)
+            {
+                return 0;
+            }
+
+            var text = value.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            var normalized = text.ToLowerInvariant();
+            normalized = normalized.Replace(",", "."); // 1,5 -> 1.5
+
+            var match = System.Text.RegularExpressions.Regex.Match(normalized, @"-?\d+(\.\d+)?");
+            if (match.Success && double.TryParse(match.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var number))
+            {
+                return (int)Math.Round(number, MidpointRounding.AwayFromZero);
+            }
+
+            if (normalized.Contains("yarım"))
+            {
+                return 1; // yarım boy/yarım parça gibi ifadeler için yuvarlama
+            }
+
+            return 0;
+        }
+
+        private int ParseCalismaSuresiDakika(object? value)
+        {
+            if (value == null)
+            {
+                return 0;
+            }
+
+            if (value is int i)
+            {
+                return i;
+            }
+
+            if (value is double d)
+            {
+                if (d > 0 && d < 1)
+                {
+                    return (int)Math.Round(d * 24 * 60, MidpointRounding.AwayFromZero);
+                }
+                return (int)Math.Round(d, MidpointRounding.AwayFromZero);
+            }
+
+            if (value is DateTime dt)
+            {
+                return (int)Math.Round(dt.TimeOfDay.TotalMinutes, MidpointRounding.AwayFromZero);
+            }
+
+            var text = value.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            var normalized = text.ToLowerInvariant();
+            normalized = normalized.Replace(",", ".").Replace(" ", "");
+            normalized = normalized.Replace("saaat", "saat").Replace("ssat", "saat");
+
+            double totalMinutes = 0;
+
+            if (normalized.Contains("saat"))
+            {
+                var hourMatch = System.Text.RegularExpressions.Regex.Match(normalized, @"(\d+(\.\d+)?)saat");
+                if (hourMatch.Success && double.TryParse(hourMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var hours))
+                {
+                    totalMinutes += hours * 60;
+                }
+            }
+
+            if (normalized.Contains("dk"))
+            {
+                var minMatch = System.Text.RegularExpressions.Regex.Match(normalized, @"(\d+(\.\d+)?)dk");
+                if (minMatch.Success && double.TryParse(minMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var mins))
+                {
+                    totalMinutes += mins;
+                }
+            }
+
+            if (totalMinutes > 0)
+            {
+                return (int)Math.Round(totalMinutes, MidpointRounding.AwayFromZero);
+            }
+
+            if (normalized.Contains("yarım") && normalized.Contains("saat"))
+            {
+                return 30;
+            }
+
+            if (normalized.Contains("boy"))
+            {
+                return 0;
+            }
+
+            var fallbackMatch = System.Text.RegularExpressions.Regex.Match(normalized, @"-?\d+(\.\d+)?");
+            if (fallbackMatch.Success && double.TryParse(fallbackMatch.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var fallback))
+            {
+                return (int)Math.Round(fallback, MidpointRounding.AwayFromZero);
+            }
+
+            return 0;
+        }
+
         private static void AddDuraklama(Dictionary<string, double> toplamlar, string? neden, double dakika)
         {
             if (string.IsNullOrWhiteSpace(neden) || dakika <= 0)
@@ -760,6 +1002,19 @@ namespace ONERI.Controllers
             {
                 toplamlar[neden] = dakika;
             }
+        }
+
+        private static string NormalizeLabel(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Bilinmeyen";
+            }
+
+            var trimmed = value.Trim();
+            var lower = trimmed.ToLower(new System.Globalization.CultureInfo("tr-TR"));
+            var textInfo = new System.Globalization.CultureInfo("tr-TR").TextInfo;
+            return textInfo.ToTitleCase(lower);
         }
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
             

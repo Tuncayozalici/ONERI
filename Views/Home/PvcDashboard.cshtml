@@ -110,30 +110,32 @@
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
+                    Makine Bazlı Üretilen Parça
+                </div>
+                <div class="card-body">
+                    <canvas id="makineParcaGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Fiili Çalışma / Kayıp Süre
+                </div>
+                <div class="card-body">
+                    <canvas id="fiiliKayipGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
                     Duraklama Nedenleri
                 </div>
                 <div class="card-body">
-                    <canvas id="duraklamaNedenGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.FiiliCalismaTrendTitle ?? "Fiili Çalışma Oranı (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="fiiliCalismaGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.KayipSureTrendTitle ?? "Kayıp Süre (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="kayipSureGrafigi"></canvas>
+                    <div class="chart-pie-wrap">
+                        <canvas id="duraklamaNedenGrafigi" class="chart-pie"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,6 +244,44 @@
                 options: { responsive: true }
             });
 
+            const makineParcaCtx = document.getElementById('makineParcaGrafigi').getContext('2d');
+            new Chart(makineParcaCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.MakineLabels)),
+                    datasets: [{
+                        label: 'Parça',
+                        data: @Html.Raw(Json.Serialize(Model.MakineParcaData)),
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            const fiiliKayipCtx = document.getElementById('fiiliKayipGrafigi').getContext('2d');
+            new Chart(fiiliKayipCtx, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.FiiliCalismaLabels)),
+                    datasets: [{
+                        label: 'Fiili Çalışma (%)',
+                        data: @Html.Raw(Json.Serialize(Model.FiiliCalismaData)),
+                        borderColor: 'rgba(153, 102, 255, 0.9)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.2,
+                        fill: true
+                    }, {
+                        label: 'Kayıp Süre (%)',
+                        data: @Html.Raw(Json.Serialize(Model.KayipSureData)),
+                        borderColor: 'rgba(255, 159, 64, 0.9)',
+                        backgroundColor: 'rgba(255, 159, 64, 0.15)',
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: { responsive: true }
+            });
+
             const duraklamaCtx = document.getElementById('duraklamaNedenGrafigi').getContext('2d');
             if (@Model.DuraklamaNedenLabels.Count > 0) {
                 new Chart(duraklamaCtx, {
@@ -261,43 +301,9 @@
                             ]
                         }]
                     },
-                    options: { responsive: true }
+                    options: { responsive: true, maintainAspectRatio: false }
                 });
             }
-
-            const fiiliCtx = document.getElementById('fiiliCalismaGrafigi').getContext('2d');
-            new Chart(fiiliCtx, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.FiiliCalismaLabels)),
-                    datasets: [{
-                        label: 'Fiili Çalışma (%)',
-                        data: @Html.Raw(Json.Serialize(Model.FiiliCalismaData)),
-                        borderColor: 'rgba(153, 102, 255, 0.9)',
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                        tension: 0.2,
-                        fill: true
-                    }]
-                },
-                options: { responsive: true }
-            });
-
-            const kayipCtx = document.getElementById('kayipSureGrafigi').getContext('2d');
-            new Chart(kayipCtx, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.KayipSureLabels)),
-                    datasets: [{
-                        label: 'Kayıp Süre (%)',
-                        data: @Html.Raw(Json.Serialize(Model.KayipSureData)),
-                        borderColor: 'rgba(255, 159, 64, 0.9)',
-                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                        tension: 0.2,
-                        fill: true
-                    }]
-                },
-                options: { responsive: true }
-            });
         });
     </script>
 }

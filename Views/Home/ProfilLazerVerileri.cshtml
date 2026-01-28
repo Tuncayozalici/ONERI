@@ -57,8 +57,8 @@
     </div>
 
     <!-- KPI Kartları -->
-    <div class="row g-4 mb-5">
-        <div class="col-lg-4 col-md-6">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-5 g-4 mb-5">
+        <div class="col">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Üretim</h5>
@@ -66,7 +66,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-6">
+        <div class="col">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-clock me-2"></i>Toplam Süre</h5>
@@ -74,7 +74,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-12">
+        <div class="col">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Süre</h5>
@@ -82,22 +82,40 @@
                 </div>
             </div>
         </div>
+        <div class="col">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>Hatalı Ürün</h5>
+                    <p class="card-text">@Model.HataliUrunAdedi.ToString("N0") adet</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-trash3 me-2"></i>Hurda</h5>
+                    <p class="card-text">@Model.HurdaAdedi.ToString("N0") adet</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Grafikler -->
-    <div class="row g-5">
+    <div class="row g-4">
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
                     Profil Tipine Göre Bugünün Üretim Dağılımı
                 </div>
                 <div class="card-body">
-                    <canvas id="pastaGrafigi"></canvas>
+                    <div class="chart-pie-wrap">
+                        <canvas id="pastaGrafigi" class="chart-pie"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-sm h-100">
                 <div class="card-header">
                     @(ViewBag.TrendTitle ?? "Son 7 Günlük Üretim Trendi")
                 </div>
@@ -105,7 +123,19 @@
                     <canvas id="cizgiGrafigi"></canvas>
                 </div>
             </div>
-            <div class="card shadow-sm">
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Hatalı Ürün Trendi
+                </div>
+                <div class="card-body">
+                    <canvas id="hataliTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
                 <div class="card-header">
                     Profil Tipine Göre Süre Dağılımı
                 </div>
@@ -114,8 +144,33 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Hata Nedenleri
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie-wrap">
+                        <canvas id="hataNedenGrafigi" class="chart-pie"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Hatalı Ürün Ne Olacak?
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie-wrap">
+                        <canvas id="hataUrunSonucGrafigi" class="chart-pie"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -213,6 +268,7 @@
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: {
                                 position: 'top',
@@ -243,6 +299,29 @@
                             y: {
                                 beginAtZero: true
                             }
+                        }
+                    }
+                });
+            }
+
+            const hataliTrendCtx = document.getElementById('hataliTrendGrafigi').getContext('2d');
+            if (@Model.Son7GunTarihleri.Count > 0) {
+                new Chart(hataliTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.Son7GunTarihleri)),
+                        datasets: [{
+                            label: 'Hatalı Ürün Adedi',
+                            data: @Html.Raw(Json.Serialize(Model.GunlukHataliUrunSayilari)),
+                            fill: false,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
                         }
                     }
                 });
@@ -284,6 +363,72 @@
                                         return value + '%'
                                     }
                                 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const hataNedenCtx = document.getElementById('hataNedenGrafigi').getContext('2d');
+            if (@Model.HataNedenleri.Count > 0) {
+                new Chart(hataNedenCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.HataNedenleri)),
+                        datasets: [{
+                            label: 'Hatalı Adet',
+                            data: @Html.Raw(Json.Serialize(Model.HataNedenAdetleri)),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.9)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            }
+
+            const hataUrunSonucCtx = document.getElementById('hataUrunSonucGrafigi').getContext('2d');
+            if (@Model.HataUrunSonuclari.Count > 0) {
+                new Chart(hataUrunSonucCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.HataUrunSonuclari)),
+                        datasets: [{
+                            label: 'Hatalı Ürün Adet',
+                            data: @Html.Raw(Json.Serialize(Model.HataUrunSonucAdetleri)),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.9)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
                             }
                         }
                     }

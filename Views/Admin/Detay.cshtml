@@ -31,29 +31,43 @@
     }
 }
 
+<div class="detail-page">
 <div class="container mt-4">
-    <h1 class="display-6 fw-bold">Öneri Detayı</h1>
-    <hr />
+    <div class="detail-hero mb-4">
+        <div>
+            <div class="hero-kicker"><i class="bi bi-file-earmark-text"></i> Öneri Merkezi</div>
+            <h1 class="display-6 fw-bold mb-1">Öneri Detayı</h1>
+            <p class="text-muted mb-0">Öneri ve değerlendirme bilgilerini tek ekranda inceleyin.</p>
+        </div>
+        <span class="badge rounded-pill @GetBadgeClass(Model.Durum) detail-pill">@GetStatusName(Model.Durum)</span>
+    </div>
 
-    <div class="card shadow-sm" style="border-radius: 1rem;">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center p-3">
+    <div class="card detail-card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center p-3">
             <h5 class="mb-0">Konu: @Model.Konu</h5>
-            <span class="badge rounded-pill @GetBadgeClass(Model.Durum)">@GetStatusName(Model.Durum)</span>
         </div>
         <div class="card-body p-4">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Öneren Kişi:</strong> @(string.IsNullOrEmpty(Model.OnerenKisi) ? "Anonim" : Model.OnerenKisi)</p>
-                    <p><strong>Çalıştığı Bölüm:</strong> @(Model.CalistigiBolum ?? "Belirtilmemiş")</p>
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <label>Öneren Kişi</label>
+                    <div>@(string.IsNullOrEmpty(Model.OnerenKisi) ? "Anonim" : Model.OnerenKisi)</div>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Öneri Tarihi:</strong> @Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</p>
-                    <p><strong>İlgili Bölüm:</strong> @Model.Bolum</p>
+                <div class="meta-item">
+                    <label>Çalıştığı Bölüm</label>
+                    <div>@(Model.CalistigiBolum ?? "Belirtilmemiş")</div>
+                </div>
+                <div class="meta-item">
+                    <label>Öneri Tarihi</label>
+                    <div>@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</div>
+                </div>
+                <div class="meta-item">
+                    <label>İlgili Bölüm</label>
+                    <div>@Model.Bolum</div>
                 </div>
             </div>
             <hr>
             <h6 class="mt-4">Açıklama</h6>
-            <p>@Model.Aciklama</p>
+            <div class="desc-box">@Model.Aciklama</div>
         </div>
         <div class="card-footer text-muted p-3">
             <a asp-action="Index" class="btn btn-outline-secondary">
@@ -62,3 +76,74 @@
         </div>
     </div>
 </div>
+</div>
+
+<style>
+    .detail-page {
+        background: radial-gradient(1200px 350px at 15% -10%, #eef3ff 0%, rgba(238, 243, 255, 0) 60%),
+                    radial-gradient(900px 300px at 85% 0%, #fff1dd 0%, rgba(255, 241, 221, 0) 55%);
+        padding-bottom: 2.5rem;
+    }
+
+    .detail-hero {
+        background: #fff;
+        border-radius: 22px;
+        padding: 1.5rem 1.75rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #5b6b8c;
+        margin-bottom: 0.35rem;
+    }
+
+    .detail-pill {
+        padding: 0.45rem 0.9rem;
+        font-weight: 600;
+    }
+
+    .detail-card {
+        border-radius: 1.25rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+    }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .meta-item label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.3rem;
+        display: block;
+    }
+
+    .desc-box {
+        white-space: pre-wrap;
+        background: #f8f9fb;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+    }
+
+    @@media (max-width: 768px) {
+        .meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

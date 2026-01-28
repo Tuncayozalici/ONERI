@@ -57,3 +57,13 @@
     background-color: #218838;
     border-color: #1e7e34;
 }
+
+.chart-pie {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.chart-pie-wrap {
+    height: 420px;
+    max-height: 420px;
+}

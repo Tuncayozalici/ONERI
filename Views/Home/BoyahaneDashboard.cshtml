@@ -108,7 +108,9 @@
                     Hata Nedenleri Analizi
                 </div>
                 <div class="card-body">
-                    <canvas id="hataGrafigi"></canvas>
+                    <div class="chart-pie-wrap">
+                        <canvas id="hataGrafigi" class="chart-pie"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -263,6 +265,7 @@
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: {
                                 position: 'top',

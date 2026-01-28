@@ -17,14 +17,13 @@ namespace ONERI.Models
 
         public List<string> MakineLabels { get; set; } = new List<string>();
         public List<double> MakineUretimData { get; set; } = new List<double>();
+        public List<double> MakineParcaData { get; set; } = new List<double>();
 
         public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
         public List<double> DuraklamaNedenData { get; set; } = new List<double>();
 
         public List<string> FiiliCalismaLabels { get; set; } = new List<string>();
         public List<double> FiiliCalismaData { get; set; } = new List<double>();
-
-        public List<string> KayipSureLabels { get; set; } = new List<string>();
         public List<double> KayipSureData { get; set; } = new List<double>();
     }
 }

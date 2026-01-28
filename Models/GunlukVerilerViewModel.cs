@@ -19,6 +19,8 @@ namespace ONERI.Models
         public int GunlukToplamUretim { get; set; }
         public int GunlukToplamSure { get; set; }
         public double OrtalamaIslemSuresi { get; set; }
+        public int HataliUrunAdedi { get; set; }
+        public int HurdaAdedi { get; set; }
 
         // Pasta Grafik için
         public List<string> ProfilIsimleri { get; set; }
@@ -27,10 +29,17 @@ namespace ONERI.Models
         // Çizgi Grafik için
         public List<string> Son7GunTarihleri { get; set; }
         public List<int> GunlukUretimSayilari { get; set; }
+        public List<int> GunlukHataliUrunSayilari { get; set; } = new List<int>();
 
         // Yeni Pasta Grafik için (Ürün bazlı süre dağılımı)
         public List<string> UrunIsimleri { get; set; }
         public List<int> UrunHarcananSure { get; set; }
+
+        // Hata nedenleri (Profil Lazer)
+        public List<string> HataNedenleri { get; set; } = new List<string>();
+        public List<int> HataNedenAdetleri { get; set; } = new List<int>();
+        public List<string> HataUrunSonuclari { get; set; } = new List<string>();
+        public List<int> HataUrunSonucAdetleri { get; set; } = new List<int>();
 
         // Raporun hangi tarihe ait olduğunu tutmak için
         public DateTime RaporTarihi { get; set; }

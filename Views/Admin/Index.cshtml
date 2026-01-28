@@ -11,12 +11,14 @@
     var toplamOneriSayisi = Model.Count();
 }
 
+<div class="admin-page">
 <div class="container mt-4">
 
     <!-- Step 1: Dashboard Header -->
-    <div class="page-header mb-4 d-flex justify-content-between align-items-center">
+    <div class="admin-hero mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-            <h1 class="fw-bold display-6">Yönetim Paneli</h1>
+            <div class="hero-kicker"><i class="bi bi-shield-lock"></i> Yönetim Merkezi</div>
+            <h1 class="fw-bold display-6 mb-1">Yönetim Paneli</h1>
             <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
         </div>
         <a asp-action="BolumYoneticileri" class="btn btn-dark">
@@ -27,34 +29,46 @@
     <!-- Stat Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card bg-light border-0 h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title text-warning-emphasis">Bekleyen</h5>
-                    <p class="card-text fs-2 fw-bold">@bekleyenSayisi</p>
+            <div class="card stat-card h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="stat-icon warn"><i class="bi bi-hourglass-split"></i></div>
+                    <div>
+                        <div class="stat-label">Bekleyen</div>
+                        <div class="stat-value">@bekleyenSayisi</div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light border-0 h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title text-info-emphasis">Onaylanan</h5>
-                    <p class="card-text fs-2 fw-bold">@onaylananSayisi</p>
+            <div class="card stat-card h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="stat-icon info"><i class="bi bi-patch-check"></i></div>
+                    <div>
+                        <div class="stat-label">Onaylanan</div>
+                        <div class="stat-value">@onaylananSayisi</div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light border-0 h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title text-primary-emphasis">Bugün Gelen</h5>
-                    <p class="card-text fs-2 fw-bold">@bugunGelenSayisi</p>
+            <div class="card stat-card h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="stat-icon primary"><i class="bi bi-calendar-check"></i></div>
+                    <div>
+                        <div class="stat-label">Bugün Gelen</div>
+                        <div class="stat-value">@bugunGelenSayisi</div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light border-0 h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title text-secondary">Toplam</h5>
-                    <p class="card-text fs-2 fw-bold">@toplamOneriSayisi</p>
+            <div class="card stat-card h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="stat-icon neutral"><i class="bi bi-collection"></i></div>
+                    <div>
+                        <div class="stat-label">Toplam</div>
+                        <div class="stat-value">@toplamOneriSayisi</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,7 +76,7 @@
 
 
     <!-- Step 2: Control Bar -->
-    <div class="card shadow-sm mb-4" style="border-radius: 15px; border: none;">
+    <div class="filter-bar mb-4">
         <div class="card-body">
             <form asp-controller="Admin" asp-action="Index" method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-3">
 
@@ -98,7 +112,7 @@
 
 
     <!-- Step 3 & 4: "Smart List" Table -->
-    <div class="card shadow-sm" style="border-radius: 1.25rem; border: none;">
+    <div class="card table-card">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-borderless align-middle">
@@ -209,6 +223,7 @@
         </div>
     </div>
 </div>
+</div>
 
 @functions {
     string GetStatusName(OneriDurum durum)
@@ -247,18 +262,79 @@
 }
 
 <style>
-    .page-header {
-        padding-left: 0;
+    .admin-page {
+        background: radial-gradient(1200px 350px at 15% -10%, #eef3ff 0%, rgba(238, 243, 255, 0) 60%),
+                    radial-gradient(900px 300px at 85% 0%, #fff1dd 0%, rgba(255, 241, 221, 0) 55%);
+        padding-bottom: 2.5rem;
     }
 
-    /* YENİ EKLENECEK KISIM: Tablo Menü Taşma Sorunu Çözümü */
-    .table-responsive {
-        overflow-x: auto; /* Yatayda kaydırmaya izin ver */
-        overflow-y: visible !important; /* Dikeyde menünün dışarı taşmasına izin ver */
+    .admin-hero {
+        background: #fff;
+        border-radius: 22px;
+        padding: 1.5rem 1.75rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
     }
-    
-    /* Eğer tablo çok kısaysa menünün açılacağı kadar yer aç */
+
+    .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #5b6b8c;
+        margin-bottom: 0.35rem;
+    }
+
+    .stat-card {
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        background: #fff;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-size: 1.25rem;
+    }
+
+    .stat-icon.warn { background: rgba(255, 193, 7, 0.15); color: #d39e00; }
+    .stat-icon.info { background: rgba(13, 202, 240, 0.15); color: #0aa2c0; }
+    .stat-icon.primary { background: rgba(13, 110, 253, 0.12); color: #0d6efd; }
+    .stat-icon.neutral { background: rgba(108, 117, 125, 0.12); color: #6c757d; }
+
+    .stat-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #6c757d;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+
+    .filter-bar {
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        background: #fff;
+    }
+
+    .table-card {
+        border-radius: 1.25rem;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+    }
+
+    /* Tablo menü taşma */
     .table-responsive {
-        min-height: 300px; 
+        overflow-x: auto;
+        overflow-y: visible !important;
+        min-height: 300px;
     }
 </style>

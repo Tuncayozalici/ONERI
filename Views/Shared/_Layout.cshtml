@@ -116,7 +116,8 @@
             var gunlukActive = path.StartsWith("/home/gunlukveriler")
                 || path.StartsWith("/home/profillazerverileri")
                 || path.StartsWith("/home/boyahanedashboard")
-                || path.StartsWith("/home/pvcdashboard");
+                || path.StartsWith("/home/pvcdashboard")
+                || path.StartsWith("/home/masterwooddashboard");
             var fikirActive = path.StartsWith("/fikiratolyesi")
                 || path.StartsWith("/oneri/yeni")
                 || path.StartsWith("/oneri/sorgula");
@@ -143,6 +144,9 @@
                         </a>
                         <a asp-controller="Home" asp-action="PvcDashboard" class="list-group-item list-group-item-action ps-5">
                             <i class="bi bi-bounding-box me-2"></i> PVC Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="MasterwoodDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-tree me-2"></i> Masterwood Bölümü
                         </a>
                     </div>
                 </div>

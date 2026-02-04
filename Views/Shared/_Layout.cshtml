@@ -117,7 +117,9 @@
                 || path.StartsWith("/home/profillazerverileri")
                 || path.StartsWith("/home/boyahanedashboard")
                 || path.StartsWith("/home/pvcdashboard")
-                || path.StartsWith("/home/masterwooddashboard");
+                || path.StartsWith("/home/masterwooddashboard")
+                || path.StartsWith("/home/skipperdashboard")
+                || path.StartsWith("/home/tezgahdashboard");
             var fikirActive = path.StartsWith("/fikiratolyesi")
                 || path.StartsWith("/oneri/yeni")
                 || path.StartsWith("/oneri/sorgula");
@@ -147,6 +149,12 @@
                         </a>
                         <a asp-controller="Home" asp-action="MasterwoodDashboard" class="list-group-item list-group-item-action ps-5">
                             <i class="bi bi-tree me-2"></i> Masterwood Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="SkipperDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-cpu me-2"></i> Skipper Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="TezgahDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-gear me-2"></i> Tezgah Bölümü
                         </a>
                     </div>
                 </div>

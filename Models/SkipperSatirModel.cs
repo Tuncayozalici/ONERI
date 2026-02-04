@@ -1,0 +1,21 @@
+using System;
+
+namespace ONERI.Models
+{
+    public class SkipperSatirModel
+    {
+        public DateTime Tarih { get; set; }
+        public double KisiSayisi { get; set; }
+        public double DelikSayisi { get; set; }
+        public string? CalismaKosulu { get; set; }
+        public double Duraklama1 { get; set; }
+        public string? DuraklamaNedeni1 { get; set; }
+        public double Duraklama2 { get; set; }
+        public string? DuraklamaNedeni2 { get; set; }
+        public double Duraklama3 { get; set; }
+        public string? DuraklamaNedeni3 { get; set; }
+        public double UretimOrani { get; set; }
+        public double KayipSureOrani { get; set; }
+        public double FiiliCalismaOrani { get; set; }
+    }
+}

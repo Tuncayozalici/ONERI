@@ -1,5 +1,6 @@
 @model IEnumerable<ONERI.Models.Oneri>
 @using ONERI.Models
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Yönetim Paneli";
@@ -9,6 +10,14 @@
     var onaylananSayisi = Model.Count(o => o.Durum == OneriDurum.Onaylandi);
     var bugunGelenSayisi = Model.Count(o => o.Tarih.Date == DateTime.Today);
     var toplamOneriSayisi = Model.Count();
+
+    var canVeriYukle = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.VeriYukle.Create)).Succeeded;
+    var canBolumYoneticileri = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.BolumYoneticileri.View)).Succeeded;
+    var canDetay = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Detail)).Succeeded;
+    var canApprove = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Approve)).Succeeded;
+    var canReject = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Reject)).Succeeded;
+    var canDelete = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Delete)).Succeeded;
+    var canEvaluate = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Oneri.Evaluate)).Succeeded;
 }
 
 <div class="admin-page">
@@ -22,12 +31,18 @@
             <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
         </div>
         <div class="d-flex gap-2">
-            <a asp-action="VeriYukle" class="btn btn-outline-dark">
-                <i class="bi bi-upload me-1"></i> Veri Yükle
-            </a>
-            <a asp-action="BolumYoneticileri" class="btn btn-dark">
-                <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
-            </a>
+            @if (canVeriYukle)
+            {
+                <a asp-action="VeriYukle" class="btn btn-outline-dark">
+                    <i class="bi bi-upload me-1"></i> Veri Yükle
+                </a>
+            }
+            @if (canBolumYoneticileri)
+            {
+                <a asp-action="BolumYoneticileri" class="btn btn-dark">
+                    <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
+                </a>
+            }
         </div>
     </div>
 
@@ -160,44 +175,62 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-@item.Id">
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Admin" asp-action="Detay" asp-route-id="@item.Id">
-                                                    <i class="bi bi-eye me-2"></i>İncele
-                                                </a>
-                                            </li>
-                                            @if (item.Durum == OneriDurum.Beklemede)
+                                            @if (canDetay)
                                             {
                                                 <li>
-                                                    <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                        <button type="submit" class="dropdown-item">
-                                                            <i class="bi bi-check-lg text-success me-2"></i>Hızlı Onayla
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                        <button type="submit" class="dropdown-item">
-                                                            <i class="bi bi-x-lg text-danger me-2"></i>Hızlı Reddet
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            }
-                                            @if (item.Durum == OneriDurum.Onaylandi)
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" asp-controller="Oneri" asp-action="Degerlendir" asp-route-id="@item.Id">
-                                                        <i class="bi bi-pencil-square me-2"></i>Kurula Gönder
+                                                    <a class="dropdown-item" asp-controller="Admin" asp-action="Detay" asp-route-id="@item.Id">
+                                                        <i class="bi bi-eye me-2"></i>İncele
                                                     </a>
                                                 </li>
                                             }
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form asp-controller="Admin" asp-action="Sil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Silmek istediğine emin misin?');">
-                                                    <button type="submit" class="dropdown-item text-danger">
-                                                        <i class="bi bi-trash me-2"></i>Sil
-                                                    </button>
-                                                </form>
-                                            </li>
+                                            @if (item.Durum == OneriDurum.Beklemede)
+                                            {
+                                                @if (canApprove)
+                                                {
+                                                    <li>
+                                                        <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                            @Html.AntiForgeryToken()
+                                                            <button type="submit" class="dropdown-item">
+                                                                <i class="bi bi-check-lg text-success me-2"></i>Hızlı Onayla
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                                @if (canReject)
+                                                {
+                                                    <li>
+                                                        <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                            @Html.AntiForgeryToken()
+                                                            <button type="submit" class="dropdown-item">
+                                                                <i class="bi bi-x-lg text-danger me-2"></i>Hızlı Reddet
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            }
+                                            @if (item.Durum == OneriDurum.Onaylandi)
+                                            {
+                                                @if (canEvaluate)
+                                                {
+                                                    <li>
+                                                        <a class="dropdown-item" asp-controller="Oneri" asp-action="Degerlendir" asp-route-id="@item.Id">
+                                                            <i class="bi bi-pencil-square me-2"></i>Kurula Gönder
+                                                        </a>
+                                                    </li>
+                                                }
+                                            }
+                                            @if (canDelete)
+                                            {
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form asp-controller="Admin" asp-action="Sil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Silmek istediğine emin misin?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="dropdown-item text-danger">
+                                                            <i class="bi bi-trash me-2"></i>Sil
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
                                         </ul>
                                     </div>
                                 </td>

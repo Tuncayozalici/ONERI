@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
 using Microsoft.AspNetCore.Authorization;
+using ONERI.Models.Authorization;
 using OfficeOpenXml;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
@@ -24,6 +25,7 @@ namespace ONERI.Controllers
         }
 
         // Görev 1: Listeleme (Index Metodu)
+        [Authorize(Policy = Permissions.OneriAdmin.Access)]
         public async Task<IActionResult> Index(string durum, string arama)
         {
             // Başlangıç sorgusu - veritabanından veri çekilmez.
@@ -67,6 +69,8 @@ namespace ONERI.Controllers
         // Görev 2: Onaylama (Onayla Metodu)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.OneriAdmin.Access)]
+        [Authorize(Policy = Permissions.OneriAdmin.Approve)]
         public async Task<IActionResult> Onayla(int id)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
@@ -85,6 +89,8 @@ namespace ONERI.Controllers
         // Görev 3: Reddetme (Reddet Metodu)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.OneriAdmin.Access)]
+        [Authorize(Policy = Permissions.OneriAdmin.Reject)]
         public async Task<IActionResult> Reddet(int id)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
@@ -104,6 +110,7 @@ namespace ONERI.Controllers
 
         // A. Listeleme (Rehberi Göster)
         [HttpGet]
+        [Authorize(Policy = Permissions.BolumYoneticileri.View)]
         public async Task<IActionResult> BolumYoneticileri()
         {
             var yoneticiler = await _context.BolumYoneticileri.OrderBy(y => y.BolumAdi).ToListAsync();
@@ -114,6 +121,7 @@ namespace ONERI.Controllers
 
         // B. Yeni Sorumlu Ekleme (GET)
         [HttpGet]
+        [Authorize(Policy = Permissions.BolumYoneticileri.Create)]
         public IActionResult YoneticiEkle()
         {
             return View();
@@ -122,6 +130,7 @@ namespace ONERI.Controllers
         // B. Yeni Sorumlu Ekleme (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.BolumYoneticileri.Create)]
         public async Task<IActionResult> YoneticiEkle(BolumYonetici bolumYonetici)
         {
             if (ModelState.IsValid)
@@ -150,6 +159,7 @@ namespace ONERI.Controllers
         // C. Sorumlu Silme
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.BolumYoneticileri.Delete)]
         public async Task<IActionResult> YoneticiSil(int id)
         {
             var yonetici = await _context.BolumYoneticileri.FindAsync(id);
@@ -175,6 +185,8 @@ namespace ONERI.Controllers
 
         // Görev 4: Detay Sayfası
         [HttpGet]
+        [Authorize(Policy = Permissions.OneriAdmin.Access)]
+        [Authorize(Policy = Permissions.OneriAdmin.Detail)]
         public async Task<IActionResult> Detay(int id)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
@@ -188,6 +200,8 @@ namespace ONERI.Controllers
         // Görev 5: Silme (Sil Metodu)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.OneriAdmin.Access)]
+        [Authorize(Policy = Permissions.OneriAdmin.Delete)]
         public async Task<IActionResult> Sil(int id)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
@@ -204,6 +218,7 @@ namespace ONERI.Controllers
 
         // Veri Yükle Sayfası
         [HttpGet]
+        [Authorize(Policy = Permissions.VeriYukle.Create)]
         public IActionResult VeriYukle()
         {
             return View(new VeriYukleViewModel());
@@ -211,6 +226,7 @@ namespace ONERI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.VeriYukle.Create)]
         public IActionResult VeriYukle(VeriYukleViewModel model)
         {
             var results = new List<VeriYukleResult>();

@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
+using ONERI.Models.Authorization;
 
 namespace ONERI.Controllers
 {
@@ -31,6 +33,7 @@ namespace ONERI.Controllers
             return View();
         }
 
+        [Authorize(Policy = Permissions.Dashboards.GunlukVeriler)]
         public IActionResult GunlukVeriler(DateTime? raporTarihi, int? ay, int? yil)
         {
             var model = new GenelFabrikaOzetViewModel();
@@ -47,6 +50,17 @@ namespace ONERI.Controllers
             var tezgahRows = new List<(DateTime Tarih, double Uretim, double Duraklama, double Kullanilabilirlik)>();
             var ebatlamaRows = new List<(DateTime Tarih, double Uretim, double Duraklama)>();
             var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
+
+            void AddHataRow(DateTime tarih, double adet, double m2, string? neden, string? bolum, string? op)
+            {
+                if (tarih == DateTime.MinValue)
+                {
+                    return;
+                }
+
+                hataliRows.Add((tarih, adet, m2, neden, bolum, op));
+                TrackMax(tarih);
+            }
 
             void TrackMax(DateTime tarih)
             {
@@ -282,7 +296,7 @@ namespace ONERI.Controllers
                 }
             }
 
-            // Hatalı Parça
+            // Hatalı Parça (Genel)
             var hataliPath = Path.Combine(rootPath, "EXCELS", "HATALI PARÇA VERİ GİRİŞİ.xlsm");
             if (System.IO.File.Exists(hataliPath))
             {
@@ -308,15 +322,69 @@ namespace ONERI.Controllers
                             var neden = ws.Cells[row, 12].Value?.ToString()?.Trim();
                             var bolum = ws.Cells[row, 2].Value?.ToString()?.Trim();
                             var op = ws.Cells[row, 13].Value?.ToString()?.Trim();
-                            if (tarih != DateTime.MinValue)
-                            {
-                                hataliRows.Add((tarih, adet, m2, neden, bolum, op));
-                                TrackMax(tarih);
-                            }
+                            AddHataRow(tarih, adet, m2, neden, bolum, op);
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError($"GENEL ÖZET Hatalı Parça, Satır {row} hata: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
+            // Profil Lazer Hatalı Parça (Metal)
+            var profilHataPath = Path.Combine(rootPath, "EXCELS", "METAL HATALI  PARÇA GİRİŞİ.xlsm");
+            if (System.IO.File.Exists(profilHataPath))
+            {
+                using var package = new ExcelPackage(new FileInfo(profilHataPath));
+                var ws = package.Workbook.Worksheets["VERİ KAYIT"];
+                if (ws != null)
+                {
+                    int rowCount = ws.Dimension.Rows;
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        try
+                        {
+                            var dateValue = ws.Cells[row, 1].Value;
+                            var dateString = dateValue?.ToString() ?? string.Empty;
+                            var bolumAdi = ws.Cells[row, 2].Value?.ToString()?.Trim();
+                            var neden = ws.Cells[row, 7].Value?.ToString()?.Trim();
+                            var adet = ParseUretimAdedi(ws.Cells[row, 5].Value);
+
+                            var bolum = string.IsNullOrWhiteSpace(bolumAdi) ? "Profil Lazer" : bolumAdi;
+                            AddHataRow(ParseTurkishDate(dateString), adet, 0, neden, bolum, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"GENEL ÖZET Profil Lazer Hata, Satır {row} hata: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
+            // Boyahane Hatalı Parça
+            var boyaHataPath = Path.Combine(rootPath, "EXCELS", "BOYA HATALI  PARÇA GİRİŞİ.xlsm");
+            if (System.IO.File.Exists(boyaHataPath))
+            {
+                using var package = new ExcelPackage(new FileInfo(boyaHataPath));
+                var ws = package.Workbook.Worksheets["VERİ KAYIT"];
+                if (ws != null)
+                {
+                    int rowCount = ws.Dimension.Rows;
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        try
+                        {
+                            var dateValue = ws.Cells[row, 1].Value;
+                            var dateString = dateValue?.ToString() ?? string.Empty;
+                            var neden = ws.Cells[row, 7].Value?.ToString()?.Trim();
+                            var adet = ParseUretimAdedi(ws.Cells[row, 5].Value);
+
+                            AddHataRow(ParseTurkishDate(dateString), adet, 0, neden, "Boyahane", null);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"GENEL ÖZET Boyahane Hata, Satır {row} hata: {ex.Message}");
                         }
                     }
                 }
@@ -520,6 +588,7 @@ namespace ONERI.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.ProfilLazer)]
         public IActionResult ProfilLazerVerileri(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -759,6 +828,7 @@ namespace ONERI.Controllers
             
 
             
+        [Authorize(Policy = Permissions.Dashboards.Boyahane)]
         public IActionResult BoyahaneDashboard(DateTime? raporTarihi, int? ay, int? yil)
             
         {
@@ -1029,6 +1099,7 @@ namespace ONERI.Controllers
 
         }
 
+        [Authorize(Policy = Permissions.Dashboards.Pvc)]
         public IActionResult PvcDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -1184,6 +1255,7 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.Masterwood)]
         public IActionResult MasterwoodDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -1383,6 +1455,7 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.Skipper)]
         public IActionResult SkipperDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -1566,6 +1639,7 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.Tezgah)]
         public IActionResult TezgahDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -1716,6 +1790,7 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.Ebatlama)]
         public IActionResult EbatlamaDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;
@@ -1938,6 +2013,7 @@ namespace ONERI.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = Permissions.Dashboards.HataliParca)]
         public IActionResult HataliParcaDashboard(DateTime? raporTarihi, int? ay, int? yil)
         {
             var islenecekTarih = raporTarihi ?? DateTime.Today;

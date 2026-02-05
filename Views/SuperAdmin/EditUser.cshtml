@@ -1,0 +1,93 @@
+@model ONERI.Models.UserEditViewModel
+@{
+    ViewData["Title"] = "Kullanıcı Yetkileri";
+    var currentGroup = string.Empty;
+}
+
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-4">
+        <div>
+            <h1 class="h4 mb-1">Kullanıcı Yetkileri</h1>
+            <p class="text-muted mb-0">Rol ve ek yetkileri güncelleyin.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Geri Dön</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="EditUser" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="UserId" />
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input class="form-control" value="@Model.UserName" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ad Soyad</label>
+                        <input class="form-control" value="@(Model.AdSoyad ?? "-")" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">E-posta</label>
+                        <input class="form-control" value="@(Model.Email ?? "-")" readonly />
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    Super Admin rolü tek kişi için tanımlıdır ve kaldırılamaz.
+                </div>
+
+                <div asp-validation-summary="All" class="text-danger mt-3"></div>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-lg-4">
+                        <h2 class="h6">Roller</h2>
+                        <p class="text-muted small">Kullanıcıya atanacak rolleri seçin.</p>
+                        <div class="d-flex flex-column gap-2">
+                            @for (var i = 0; i < Model.Roles.Count; i++)
+                            {
+                                <div class="form-check">
+                                    <input type="hidden" asp-for="Roles[i].RoleName" />
+                                    <input class="form-check-input" asp-for="Roles[i].Selected" />
+                                    <label class="form-check-label">@Model.Roles[i].RoleName</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-8">
+                        <h2 class="h6">Ek Yetkiler</h2>
+                        <p class="text-muted small">Rol dışında, kullanıcıya özel izinler tanımlayın.</p>
+                        <div class="d-flex flex-column gap-3">
+                            @for (var i = 0; i < Model.ExtraPermissions.Count; i++)
+                            {
+                                if (currentGroup != Model.ExtraPermissions[i].Group)
+                                {
+                                    currentGroup = Model.ExtraPermissions[i].Group;
+                                    <div class="fw-semibold text-uppercase text-muted small mt-2">@currentGroup</div>
+                                }
+                                <div class="form-check">
+                                    <input type="hidden" asp-for="ExtraPermissions[i].Key" />
+                                    <input type="hidden" asp-for="ExtraPermissions[i].Name" />
+                                    <input type="hidden" asp-for="ExtraPermissions[i].Group" />
+                                    <input class="form-check-input" asp-for="ExtraPermissions[i].Selected" />
+                                    <label class="form-check-label">@Model.ExtraPermissions[i].Name</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a class="btn btn-outline-secondary" asp-action="Index">İptal</a>
+                    <button type="submit" class="btn btn-dark">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

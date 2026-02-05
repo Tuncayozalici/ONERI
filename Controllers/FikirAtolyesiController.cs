@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
+using Microsoft.AspNetCore.Authorization;
+using ONERI.Models.Authorization;
 
 namespace ONERI.Controllers;
 
@@ -17,6 +19,7 @@ public class FikirAtolyesiController : Controller
         _context = context;
     }
 
+    [Authorize(Policy = Permissions.FikirAtolyesi.View)]
     public async Task<IActionResult> Index()
     {
         ViewBag.ToplamSayi = await _context.Oneriler.CountAsync();

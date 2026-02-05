@@ -4,6 +4,7 @@ using ONERI.Data;
 using ONERI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using ONERI.Models.Authorization;
 
 namespace ONERI.Controllers
 {
@@ -25,6 +26,7 @@ namespace ONERI.Controllers
 
         // GET: Oneri/Tesekkurler/{id}
         // Başarılı bir gönderim sonrası gösterilecek sayfa.
+        [Authorize(Policy = Permissions.Oneri.Create)]
         public async Task<IActionResult> Tesekkurler(int id)
         {
             if (id <= 0)
@@ -44,6 +46,7 @@ namespace ONERI.Controllers
         }
 
         // GET: Oneri/Yeni
+        [Authorize(Policy = Permissions.Oneri.Create)]
         public async Task<IActionResult> Yeni()
         {
             var bolumler = await _context.BolumYoneticileri
@@ -59,6 +62,7 @@ namespace ONERI.Controllers
         // POST: Oneri/Yeni
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Oneri.Create)]
         public async Task<IActionResult> Yeni(OneriCreateViewModel viewModel)
         {
             if (ModelState.IsValid)
@@ -105,6 +109,7 @@ namespace ONERI.Controllers
 
         // Görev 1: Arama Kutusunu Gösterme (GET Metodu)
         [HttpGet]
+        [Authorize(Policy = Permissions.Oneri.Query)]
         public IActionResult Sorgula()
         {
             return View();
@@ -113,6 +118,7 @@ namespace ONERI.Controllers
         // Görev 2: Aramayı Yapma ve Sonucu Getirme (POST Metodu)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Oneri.Query)]
         public async Task<IActionResult> Sorgula(int id)
         {
             if (id <= 0)
@@ -140,7 +146,7 @@ namespace ONERI.Controllers
 
         // 2. Değerlendirme Sayfasını Hazırla (Backend - GET)
         [HttpGet]
-        [Authorize(Roles = "Yönetici")]
+        [Authorize(Policy = Permissions.Oneri.Evaluate)]
         public async Task<IActionResult> Degerlendir(int id)
         {
             if (id <= 0)
@@ -181,7 +187,7 @@ namespace ONERI.Controllers
         // 4. Karar Mekanizması (Backend - POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Yönetici")]
+        [Authorize(Policy = Permissions.Oneri.Evaluate)]
         public async Task<IActionResult> Degerlendir(Degerlendirme degerlendirme)
         {
             // ModelState.IsValid kontrolü, modeldeki zorunlu alanların (varsa) dolu geldiğini doğrular.

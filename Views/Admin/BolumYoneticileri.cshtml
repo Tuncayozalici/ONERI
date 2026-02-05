@@ -1,7 +1,10 @@
 @model IEnumerable<ONERI.Models.BolumYonetici>
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Bölüm Yöneticileri";
+    var canCreate = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.BolumYoneticileri.Create)).Succeeded;
+    var canDelete = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.BolumYoneticileri.Delete)).Succeeded;
 }
 
 <div class="container mt-4">
@@ -23,38 +26,45 @@
             <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
                 <div class="card-body p-4">
                     <h5 class="card-title mb-4">Yeni Sorumlu Ekle</h5>
-                    <form asp-action="YoneticiEkle" method="post">
-                        @Html.AntiForgeryToken()
-                        
-                        @if (TempData["YoneticiHata"] != null)
-                        {
-                            <div class="alert alert-danger small">@TempData["YoneticiHata"]</div>
-                        }
+                    @if (canCreate)
+                    {
+                        <form asp-action="YoneticiEkle" method="post">
+                            @Html.AntiForgeryToken()
+                            
+                            @if (TempData["YoneticiHata"] != null)
+                            {
+                                <div class="alert alert-danger small">@TempData["YoneticiHata"]</div>
+                            }
 
-                        <div class="mb-3">
-                            <label for="BolumAdi" class="form-label">Bölüm</label>
-                            <select name="BolumAdi" id="BolumAdi" class="form-select" required>
-                                <option value="" disabled selected>Seçiniz...</option>
-                                <option value="Modüler">Modüler</option>
-                                <option value="Döşeme">Döşeme</option>
-                                <option value="Kaynak">Kaynak</option>
-                                <option value="Lojistik">Lojistik</option>
-                                <option value="İnsan Kaynakları">İnsan Kaynakları</option>
-                                <option value="Muhasebe">Muhasebe</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="YoneticiAdi" class="form-label">Adı Soyadı</label>
-                            <input type="text" name="YoneticiAdi" class="form-control" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="YoneticiEmail" class="form-label">E-posta Adresi</label>
-                            <input type="email" name="YoneticiEmail" class="form-control" required />
-                        </div>
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-dark"><i class="bi bi-plus-lg me-1"></i> Ekle</button>
-                        </div>
-                    </form>
+                            <div class="mb-3">
+                                <label for="BolumAdi" class="form-label">Bölüm</label>
+                                <select name="BolumAdi" id="BolumAdi" class="form-select" required>
+                                    <option value="" disabled selected>Seçiniz...</option>
+                                    <option value="Modüler">Modüler</option>
+                                    <option value="Döşeme">Döşeme</option>
+                                    <option value="Kaynak">Kaynak</option>
+                                    <option value="Lojistik">Lojistik</option>
+                                    <option value="İnsan Kaynakları">İnsan Kaynakları</option>
+                                    <option value="Muhasebe">Muhasebe</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="YoneticiAdi" class="form-label">Adı Soyadı</label>
+                                <input type="text" name="YoneticiAdi" class="form-control" required />
+                            </div>
+                            <div class="mb-3">
+                                <label for="YoneticiEmail" class="form-label">E-posta Adresi</label>
+                                <input type="email" name="YoneticiEmail" class="form-control" required />
+                            </div>
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-dark"><i class="bi bi-plus-lg me-1"></i> Ekle</button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning mb-0">Bölüm yöneticisi ekleme yetkiniz yok.</div>
+                    }
                 </div>
             </div>
         </div>
@@ -81,10 +91,17 @@
                                         <td>@item.YoneticiAdi</td>
                                         <td>@item.YoneticiEmail</td>
                                         <td class="text-end">
-                                            <form asp-action="YoneticiSil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Bu yöneticiyi silmek istediğinizden emin misiniz?');">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                            </form>
+                                            @if (canDelete)
+                                            {
+                                                <form asp-action="YoneticiSil" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Bu yöneticiyi silmek istediğinizden emin misiniz?');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
                                         </td>
                                     </tr>
                                 }

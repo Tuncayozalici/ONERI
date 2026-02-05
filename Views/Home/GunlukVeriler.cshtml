@@ -73,7 +73,7 @@
     }
 
     .summary-card.summary-ultra .summary-kpis {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .summary-card.summary-ultra .summary-metrics {
@@ -89,6 +89,16 @@
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
         border-radius: 0;
+    }
+
+    .kpi-card.kpi-card-info .card-text {
+        font-size: 1.25rem;
+        color: #495057;
+        word-break: break-word;
+    }
+
+    .kpi-card.kpi-card-info .card-title i {
+        color: #6c757d;
     }
 
     .nav-tile {
@@ -211,12 +221,6 @@
                         </div>
                         <div class="kpi-card h-100">
                             <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h6>
-                                <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("F2") %</p>
-                            </div>
-                        </div>
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
                                 <h6 class="card-title"><i class="bi bi-activity me-2"></i>Fiili Çalışma</h6>
                                 <p class="card-text">@Model.OrtalamaFiiliCalisma.ToString("F2") %</p>
                             </div>
@@ -224,17 +228,23 @@
                     </div>
 
                     <div class="summary-metrics mb-4">
-                        <div class="p-3 bg-light rounded-3 h-100">
-                            <div class="fw-semibold mb-2">En Çok Hata Nedeni</div>
-                            <div class="text-muted">@Model.EnCokHataNedeni</div>
+                        <div class="kpi-card kpi-card-info h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>En Çok Hata Nedeni</h6>
+                                <p class="card-text">@Model.EnCokHataNedeni</p>
+                            </div>
                         </div>
-                        <div class="p-3 bg-light rounded-3 h-100">
-                            <div class="fw-semibold mb-2">En Çok Hata Bölümü</div>
-                            <div class="text-muted">@Model.EnCokHataBolum</div>
+                        <div class="kpi-card kpi-card-info h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-diagram-3 me-2"></i>En Çok Hata Bölümü</h6>
+                                <p class="card-text">@Model.EnCokHataBolum</p>
+                            </div>
                         </div>
-                        <div class="p-3 bg-light rounded-3 h-100">
-                            <div class="fw-semibold mb-2">En Çok Hata Operatörü</div>
-                            <div class="text-muted">@Model.EnCokHataOperator</div>
+                        <div class="kpi-card kpi-card-info h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-person-badge me-2"></i>En Çok Hata Operatörü</h6>
+                                <p class="card-text">@Model.EnCokHataOperator</p>
+                            </div>
                         </div>
                     </div>
 

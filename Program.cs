@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
 using ONERI.Models;
+using ONERI.Models.Authorization;
 using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,20 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
         options.Password.RequireNonAlphanumeric = true;
     })
     .AddEntityFrameworkStores<FabrikaContext>();
+
+// Yetkilendirme politikaları (rol + izin)
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in Permissions.All)
+    {
+        options.AddPolicy(permission.Key, policy =>
+        {
+            policy.RequireAssertion(context =>
+                context.User.IsInRole(Permissions.SuperAdminRole) ||
+                context.User.HasClaim(Permissions.ClaimType, permission.Key));
+        });
+    }
+});
 
 // Cookie ayarlarını Identity ile entegre et
 builder.Services.ConfigureApplicationCookie(options =>

@@ -119,7 +119,9 @@
                 || path.StartsWith("/home/pvcdashboard")
                 || path.StartsWith("/home/masterwooddashboard")
                 || path.StartsWith("/home/skipperdashboard")
-                || path.StartsWith("/home/tezgahdashboard");
+                || path.StartsWith("/home/tezgahdashboard")
+                || path.StartsWith("/home/ebatlamadashboard")
+                || path.StartsWith("/home/hataliparcadashboard");
             var fikirActive = path.StartsWith("/fikiratolyesi")
                 || path.StartsWith("/oneri/yeni")
                 || path.StartsWith("/oneri/sorgula");
@@ -155,6 +157,12 @@
                         </a>
                         <a asp-controller="Home" asp-action="TezgahDashboard" class="list-group-item list-group-item-action ps-5">
                             <i class="bi bi-gear me-2"></i> Tezgah Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="EbatlamaDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-tools me-2"></i> Ebatlama Bölümü
+                        </a>
+                        <a asp-controller="Home" asp-action="HataliParcaDashboard" class="list-group-item list-group-item-action ps-5">
+                            <i class="bi bi-bug me-2"></i> Hatalı Parça Analizi
                         </a>
                     </div>
                 </div>

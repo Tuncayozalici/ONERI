@@ -25,4 +25,21 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebar.style.width = "0";
         main.style.marginLeft = "0";
     }
+
+    const themeToggle = document.getElementById("themeToggle");
+    if (themeToggle) {
+        const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+        themeToggle.checked = currentTheme === "dark";
+
+        themeToggle.addEventListener("change", function () {
+            const nextTheme = themeToggle.checked ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", nextTheme);
+            document.documentElement.setAttribute("data-bs-theme", nextTheme);
+            try {
+                localStorage.setItem("theme", nextTheme);
+            } catch (e) {
+                // ignore storage errors
+            }
+        });
+    }
 });

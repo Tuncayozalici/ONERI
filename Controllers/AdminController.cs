@@ -241,7 +241,12 @@ namespace ONERI.Controllers
                 ["YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"), "VERİ KAYIT"),
                 ["BOYA HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "BOYA HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT"),
                 ["PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
-                ["METAL HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "METAL HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT")
+                ["METAL HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "METAL HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT"),
+                ["MARWOOD Masterwood Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Masterwood Veri Ekranı.xlsm"), "ANA RAPOR"),
+                ["MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm"] = (Path.Combine(excelPath, "MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm"), "ANA RAPOR"),
+                ["MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"), "ANA RAPOR"),
+                ["EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"), "KAYIT"),
+                ["HATALI PARÇA VERİ GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "HATALI PARÇA VERİ GİRİŞİ.xlsm"), "VERİ KAYIT")
             };
 
             foreach (var file in model.Dosyalar ?? new List<IFormFile>())

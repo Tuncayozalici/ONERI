@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>29f4ad86-eb36-41af-9e70-c3eae8a77386</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ONERI.Tests/**/*.cs" />
+    <Content Remove="ONERI.Tests/**" />
+    <EmbeddedResource Remove="ONERI.Tests/**" />
+    <None Remove="ONERI.Tests/**" />
   </ItemGroup>
 
 </Project>

@@ -4,6 +4,10 @@
     ViewData["Title"] = "Yeni Fikir Paylaş";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/oneri-yeni.css" asp-append-version="true" />
+}
+
 <div class="idea-page">
     <div class="container mt-4">
         <!-- Page Header -->
@@ -121,174 +125,7 @@
     </div>
 </div>
 
-<!-- Add a generic page header style -->
-<style>
-    .idea-page {
-        background: radial-gradient(1200px 400px at 10% -10%, #f4e9d9 0%, rgba(244, 233, 217, 0) 60%),
-                    radial-gradient(900px 300px at 90% 10%, #e7f0ff 0%, rgba(231, 240, 255, 0) 60%);
-        padding-bottom: 2.5rem;
-    }
-
-    .idea-hero {
-        background: #fff8ef;
-        border-radius: 22px;
-        padding: 1.75rem 2rem;
-        border: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
-    }
-
-    .idea-hero-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    .idea-hero h1 {
-        font-family: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        margin-bottom: 0.25rem;
-    }
-
-    .hero-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 600;
-        color: #8a6a3f;
-        margin-bottom: 0.35rem;
-    }
-
-    .hero-badge {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        background: #fff;
-        border-radius: 16px;
-        padding: 0.75rem 1rem;
-        border: 1px solid rgba(0, 0, 0, 0.06);
-    }
-
-    .badge-circle {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: #f4e1c3;
-        display: grid;
-        place-items: center;
-        color: #8a6a3f;
-    }
-
-    .badge-title {
-        font-weight: 600;
-    }
-
-    .badge-sub {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-
-    .helper-card {
-        background: #fff;
-        border-radius: 18px;
-        border: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
-        padding: 1.25rem;
-    }
-
-    .helper-card h5 {
-        font-weight: 700;
-        margin-bottom: 0.75rem;
-    }
-
-    .helper-card ul,
-    .helper-card ol {
-        padding-left: 1.2rem;
-        margin-bottom: 0;
-        color: #495057;
-    }
-
-    .helper-mini {
-        margin-top: 1rem;
-        display: flex;
-        gap: 0.75rem;
-        background: #f8f9fa;
-        padding: 0.75rem;
-        border-radius: 12px;
-    }
-
-    .form-card {
-        background: #fff;
-        border-radius: 22px;
-        border: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
-        padding: 2rem 2rem;
-    }
-
-    .req {
-        color: #d63384;
-        font-weight: 700;
-    }
-
-    .alt-birim {
-        display: none;
-    }
-
-    .alt-birim.is-visible {
-        display: block;
-        animation: fadeInUp 0.2s ease;
-    }
-
-    @@keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(6px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    @@media (max-width: 991px) {
-        .form-card {
-            padding: 1.5rem;
-        }
-    }
-</style>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const anaBolumSelect = document.getElementById('anaBolum');
-            const altBolumKapsayici = document.getElementById('altBolumKapsayici');
-            const altBolumSelect = document.getElementById('altBolum');
-
-            const altBolumler = {
-                Panel: ['CNC', 'PVC', 'Ebatlama', 'Keson'],
-                Metal: ['Boya', 'Metal Imalat']
-            };
-
-            anaBolumSelect.addEventListener('change', function () {
-                const secilenBolum = this.value;
-                
-                // Önce alt bölümü temizle ve gizle
-                altBolumSelect.innerHTML = '';
-                altBolumKapsayici.classList.remove('is-visible');
-                altBolumSelect.value = '';
-
-
-                if (secilenBolum in altBolumler) {
-                    // İlgili alt bölümleri ekle
-                    altBolumKapsayici.classList.add('is-visible');
-                    altBolumSelect.innerHTML = '<option value="">Lütfen alt birim seçiniz...</option>';
-                    
-                    altBolumler[secilenBolum].forEach(function(birim) {
-                        const option = document.createElement('option');
-                        option.value = birim.replace(/\s+/g, ''); // Boşlukları kaldır
-                        option.textContent = birim;
-                        altBolumSelect.appendChild(option);
-                    });
-                }
-            });
-        });
-    </script>
+    <script src="~/js/pages/oneri-yeni.js" asp-append-version="true"></script>
 }

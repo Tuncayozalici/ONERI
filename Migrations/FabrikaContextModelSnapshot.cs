@@ -220,19 +220,34 @@ namespace ONERI.Migrations
 
                     b.Property<string>("BolumAdi")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("YoneticiAdi")
                         .IsRequired()
+                        .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("YoneticiEmail")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
-                    b.ToTable("BolumYoneticileri");
+                    b.HasIndex("BolumAdi")
+                        .IsUnique();
+
+                    b.ToTable("BolumYoneticileri", t =>
+                        {
+                            t.HasCheckConstraint("CK_BolumYonetici_BolumAdi_NotEmpty", "length(trim([BolumAdi])) > 0");
+
+                            t.HasCheckConstraint("CK_BolumYonetici_YoneticiAdi_NotEmpty", "length(trim([YoneticiAdi])) > 0");
+
+                            t.HasCheckConstraint("CK_BolumYonetici_YoneticiEmail_NotEmpty", "length(trim([YoneticiEmail])) > 0");
+                        });
                 });
 
             modelBuilder.Entity("ONERI.Models.Degerlendirme", b =>
@@ -249,6 +264,7 @@ namespace ONERI.Migrations
 
                     b.Property<string>("KurulYorumu")
                         .IsRequired()
+                        .HasMaxLength(1000)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("OneriId")
@@ -265,9 +281,23 @@ namespace ONERI.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OneriId");
+                    b.HasIndex("OneriId")
+                        .IsUnique();
 
-                    b.ToTable("Degerlendirmeler");
+                    b.ToTable("Degerlendirmeler", t =>
+                        {
+                            t.HasCheckConstraint("CK_Degerlendirme_EtkiPuani_Range", "[EtkiPuani] BETWEEN 0 AND 25");
+
+                            t.HasCheckConstraint("CK_Degerlendirme_GayretPuani_Range", "[GayretPuani] BETWEEN 0 AND 25");
+
+                            t.HasCheckConstraint("CK_Degerlendirme_OrijinallikPuani_Range", "[OrijinallikPuani] BETWEEN 0 AND 25");
+
+                            t.HasCheckConstraint("CK_Degerlendirme_ToplamPuan_Consistency", "[ToplamPuan] = [GayretPuani] + [OrijinallikPuani] + [EtkiPuani] + [UygulanabilirlikPuani]");
+
+                            t.HasCheckConstraint("CK_Degerlendirme_ToplamPuan_Range", "[ToplamPuan] BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_Degerlendirme_UygulanabilirlikPuani_Range", "[UygulanabilirlikPuani] BETWEEN 0 AND 25");
+                        });
                 });
 
             modelBuilder.Entity("ONERI.Models.Oneri", b =>
@@ -304,7 +334,13 @@ namespace ONERI.Migrations
                     b.Property<DateTime>("Tarih")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("TrackingToken")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TrackingToken")
+                        .IsUnique();
 
                     b.ToTable("Oneriler");
                 });

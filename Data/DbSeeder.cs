@@ -1,21 +1,28 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using ONERI.Models;
 using ONERI.Models.Authorization;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 
 namespace ONERI.Data
 {
     public static class DbSeeder
     {
-        public static async Task SeedIdentityData(IServiceProvider services)
+        public static async Task SeedIdentityData(IServiceProvider services, IConfiguration configuration)
         {
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+            var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("DbSeeder");
 
             // Roller
-            string[] roleNames = { Permissions.SuperAdminRole, "Yönetici", "Personel" };
+            var roleNames = new[] { Permissions.SuperAdminRole }
+                .Concat(RolePermissionMatrix.GetRoleNames())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             foreach (var roleName in roleNames)
             {
                 var roleExist = await roleManager.RoleExistsAsync(roleName);
@@ -25,22 +32,42 @@ namespace ONERI.Data
                 }
             }
 
-            // Yönetici Kullanıcısı (Super Admin)
-            var adminUser = await userManager.FindByNameAsync("admin");
+            // İlk kurulum Super Admin kullanıcısı
+            var bootstrapUserName = configuration["BootstrapAdmin:UserName"] ?? "admin";
+            var bootstrapEmail = configuration["BootstrapAdmin:Email"] ?? "admin@marwood.com";
+            var bootstrapFullName = configuration["BootstrapAdmin:FullName"] ?? "Admin";
+            var bootstrapPassword = configuration["BootstrapAdmin:Password"];
+            if (string.IsNullOrWhiteSpace(bootstrapPassword))
+            {
+                bootstrapPassword = Environment.GetEnvironmentVariable("BOOTSTRAP_ADMIN_PASSWORD");
+            }
+            var adminUser = await userManager.FindByNameAsync(bootstrapUserName);
             if (adminUser == null)
             {
-                var newAdminUser = new AppUser
+                if (string.IsNullOrWhiteSpace(bootstrapPassword))
                 {
-                    UserName = "admin",
-                    Email = "admin@marwood.com",
-                    AdSoyad = "Admin"
-                };
-                // Şifre politikasına uygun, daha güvenli bir başlangıç şifresi
-                var result = await userManager.CreateAsync(newAdminUser, "Qwerty.1234"); 
-                if (result.Succeeded)
+                    logger.LogWarning("Super Admin oluşturulmadı. İlk kurulum için 'BootstrapAdmin:Password' secret'ı tanımlayın.");
+                }
+                else
                 {
-                    await userManager.AddToRoleAsync(newAdminUser, Permissions.SuperAdminRole);
-                    await userManager.AddToRoleAsync(newAdminUser, "Yönetici");
+                    var newAdminUser = new AppUser
+                    {
+                        UserName = bootstrapUserName,
+                        Email = bootstrapEmail,
+                        AdSoyad = bootstrapFullName
+                    };
+
+                    var result = await userManager.CreateAsync(newAdminUser, bootstrapPassword);
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(newAdminUser, Permissions.SuperAdminRole);
+                        await userManager.AddToRoleAsync(newAdminUser, "Yönetici");
+                    }
+                    else
+                    {
+                        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                        logger.LogError("Super Admin oluşturulamadı: {Errors}", errors);
+                    }
                 }
             }
             else
@@ -52,30 +79,7 @@ namespace ONERI.Data
             }
 
             // Varsayılan rol izinleri
-            var rolePermissionMap = new Dictionary<string, string[]>
-            {
-                ["Yönetici"] = new[]
-                {
-                    Permissions.OneriAdmin.Access,
-                    Permissions.OneriAdmin.Detail,
-                    Permissions.OneriAdmin.Approve,
-                    Permissions.OneriAdmin.Reject,
-                    Permissions.OneriAdmin.Delete,
-                    Permissions.Oneri.Evaluate,
-                    Permissions.BolumYoneticileri.View,
-                    Permissions.BolumYoneticileri.Create,
-                    Permissions.BolumYoneticileri.Delete,
-                    Permissions.VeriYukle.Create
-                },
-                ["Personel"] = new[]
-                {
-                    Permissions.FikirAtolyesi.View,
-                    Permissions.Oneri.Create,
-                    Permissions.Oneri.Query
-                }
-            };
-
-            foreach (var entry in rolePermissionMap)
+            foreach (var entry in RolePermissionMatrix.DefaultRolePermissions)
             {
                 var role = await roleManager.FindByNameAsync(entry.Key);
                 if (role == null)

@@ -9,6 +9,7 @@ using ONERI.Models.Authorization;
 using OfficeOpenXml;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
+using ONERI.Services.Dashboards;
 
 namespace ONERI.Controllers
 {
@@ -17,11 +18,19 @@ namespace ONERI.Controllers
     {
         private readonly FabrikaContext _context;
         private readonly IWebHostEnvironment _hostingEnvironment;
+        private readonly IDashboardIngestionService _dashboardIngestionService;
+        private readonly ILogger<AdminController> _logger;
 
-        public AdminController(FabrikaContext context, IWebHostEnvironment hostingEnvironment)
+        public AdminController(
+            FabrikaContext context,
+            IWebHostEnvironment hostingEnvironment,
+            IDashboardIngestionService dashboardIngestionService,
+            ILogger<AdminController> logger)
         {
             _context = context;
             _hostingEnvironment = hostingEnvironment;
+            _dashboardIngestionService = dashboardIngestionService;
+            _logger = logger;
         }
 
         // Görev 1: Listeleme (Index Metodu)
@@ -147,9 +156,17 @@ namespace ONERI.Controllers
                     return RedirectToAction(nameof(BolumYoneticileri));
                 }
 
-                _context.Add(bolumYonetici);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(BolumYoneticileri));
+                try
+                {
+                    _context.Add(bolumYonetici);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(BolumYoneticileri));
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["YoneticiHata"] = "Bu bölüm için zaten bir yönetici atanmış.";
+                    return RedirectToAction(nameof(BolumYoneticileri));
+                }
             }
 
             // Hata durumunda formu kendi view'ında tekrar göster
@@ -227,7 +244,7 @@ namespace ONERI.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Permissions.VeriYukle.Create)]
-        public IActionResult VeriYukle(VeriYukleViewModel model)
+        public async Task<IActionResult> VeriYukle(VeriYukleViewModel model)
         {
             var results = new List<VeriYukleResult>();
 
@@ -272,6 +289,15 @@ namespace ONERI.Controllers
                 HandleUpload(file, info.TargetPath, info.SheetName, results);
             }
 
+            try
+            {
+                await _dashboardIngestionService.RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Upload sonrası dashboard ingest yenilemesi başarısız oldu.");
+            }
+
             model.Results = results;
             return View(model);
         }
@@ -310,7 +336,8 @@ namespace ONERI.Controllers
                 }
                 catch (Exception ex)
                 {
-                    message = $"Dosya okunamadı: {ex.Message}";
+                    _logger.LogWarning(ex, "Yüklenen Excel doğrulanamadı. Dosya: {FileName}", Path.GetFileName(targetPath));
+                    message = "Dosya yüklendi ancak içerik doğrulaması başarısız oldu.";
                 }
 
                 results.Add(new VeriYukleResult
@@ -323,12 +350,13 @@ namespace ONERI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Dosya yükleme hatası. Dosya: {FileName}", Path.GetFileName(targetPath));
                 results.Add(new VeriYukleResult
                 {
                     DosyaAdi = Path.GetFileName(targetPath),
                     SayfaAdi = sheetName,
                     SatirSayisi = null,
-                    Mesaj = $"Yükleme hatası: {ex.Message}"
+                    Mesaj = "Dosya yüklenemedi."
                 });
             }
         }

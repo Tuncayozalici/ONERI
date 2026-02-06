@@ -24,19 +24,19 @@ namespace ONERI.Controllers
             return RedirectToAction(nameof(Yeni));
         }
 
-        // GET: Oneri/Tesekkurler/{id}
+        // GET: Oneri/Tesekkurler?token={trackingToken}
         // Başarılı bir gönderim sonrası gösterilecek sayfa.
         [Authorize(Policy = Permissions.Oneri.Create)]
-        public async Task<IActionResult> Tesekkurler(int id)
+        public async Task<IActionResult> Tesekkurler(string token)
         {
-            if (id <= 0)
+            if (!Guid.TryParse(token, out var parsedToken))
             {
                 return RedirectToAction(nameof(Yeni));
             }
 
             var oneri = await _context.Oneriler
                                       .AsNoTracking()
-                                      .FirstOrDefaultAsync(o => o.Id == id);
+                                      .FirstOrDefaultAsync(o => o.TrackingToken == parsedToken);
             if (oneri == null)
             {
                 return RedirectToAction(nameof(Yeni));
@@ -76,6 +76,7 @@ namespace ONERI.Controllers
                     Bolum = viewModel.Bolum,
                     Konu = viewModel.Konu,
                     Aciklama = viewModel.Aciklama,
+                    TrackingToken = Guid.NewGuid(),
                     // Bu alanlar sunucu tarafından, güvenli bir şekilde atanır
                     Tarih = DateTime.Now,
                     Durum = OneriDurum.Beklemede 
@@ -94,7 +95,7 @@ namespace ONERI.Controllers
                     // E-posta gönderme işlemi burada yapılabilir
                 }
 
-                return RedirectToAction(nameof(Tesekkurler), new { id = oneri.Id });
+                return RedirectToAction(nameof(Tesekkurler), new { token = oneri.TrackingToken });
             }
             
             // ModelState geçerli değilse, formu yeniden gösterirken Bölüm listesini tekrar doldur.
@@ -110,20 +111,33 @@ namespace ONERI.Controllers
         // Görev 1: Arama Kutusunu Gösterme (GET Metodu)
         [HttpGet]
         [Authorize(Policy = Permissions.Oneri.Query)]
-        public IActionResult Sorgula()
+        public async Task<IActionResult> Sorgula(string? token)
         {
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                return await SorgulaByTrackingToken(token);
+            }
+
             return View();
         }
 
         // Görev 2: Aramayı Yapma ve Sonucu Getirme (POST Metodu)
         [HttpPost]
+        [ActionName("Sorgula")]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Permissions.Oneri.Query)]
-        public async Task<IActionResult> Sorgula(int id)
+        public async Task<IActionResult> SorgulaPost(string token)
         {
-            if (id <= 0)
+            return await SorgulaByTrackingToken(token);
+        }
+
+        private async Task<IActionResult> SorgulaByTrackingToken(string token)
+        {
+            ViewBag.SonToken = token;
+
+            if (string.IsNullOrWhiteSpace(token) || !Guid.TryParse(token, out var parsedToken))
             {
-                ViewBag.Hata = "Lütfen geçerli bir Öneri Numarası giriniz.";
+                ViewBag.Hata = "Lütfen geçerli bir takip numarası giriniz.";
                 return View();
             }
 
@@ -131,11 +145,11 @@ namespace ONERI.Controllers
             var oneri = await _context.Oneriler
                                       .AsNoTracking()
                                       .Include(o => o.Degerlendirmeler) // Degerlendirmeler'i dahil et
-                                      .FirstOrDefaultAsync(o => o.Id == id);
+                                      .FirstOrDefaultAsync(o => o.TrackingToken == parsedToken);
 
             if (oneri == null)
             {
-                ViewBag.Hata = $"'{id}' numaralı bir öneri bulunamadı.";
+                ViewBag.Hata = "Bu takip numarasına ait bir öneri bulunamadı.";
                 return View(); // Boş arama sayfasını hata mesajıyla göster
             }
 
@@ -234,8 +248,16 @@ namespace ONERI.Controllers
             // Yeni oluşturulan değerlendirme kaydını veritabanına ekle.
             _context.Degerlendirmeler.Add(degerlendirme);
 
-            // Hem Degerlendirmeler tablosuna eklemeyi, hem de Oneriler tablosundaki güncellemeyi kaydet.
-            await _context.SaveChangesAsync();
+            try
+            {
+                // Hem Degerlendirmeler tablosuna eklemeyi, hem de Oneriler tablosundaki güncellemeyi kaydet.
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Hata"] = "Bu öneri daha önce değerlendirilmiş.";
+                return RedirectToAction("Index", "Admin");
+            }
 
             // İşlem bittikten sonra yöneticiyi ana panele yönlendir.
             return RedirectToAction("Index", "Admin");

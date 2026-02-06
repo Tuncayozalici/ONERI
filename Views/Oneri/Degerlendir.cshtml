@@ -4,6 +4,10 @@
     var oneri = ViewData["Oneri"] as ONERI.Models.Oneri;
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/oneri-degerlendir.css" asp-append-version="true" />
+}
+
 <div class="container mt-4">
 
     <!-- Page Header -->
@@ -15,7 +19,7 @@
     <!-- Suggestion Details -->
     @if (oneri != null)
     {
-        <div class="p-4 rounded mb-4 suggestion-card" style="background-color: #f8f9fa;">
+        <div class="p-4 rounded mb-4 suggestion-card suggestion-card-soft">
             <div class="d-flex justify-content-between align-items-start">
                 <h5 class="mb-0">Öneri Detayları (#@oneri.Id)</h5>
                 <span class="badge rounded-pill bg-secondary">@oneri.Durum.ToString()</span>
@@ -41,7 +45,7 @@
     }
 
     <!-- Evaluation Form -->
-    <div class="card p-4 evaluation-card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+    <div class="card p-4 evaluation-card evaluation-card-shell">
         <div class="card-body">
             <form asp-action="Degerlendir" method="post">
                 <input type="hidden" asp-for="OneriId" />
@@ -81,7 +85,7 @@
                     </div>
                     <div class="col-md-4 text-center">
                         <label asp-for="ToplamPuan" class="form-label">Toplam Puan</label>
-                        <input asp-for="ToplamPuan" id="total-score" class="form-control form-control-lg text-center display-4 fw-bold p-0" readonly style="border:none; background:none;">
+                        <input asp-for="ToplamPuan" id="total-score" class="form-control form-control-lg text-center display-4 fw-bold p-0 total-score-input" readonly>
                         <div id="decision" class="fw-bold mt-2 fs-5"></div>
                     </div>
                 </div>
@@ -97,51 +101,7 @@
     </div>
 </div>
 
-<style>
-    .page-header {
-        border-left: 5px solid #e9ecef;
-        padding-left: 1.5rem;
-    }
-</style>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const scoreInputs = document.querySelectorAll('.score-input');
-            const totalScoreEl = document.getElementById('total-score');
-            const decisionEl = document.getElementById('decision');
-
-            function calculateTotal() {
-                let total = 0;
-                scoreInputs.forEach(input => {
-                    const value = parseInt(input.value, 10);
-                    if (!isNaN(value)) {
-                        total += value;
-                    }
-                });
-                totalScoreEl.value = total;
-                updateDecision(total);
-            }
-
-            function updateDecision(total) {
-                if (total >= 60) {
-                    decisionEl.textContent = "KABUL";
-                    decisionEl.className = 'fw-bold mt-2 fs-5 text-success';
-                    totalScoreEl.className = 'form-control form-control-lg text-center display-4 fw-bold p-0 text-success';
-                } else {
-                    decisionEl.textContent = "RED";
-                    decisionEl.className = 'fw-bold mt-2 fs-5 text-danger';
-                    totalScoreEl.className = 'form-control form-control-lg text-center display-4 fw-bold p-0 text-danger';
-                }
-            }
-
-            scoreInputs.forEach(input => {
-                input.addEventListener('input', calculateTotal);
-            });
-
-            // Initial calculation on page load.
-            calculateTotal();
-        });
-    </script>
+    <script src="~/js/pages/oneri-degerlendir.js" asp-append-version="true"></script>
 }

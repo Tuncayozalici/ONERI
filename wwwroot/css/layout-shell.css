@@ -1,0 +1,39 @@
+.offcanvas-body .nav-link {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.offcanvas-body .nav-link:hover {
+    background-color: #f8f9fa;
+}
+
+.user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: #f6f7f9;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.9rem;
+    height: 34px;
+    line-height: 1;
+}
+
+.user-chip.nav-link {
+    padding: 0.35rem 0.6rem;
+}
+
+.user-chip:focus,
+.user-chip:hover {
+    background: #eef1f5;
+}
+
+.navbar-nav .dropdown {
+    position: relative;
+}
+
+.navbar-nav .dropdown-menu {
+    position: absolute;
+    margin-top: 0.5rem;
+}

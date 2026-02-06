@@ -6,6 +6,8 @@ namespace ONERI.Models
     {
         public int Id { get; set; }
 
+        public Guid TrackingToken { get; set; } = Guid.NewGuid();
+
         [Display(Name = "Öneriyi Yapan")]
         public string? OnerenKisi { get; set; } // Soru işareti (?) boş kalabilir demek.
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Models;
 using ONERI.Models.Authorization;
+using ONERI.Services.SuperAdmin;
 
 namespace ONERI.Controllers
 {
@@ -13,33 +14,21 @@ namespace ONERI.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ISuperAdminQueryService _superAdminQueryService;
 
-        public SuperAdminController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        public SuperAdminController(
+            UserManager<AppUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            ISuperAdminQueryService superAdminQueryService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _superAdminQueryService = superAdminQueryService;
         }
 
         public async Task<IActionResult> Index()
         {
-            var users = await _userManager.Users
-                .OrderBy(u => u.UserName)
-                .ToListAsync();
-
-            var items = new List<UserListItemViewModel>();
-            foreach (var user in users)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                items.Add(new UserListItemViewModel
-                {
-                    Id = user.Id,
-                    UserName = user.UserName ?? string.Empty,
-                    AdSoyad = user.AdSoyad,
-                    Email = user.Email,
-                    Roles = roles.ToList()
-                });
-            }
-
+            var items = await _superAdminQueryService.GetUsersWithRolesAsync();
             return View(items);
         }
 
@@ -62,6 +51,7 @@ namespace ONERI.Controllers
                 .ToListAsync();
 
             var userRoles = await _userManager.GetRolesAsync(user);
+            var userRoleSet = userRoles.ToHashSet(StringComparer.OrdinalIgnoreCase);
             var userClaims = await _userManager.GetClaimsAsync(user);
             var userPermissionClaims = userClaims
                 .Where(c => c.Type == Permissions.ClaimType)
@@ -74,7 +64,7 @@ namespace ONERI.Controllers
                 UserName = user.UserName ?? string.Empty,
                 AdSoyad = user.AdSoyad,
                 Email = user.Email,
-                IsSuperAdmin = userRoles.Contains(Permissions.SuperAdminRole)
+                IsSuperAdmin = userRoleSet.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase)
             };
 
             foreach (var role in allRoles)
@@ -87,7 +77,7 @@ namespace ONERI.Controllers
                 model.Roles.Add(new RoleOptionViewModel
                 {
                     RoleName = role.Name,
-                    Selected = userRoles.Contains(role.Name)
+                    Selected = userRoleSet.Contains(role.Name, StringComparer.OrdinalIgnoreCase)
                 });
             }
 
@@ -121,22 +111,23 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
+            var canonicalRoleMap = await BuildRoleCanonicalMapAsync();
             var selectedRoles = model.Roles
                 .Where(r => r.Selected)
-                .Select(r => r.RoleName)
-                .ToHashSet();
+                .Select(r => CanonicalizeRoleName(r.RoleName, canonicalRoleMap))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var currentRoles = await _userManager.GetRolesAsync(user);
+            var currentRoles = (await _userManager.GetRolesAsync(user)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var isSuperAdminUser = currentRoles.Contains(Permissions.SuperAdminRole);
-            if (isSuperAdminUser && !selectedRoles.Contains(Permissions.SuperAdminRole))
+            var isSuperAdminUser = currentRoles.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase);
+            if (isSuperAdminUser && !selectedRoles.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase))
             {
                 ModelState.AddModelError(string.Empty, "Super Admin rolü kaldırılmaz.");
                 await RebuildUserEditModel(model);
                 return View(model);
             }
 
-            if (!isSuperAdminUser && selectedRoles.Contains(Permissions.SuperAdminRole))
+            if (!isSuperAdminUser && selectedRoles.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase))
             {
                 var existingSuperAdmins = await _userManager.GetUsersInRoleAsync(Permissions.SuperAdminRole);
                 if (existingSuperAdmins.Any(u => u.Id != user.Id))
@@ -147,8 +138,8 @@ namespace ONERI.Controllers
                 }
             }
 
-            var rolesToAdd = selectedRoles.Except(currentRoles).ToList();
-            var rolesToRemove = currentRoles.Except(selectedRoles).ToList();
+            var rolesToAdd = selectedRoles.Except(currentRoles, StringComparer.OrdinalIgnoreCase).ToList();
+            var rolesToRemove = currentRoles.Except(selectedRoles, StringComparer.OrdinalIgnoreCase).ToList();
 
             if (rolesToAdd.Count > 0)
             {
@@ -185,29 +176,7 @@ namespace ONERI.Controllers
 
         public async Task<IActionResult> Roles()
         {
-            var roles = await _roleManager.Roles
-                .OrderBy(r => r.Name)
-                .ToListAsync();
-
-            var list = new List<RoleListItemViewModel>();
-            foreach (var role in roles)
-            {
-                if (role.Name == null)
-                {
-                    continue;
-                }
-
-                var claims = await _roleManager.GetClaimsAsync(role);
-                var permissionCount = claims.Count(c => c.Type == Permissions.ClaimType);
-                list.Add(new RoleListItemViewModel
-                {
-                    Id = role.Id,
-                    Name = role.Name,
-                    PermissionCount = permissionCount,
-                    IsSuperAdmin = role.Name == Permissions.SuperAdminRole
-                });
-            }
-
+            var list = await _superAdminQueryService.GetRolesWithPermissionCountsAsync();
             return View(list);
         }
 
@@ -229,7 +198,7 @@ namespace ONERI.Controllers
                 model.Roles.Add(new RoleOptionViewModel
                 {
                     RoleName = role.Name,
-                    Selected = role.Name == "Personel"
+                    Selected = string.Equals(role.Name, "Personel", StringComparison.OrdinalIgnoreCase)
                 });
             }
 
@@ -262,12 +231,13 @@ namespace ONERI.Controllers
                 return View(model);
             }
 
+            var canonicalRoleMap = await BuildRoleCanonicalMapAsync();
             var selectedRoles = model.Roles
                 .Where(r => r.Selected)
-                .Select(r => r.RoleName)
-                .ToHashSet();
+                .Select(r => CanonicalizeRoleName(r.RoleName, canonicalRoleMap))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            if (selectedRoles.Contains(Permissions.SuperAdminRole))
+            if (selectedRoles.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase))
             {
                 var existingSuperAdmins = await _userManager.GetUsersInRoleAsync(Permissions.SuperAdminRole);
                 if (existingSuperAdmins.Count > 0)
@@ -351,7 +321,7 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
-            if (role.Name == Permissions.SuperAdminRole)
+            if (string.Equals(role.Name, Permissions.SuperAdminRole, StringComparison.OrdinalIgnoreCase))
             {
                 TempData["Error"] = "Super Admin rolü tüm yetkilere sahiptir ve burada düzenlenmez.";
                 return RedirectToAction(nameof(Roles));
@@ -398,7 +368,7 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
-            if (role.Name == Permissions.SuperAdminRole)
+            if (string.Equals(role.Name, Permissions.SuperAdminRole, StringComparison.OrdinalIgnoreCase))
             {
                 TempData["Error"] = "Super Admin rolü tüm yetkilere sahiptir ve burada düzenlenmez.";
                 return RedirectToAction(nameof(Roles));
@@ -438,18 +408,19 @@ namespace ONERI.Controllers
                 .ToListAsync();
 
             var userRoles = await _userManager.GetRolesAsync(user);
+            var userRoleSet = userRoles.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             model.UserName = user.UserName ?? string.Empty;
             model.AdSoyad = user.AdSoyad;
             model.Email = user.Email;
-            model.IsSuperAdmin = userRoles.Contains(Permissions.SuperAdminRole);
+            model.IsSuperAdmin = userRoleSet.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase);
 
             model.Roles = allRoles
                 .Where(r => !string.IsNullOrWhiteSpace(r.Name))
                 .Select(r => new RoleOptionViewModel
                 {
                     RoleName = r.Name!,
-                    Selected = userRoles.Contains(r.Name!)
+                    Selected = userRoleSet.Contains(r.Name!, StringComparer.OrdinalIgnoreCase)
                 })
                 .ToList();
 
@@ -481,7 +452,7 @@ namespace ONERI.Controllers
             var selected = model.Roles
                 .Where(r => r.Selected)
                 .Select(r => r.RoleName)
-                .ToHashSet();
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             model.Roles = allRoles
                 .Where(r => !string.IsNullOrWhiteSpace(r.Name))
@@ -491,6 +462,21 @@ namespace ONERI.Controllers
                     Selected = selected.Contains(r.Name!)
                 })
                 .ToList();
+        }
+
+        private async Task<Dictionary<string, string>> BuildRoleCanonicalMapAsync()
+        {
+            var roleNames = await _roleManager.Roles
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => r.Name!)
+                .ToListAsync();
+
+            return roleNames.ToDictionary(r => r, r => r, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string CanonicalizeRoleName(string roleName, IReadOnlyDictionary<string, string> canonicalRoleMap)
+        {
+            return canonicalRoleMap.TryGetValue(roleName, out var canonical) ? canonical : roleName;
         }
     }
 }

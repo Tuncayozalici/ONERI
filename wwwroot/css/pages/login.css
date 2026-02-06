@@ -1,0 +1,64 @@
+body {
+    font-family: "Outfit", sans-serif;
+    overflow: hidden;
+    height: 100vh;
+}
+
+.login-image-side {
+    background-image: url("/img/login.jpg");
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+    position: relative;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.8));
+}
+
+.login-image-content {
+    z-index: 2;
+}
+
+.login-image-copy {
+    max-width: 500px;
+}
+
+.login-form-side {
+    height: 100%;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-wrapper {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.btn-marwood {
+    background-color: #212529;
+    color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+}
+
+.btn-marwood:hover {
+    background-color: #000;
+    transform: translateY(-2px);
+}
+
+.form-control {
+    padding: 12px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+}

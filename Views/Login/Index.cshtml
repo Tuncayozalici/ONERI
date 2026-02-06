@@ -12,48 +12,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <style>
-        /* Genel Sayfa Ayarları */
-        body { font-family: 'Outfit', sans-serif; overflow: hidden; height: 100vh; }
-        
-        /* SOL TARAF: FOTOĞRAF ALANI */
-        .login-image-side {
-            /* BURASI ÖNEMLİ: Sizin wwwroot/img klasörüne koyduğunuz fotoğrafı çeker */
-            background-image: url('/img/login.jpg'); 
-            background-size: cover;       /* Resmi ekrana sığdır */
-            background-position: center;  /* Resmi ortala */
-            height: 100%;
-            position: relative;
-        }
-        
-        /* Resmin üzerindeki siyah perde (yazılar okunsun diye) */
-        .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.8)); 
-        }
-
-        /* SAĞ TARAF: FORM ALANI */
-        .login-form-side {
-            height: 100%;
-            background-color: #fff;
-            display: flex;
-            align-items: center;    /* Dikeyde ortala */
-            justify-content: center; /* Yatayda ortala */
-        }
-
-        .form-wrapper { width: 100%; max-width: 400px; padding: 20px; }
-
-        /* Buton ve Input Tasarımları */
-        .btn-marwood {
-            background-color: #212529; color: white; padding: 12px; border-radius: 8px; border: none;
-        }
-        .btn-marwood:hover { background-color: #000; transform: translateY(-2px); }
-
-        .form-control {
-            padding: 12px; border-radius: 8px; background-color: #f8f9fa; border: 1px solid #eee;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/login.css" asp-append-version="true" />
 </head>
 <body>
 
@@ -62,9 +21,9 @@
             
             <div class="col-lg-7 d-none d-lg-block login-image-side">
                 <div class="overlay"></div>
-                <div class="position-absolute bottom-0 start-0 p-5 text-white" style="z-index: 2;">
+                <div class="position-absolute bottom-0 start-0 p-5 text-white login-image-content">
                     <h1 class="display-4 fw-bold">Better office mood.</h1>
-                    <p class="lead text-white-50 mt-3" style="max-width: 500px;">
+                    <p class="lead text-white-50 mt-3 login-image-copy">
                         Çalışma alanlarını dönüştüren tasarımlar için fikirlerinizi bekliyoruz.
                     </p>
                     <div class="mt-4 pt-4 border-top border-white border-opacity-25">
@@ -88,7 +47,10 @@
                         </div>
                     }
 
-                    <form action="/Login" method="post">
+                    <form asp-controller="Login" asp-action="Index" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold">KULLANICI ADI</label>
                             <input type="text" name="KullaniciAdi" class="form-control" placeholder="Örn: admin" required>

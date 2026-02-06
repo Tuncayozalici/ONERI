@@ -2,6 +2,10 @@
     ViewData["Title"] = "Gizlilik Politikası";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home-privacy.css" asp-append-version="true" />
+}
+
 <div class="container mt-4">
 
     <!-- Page Header -->
@@ -12,7 +16,7 @@
 
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+            <div class="card privacy-card">
                 <div class="card-body p-5">
                     <h5 class="card-title">Gizlilik Politikası Esasları</h5>
                     <p>Bu sayfada sitenin gizlilik politikası ile ilgili detaylı bilgiler yer alacaktır. Şirketimizin veri işleme, saklama ve koruma prensipleri burada açıklanır.</p>
@@ -25,10 +29,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    .page-header {
-        border-left: 5px solid #e9ecef;
-        padding-left: 1.5rem;
-    }
-</style>

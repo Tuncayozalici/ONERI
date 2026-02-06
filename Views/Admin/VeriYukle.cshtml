@@ -4,6 +4,10 @@
     ViewData["Title"] = "Veri Yükle";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/admin-veri-yukle.css" asp-append-version="true" />
+}
+
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
@@ -15,7 +19,7 @@
         </a>
     </div>
 
-    <div class="card shadow-sm mb-4" style="border-radius: 1rem; border: none;">
+    <div class="card shadow-sm mb-4 veri-yukle-card">
         <div class="card-body">
             <form asp-action="VeriYukle" method="post" enctype="multipart/form-data" class="row g-4">
                 @Html.AntiForgeryToken()
@@ -55,7 +59,7 @@
 
     @if (Model.Results != null && Model.Results.Any())
     {
-        <div class="card shadow-sm" style="border-radius: 1rem; border: none;">
+        <div class="card shadow-sm veri-yukle-card">
             <div class="card-header bg-light">
                 Yükleme Özeti
             </div>

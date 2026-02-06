@@ -4,6 +4,10 @@
     ViewData["Title"] = "Yeni Yönetici Ekle";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/admin-yonetici-ekle.css" asp-append-version="true" />
+}
+
 <div class="container mt-4">
     
     <!-- Page Header -->
@@ -14,7 +18,7 @@
 
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card p-4 p-md-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);">
+            <div class="card p-4 p-md-5 yonetici-ekle-card">
                 <form asp-action="YoneticiEkle" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -49,14 +53,6 @@
         </div>
     </div>
 </div>
-
-<!-- Add a generic page header style -->
-<style>
-    .page-header {
-        border-left: 5px solid #e9ecef;
-        padding-left: 1.5rem;
-    }
-</style>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}

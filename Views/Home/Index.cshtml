@@ -2,109 +2,9 @@
     ViewData["Title"] = "Portal Ana Sayfa";
 }
 
-<style>
-    .home-page {
-        background: radial-gradient(1200px 400px at 20% -10%, #e9f2ff 0%, rgba(233, 242, 255, 0) 60%),
-                    radial-gradient(900px 300px at 90% 10%, #fff3da 0%, rgba(255, 243, 218, 0) 55%),
-                    linear-gradient(180deg, #f7f8fa 0%, #ffffff 40%);
-        padding: 1.5rem 0 2.5rem;
-        border-radius: 24px;
-    }
-
-    .welcome-header {
-        text-align: center;
-        margin: 2.5rem 0; /* Boşluk azaltıldı */
-    }
-
-    .welcome-header h1 {
-        font-weight: 700;
-        color: #343a40; /* Koyu Gri (Antrasit) */
-        letter-spacing: -0.5px;
-        font-family: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
-        font-size: clamp(2.2rem, 2.8vw, 3rem);
-    }
-
-    .welcome-header p {
-        font-style: italic;
-        color: #6c757d;
-        font-size: 1.1rem;
-    }
-
-    .date-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.35rem 0.9rem;
-        border-radius: 999px;
-        background: rgba(52, 58, 64, 0.06);
-        color: #495057;
-        font-weight: 500;
-    }
-
-    .twin-card {
-        background: #fff;
-        border-radius: 20px;
-        border: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        padding: 1.25rem 1.5rem;
-    }
-
-    .twin-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 14px 36px rgba(16, 24, 40, 0.12);
-    }
-
-    .card-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        background: rgba(13, 110, 253, 0.08);
-        color: #0d6efd;
-        margin-bottom: 0.35rem;
-    }
-
-    .card-badge.secondary {
-        background: rgba(255, 152, 0, 0.12);
-        color: #c16d00;
-    }
-
-    .icon-wrapper {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
-        font-size: 1.5rem;
-    }
-
-    .info-panel {
-        background: #fff;
-        border-radius: 20px;
-        border: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
-        overflow: hidden;
-    }
-
-    .info-panel .card-header {
-        background: transparent;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-        font-weight: 600;
-    }
-
-    .info-panel .list-group-item {
-        border: 0;
-    }
-
-    .info-panel .list-group-item {
-        padding-bottom: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-</style>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home-index.css" asp-append-version="true" />
+}
 
 <div class="home-page">
     <div class="container">
@@ -123,7 +23,7 @@
         <!-- Kart 1: Fikir Atölyesi -->
         <div class="col-lg-6">
             <a href="@Url.Action("Index", "FikirAtolyesi")" class="twin-card">
-                <div class="icon-wrapper" style="background-color: #e3f2fd; color: #0d6efd;">
+                <div class="icon-wrapper icon-wrapper-fikir">
                     <i class="bi bi-lightbulb"></i>
                 </div>
                 <div class="content-wrapper">
@@ -139,7 +39,7 @@
         <!-- Kart 2: Günlük Veriler -->
         <div class="col-lg-6">
             <a href="@Url.Action("GunlukVeriler", "Home")" class="twin-card">
-                <div class="icon-wrapper" style="background-color: #fff0c2; color: #ff9800;">
+                <div class="icon-wrapper icon-wrapper-gunluk">
                     <i class="bi bi-bar-chart-line"></i>
                 </div>
                 <div class="content-wrapper">
@@ -157,7 +57,7 @@
     <div class="row g-4">
         <!-- Sol Sütun (Şirket Duyuruları) -->
         <div class="col-md-7">
-            <div class="info-panel" style="min-height: 220px;">
+            <div class="info-panel info-panel-min-height">
                 <div class="card-header">
                     <i class="bi bi-megaphone"></i> Şirket Duyuruları
                 </div>
@@ -170,7 +70,7 @@
         </div>
         <!-- Sağ Sütun (Hızlı Erişim / Faydalı Linkler) -->
         <div class="col-md-5">
-            <div class="info-panel" style="min-height: 220px;">
+            <div class="info-panel info-panel-min-height">
                 <div class="card-header">
                     <i class="bi bi-link-45deg"></i> Faydalı Linkler
                 </div>
@@ -186,12 +86,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        function updateDate() {
-            const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').textContent = now.toLocaleDateString('tr-TR', options);
-        }
-        updateDate();
-    </script>
+    <script src="~/js/pages/home-index.js" asp-append-version="true"></script>
 }

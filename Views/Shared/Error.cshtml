@@ -3,13 +3,17 @@
     ViewData["Title"] = "Hata";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/error.css" asp-append-version="true" />
+}
+
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="text-center p-5" style="border-radius: 20px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075); background-color: white;">
+            <div class="text-center p-5 error-card">
                 
                 <div class="mb-4">
-                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i>
+                    <i class="bi bi-exclamation-triangle-fill text-danger error-icon"></i>
                 </div>
 
                 <h1 class="fw-bold text-danger">Bir Hata Oluştu</h1>
@@ -18,7 +22,7 @@
 
                 @if (Model.ShowRequestId)
                 {
-                    <div class="mt-4 p-3 rounded" style="background-color: #f8f9fa; text-align: left;">
+                    <div class="mt-4 p-3 rounded error-tech">
                         <p class="small text-muted mb-1">Teknik Detaylar:</p>
                         <code class="d-block"><strong>Request ID:</strong> @Model.RequestId</code>
                         <p class="small mt-2">Bu bilgi, hatanın kaynağını bulmak için geliştirici tarafından kullanılabilir.</p>

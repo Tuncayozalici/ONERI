@@ -1,11 +1,17 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ONERI.Data;
+using ONERI.Extensions;
 using ONERI.Models;
 using ONERI.Models.Authorization;
+using ONERI.Services.Dashboards;
+using ONERI.Services.SuperAdmin;
 using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
+var isEfDesignTime = AppDomain.CurrentDomain.GetAssemblies()
+    .Any(a => string.Equals(a.GetName().Name, "Microsoft.EntityFrameworkCore.Design", StringComparison.Ordinal))
+    || string.Equals(Environment.GetEnvironmentVariable("DOTNET_EF_DESIGN_TIME"), "1", StringComparison.Ordinal);
 // EPPlus 8 için Lisans Tanımlaması (Ticari Olmayan Kişisel Kullanım)
 OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("Tuncay");
 
@@ -15,6 +21,7 @@ builder.Services.AddDbContext<FabrikaContext>(options =>
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddSession();
+builder.Services.AddMemoryCache();
 
 // Identity servislerini ve ayarlarını ekle
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
@@ -25,22 +32,16 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
         options.Password.RequireLowercase = true;
         options.Password.RequireUppercase = true;
         options.Password.RequireNonAlphanumeric = true;
+
+        // Brute-force koruması
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
     })
     .AddEntityFrameworkStores<FabrikaContext>();
 
 // Yetkilendirme politikaları (rol + izin)
-builder.Services.AddAuthorization(options =>
-{
-    foreach (var permission in Permissions.All)
-    {
-        options.AddPolicy(permission.Key, policy =>
-        {
-            policy.RequireAssertion(context =>
-                context.User.IsInRole(Permissions.SuperAdminRole) ||
-                context.User.HasClaim(Permissions.ClaimType, permission.Key));
-        });
-    }
-});
+builder.Services.AddAppAuthorizationPolicies();
 
 // Cookie ayarlarını Identity ile entegre et
 builder.Services.ConfigureApplicationCookie(options =>
@@ -50,26 +51,35 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Login/AccessDenied"; // Yetkisiz erişim için yönlendirme (opsiyonel)
 });
 
+builder.Services.AddScoped<IDashboardIngestionService, DashboardIngestionService>();
+builder.Services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+builder.Services.AddScoped<ISuperAdminQueryService, SuperAdminQueryService>();
+builder.Services.AddHostedService<DashboardIngestBackgroundService>();
+
 
 var app = builder.Build();
 
 // Veritabanını başlangıç verileriyle doldur (Roller ve Admin Kullanıcısı)
-using (var scope = app.Services.CreateScope())
+if (!isEfDesignTime)
 {
-    var services = scope.ServiceProvider;
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        var context = services.GetRequiredService<FabrikaContext>();
-        if (context.Database.GetPendingMigrations().Any())
+        var services = scope.ServiceProvider;
+        try
         {
-            context.Database.Migrate();
+            var context = services.GetRequiredService<FabrikaContext>();
+            if (context.Database.GetPendingMigrations().Any())
+            {
+                context.Database.Migrate();
+            }
+            var configuration = services.GetRequiredService<IConfiguration>();
+            await DbSeeder.SeedIdentityData(services, configuration);
         }
-        await DbSeeder.SeedIdentityData(services);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Veritabanı oluşturulurken veya seed data eklenirken bir hata oluştu.");
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Veritabanı oluşturulurken veya seed data eklenirken bir hata oluştu.");
+        }
     }
 }
 
@@ -95,4 +105,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.Run();
+if (!isEfDesignTime)
+{
+    app.Run();
+}

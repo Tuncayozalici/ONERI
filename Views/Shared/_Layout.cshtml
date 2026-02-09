@@ -132,14 +132,14 @@
             var canEbatlama = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Ebatlama)).Succeeded;
             var canHatali = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.HataliParca)).Succeeded;
 
-            var canFikirAtolyesi = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.FikirAtolyesi.View)).Succeeded;
-            var canOneriYeni = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Oneri.Create)).Succeeded;
-            var canOneriSorgu = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Oneri.Query)).Succeeded;
+            var canFikirAtolyesi = true;
+            var canOneriYeni = true;
+            var canOneriSorgu = true;
 
             var hasGunlukChildren = canProfil || canBoyahane || canPvc || canMasterwood || canSkipper || canTezgah || canEbatlama || canHatali;
             var hasAnyGunluk = canGunluk || hasGunlukChildren;
-            var hasFikirChildren = canOneriYeni || canOneriSorgu;
-            var hasAnyFikir = canFikirAtolyesi || hasFikirChildren;
+            var hasFikirChildren = true;
+            var hasAnyFikir = true;
         }
         <p class="text-muted small">MODÜLLER</p>
         <div class="list-group list-group-flush">

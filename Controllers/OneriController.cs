@@ -19,6 +19,7 @@ namespace ONERI.Controllers
 
         // GET: Oneri/Index
         // Bu metot, kullanıcıyı doğrudan yeni öneri oluşturma formuna yönlendirir.
+        [AllowAnonymous]
         public IActionResult Index()
         {
             return RedirectToAction(nameof(Yeni));
@@ -26,7 +27,7 @@ namespace ONERI.Controllers
 
         // GET: Oneri/Tesekkurler?token={trackingToken}
         // Başarılı bir gönderim sonrası gösterilecek sayfa.
-        [Authorize(Policy = Permissions.Oneri.Create)]
+        [AllowAnonymous]
         public async Task<IActionResult> Tesekkurler(string token)
         {
             if (!Guid.TryParse(token, out var parsedToken))
@@ -46,7 +47,7 @@ namespace ONERI.Controllers
         }
 
         // GET: Oneri/Yeni
-        [Authorize(Policy = Permissions.Oneri.Create)]
+        [AllowAnonymous]
         public async Task<IActionResult> Yeni()
         {
             var bolumler = await _context.BolumYoneticileri
@@ -62,7 +63,7 @@ namespace ONERI.Controllers
         // POST: Oneri/Yeni
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = Permissions.Oneri.Create)]
+        [AllowAnonymous]
         public async Task<IActionResult> Yeni(OneriCreateViewModel viewModel)
         {
             if (ModelState.IsValid)
@@ -110,7 +111,7 @@ namespace ONERI.Controllers
 
         // Görev 1: Arama Kutusunu Gösterme (GET Metodu)
         [HttpGet]
-        [Authorize(Policy = Permissions.Oneri.Query)]
+        [AllowAnonymous]
         public async Task<IActionResult> Sorgula(string? token)
         {
             if (!string.IsNullOrWhiteSpace(token))
@@ -125,7 +126,7 @@ namespace ONERI.Controllers
         [HttpPost]
         [ActionName("Sorgula")]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = Permissions.Oneri.Query)]
+        [AllowAnonymous]
         public async Task<IActionResult> SorgulaPost(string token)
         {
             return await SorgulaByTrackingToken(token);

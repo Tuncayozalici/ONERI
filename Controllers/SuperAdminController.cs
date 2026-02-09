@@ -174,6 +174,68 @@ namespace ONERI.Controllers
             return RedirectToAction(nameof(EditUser), new { id = user.Id });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(UserEditViewModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.UserId))
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(model.NewPassword) || string.IsNullOrWhiteSpace(model.ConfirmPassword))
+            {
+                ModelState.AddModelError(string.Empty, "Yeni şifre ve doğrulama zorunludur.");
+            }
+            else if (!string.Equals(model.NewPassword, model.ConfirmPassword, StringComparison.Ordinal))
+            {
+                ModelState.AddModelError(string.Empty, "Şifreler eşleşmiyor.");
+            }
+
+            if (ModelState.IsValid)
+            {
+                foreach (var validator in _userManager.PasswordValidators)
+                {
+                    var validation = await validator.ValidateAsync(_userManager, user, model.NewPassword!);
+                    if (!validation.Succeeded)
+                    {
+                        foreach (var error in validation.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        }
+                    }
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                await RebuildUserEditModel(model);
+                return View("EditUser", model);
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var resetResult = await _userManager.ResetPasswordAsync(user, token, model.NewPassword!);
+            if (!resetResult.Succeeded)
+            {
+                foreach (var error in resetResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+
+                await RebuildUserEditModel(model);
+                return View("EditUser", model);
+            }
+
+            TempData["Success"] = "Şifre güncellendi.";
+            return RedirectToAction(nameof(EditUser), new { id = user.Id });
+        }
+
         public async Task<IActionResult> Roles()
         {
             var list = await _superAdminQueryService.GetRolesWithPermissionCountsAsync();

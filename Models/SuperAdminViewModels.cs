@@ -43,6 +43,12 @@ namespace ONERI.Models
         public bool IsSuperAdmin { get; set; }
         public List<RoleOptionViewModel> Roles { get; set; } = new();
         public List<PermissionOptionViewModel> ExtraPermissions { get; set; } = new();
+
+        [DataType(DataType.Password)]
+        public string? NewPassword { get; set; }
+
+        [DataType(DataType.Password)]
+        public string? ConfirmPassword { get; set; }
     }
 
     public class RoleEditViewModel

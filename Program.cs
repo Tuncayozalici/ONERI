@@ -38,7 +38,8 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.AllowedForNewUsers = true;
     })
-    .AddEntityFrameworkStores<FabrikaContext>();
+    .AddEntityFrameworkStores<FabrikaContext>()
+    .AddDefaultTokenProviders();
 
 // Yetkilendirme politikaları (rol + izin)
 builder.Services.AddAppAuthorizationPolicies();

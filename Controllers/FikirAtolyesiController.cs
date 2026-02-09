@@ -19,7 +19,7 @@ public class FikirAtolyesiController : Controller
         _context = context;
     }
 
-    [Authorize(Policy = Permissions.FikirAtolyesi.View)]
+    [AllowAnonymous]
     public async Task<IActionResult> Index()
     {
         ViewBag.ToplamSayi = await _context.Oneriler.CountAsync();

@@ -78,8 +78,10 @@ public class DashboardQueryService : IDashboardQueryService
 
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
 
-        DateTime rangeStart;
-        DateTime rangeEnd;
+        DateTime ozetStart;
+        DateTime ozetEnd;
+        DateTime trendStart;
+        DateTime trendEnd;
         if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(allDates, ay.Value, yil);
@@ -89,30 +91,43 @@ public class DashboardQueryService : IDashboardQueryService
                 bag["OzetResolvedYear"] = resolvedYear.Value;
             }
 
-            rangeStart = new DateTime(yearToUse, ay.Value, 1);
-            rangeEnd = rangeStart.AddMonths(1).AddDays(-1);
-            bag["OzetRange"] = $"{rangeStart:dd.MM.yyyy} - {rangeEnd:dd.MM.yyyy}";
+            ozetStart = new DateTime(yearToUse, ay.Value, 1);
+            ozetEnd = ozetStart.AddMonths(1).AddDays(-1);
+            trendStart = ozetStart;
+            trendEnd = ozetEnd;
+            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
         }
         else if (raporTarihi.HasValue)
         {
-            rangeStart = raporTarihi.Value.Date;
-            rangeEnd = rangeStart;
-            bag["OzetRange"] = $"{rangeStart:dd.MM.yyyy}";
+            ozetStart = raporTarihi.Value.Date;
+            ozetEnd = ozetStart;
+            trendEnd = ozetEnd;
+            trendStart = trendEnd.AddDays(-6);
+            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy}";
         }
         else
         {
-            rangeEnd = maxDate.Date;
-            rangeStart = rangeEnd.AddDays(-6);
-            bag["OzetRange"] = $"{rangeStart:dd.MM.yyyy} - {rangeEnd:dd.MM.yyyy}";
+            ozetEnd = maxDate.Date;
+            ozetStart = ozetEnd.AddDays(-6);
+            trendStart = ozetStart;
+            trendEnd = ozetEnd;
+            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
         }
 
-        var tumTarihler = Enumerable.Range(0, (rangeEnd - rangeStart).Days + 1)
-            .Select(offset => rangeStart.AddDays(offset))
+        var ozetTarihleri = Enumerable.Range(0, (ozetEnd - ozetStart).Days + 1)
+            .Select(offset => ozetStart.AddDays(offset))
             .ToList();
 
-        var uretimGunluk = tumTarihler.ToDictionary(t => t, _ => 0d);
-        var hataGunluk = tumTarihler.ToDictionary(t => t, _ => 0d);
-        var duraklamaGunluk = tumTarihler.ToDictionary(t => t, _ => 0d);
+        var trendTarihleri = Enumerable.Range(0, (trendEnd - trendStart).Days + 1)
+            .Select(offset => trendStart.AddDays(offset))
+            .ToList();
+
+        var uretimGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
+        var hataGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
+        var duraklamaGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
+        var uretimTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
+        var hataTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
+        var duraklamaTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var bolumKatki = new Dictionary<string, double>();
 
         static void AddDaily(Dictionary<DateTime, double> dict, DateTime date, double value)
@@ -136,59 +151,96 @@ public class DashboardQueryService : IDashboardQueryService
             }
         }
 
-        foreach (var row in profilRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in profilRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDept(bolumKatki, "Profil Lazer", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDept(bolumKatki, "Profil Lazer", row.Uretim);
+            }
         }
 
-        foreach (var row in boyaRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in boyaRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDept(bolumKatki, "Boyahane", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDept(bolumKatki, "Boyahane", row.Uretim);
+            }
         }
 
-        foreach (var row in pvcRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in pvcRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-            AddDept(bolumKatki, "PVC", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
+                AddDept(bolumKatki, "PVC", row.Uretim);
+            }
         }
 
-        foreach (var row in masterRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in masterRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-            AddDept(bolumKatki, "Masterwood", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
+                AddDept(bolumKatki, "Masterwood", row.Uretim);
+            }
         }
 
-        foreach (var row in skipperRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in skipperRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-            AddDept(bolumKatki, "Skipper", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
+                AddDept(bolumKatki, "Skipper", row.Uretim);
+            }
         }
 
-        foreach (var row in tezgahRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in tezgahRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-            AddDept(bolumKatki, "Tezgah", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
+                AddDept(bolumKatki, "Tezgah", row.Uretim);
+            }
         }
 
-        foreach (var row in ebatlamaRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in ebatlamaRows)
         {
-            AddDaily(uretimGunluk, row.Tarih, row.Uretim);
-            AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-            AddDept(bolumKatki, "Ebatlama", row.Uretim);
+            AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
+                AddDept(bolumKatki, "Ebatlama", row.Uretim);
+            }
         }
 
-        foreach (var row in hataliRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd))
+        foreach (var row in hataliRows)
         {
-            AddDaily(hataGunluk, row.Tarih, row.Adet);
+            AddDaily(hataTrendGunluk, row.Tarih, row.Adet);
+            if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
+            {
+                AddDaily(hataGunluk, row.Tarih, row.Adet);
+            }
         }
 
-        var filteredHatali = hataliRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd).ToList();
+        var filteredHatali = hataliRows.Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd).ToList();
 
         model.ToplamUretim = uretimGunluk.Values.Sum();
         model.ToplamHataAdet = filteredHatali.Sum(x => x.Adet);
@@ -196,17 +248,17 @@ public class DashboardQueryService : IDashboardQueryService
         model.ToplamDuraklamaDakika = duraklamaGunluk.Values.Sum();
 
         var kullanilabilirlikValues = tezgahRows
-            .Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd)
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
             .Select(x => x.Kullanilabilirlik)
             .Where(x => x > 0)
             .ToList();
         model.OrtalamaKullanilabilirlik = kullanilabilirlikValues.Any() ? kullanilabilirlikValues.Average() : 0;
 
         var fiiliValues = pvcRows
-            .Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd)
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
             .Select(x => x.Fiili)
-            .Concat(masterRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd).Select(x => x.Fiili))
-            .Concat(skipperRows.Where(x => x.Tarih.Date >= rangeStart && x.Tarih.Date <= rangeEnd).Select(x => x.Fiili))
+            .Concat(masterRows.Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd).Select(x => x.Fiili))
+            .Concat(skipperRows.Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd).Select(x => x.Fiili))
             .Where(x => x > 0)
             .ToList();
 
@@ -242,10 +294,10 @@ public class DashboardQueryService : IDashboardQueryService
             model.EnCokHataOperator = $"{topOperator.Key} ({topOperator.Total:N0})";
         }
 
-        model.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        model.UretimTrendData = tumTarihler.Select(t => uretimGunluk[t]).ToList();
-        model.HataTrendData = tumTarihler.Select(t => hataGunluk[t]).ToList();
-        model.DuraklamaTrendData = tumTarihler.Select(t => duraklamaGunluk[t]).ToList();
+        model.TrendLabels = trendTarihleri.Select(t => t.ToString("dd.MM")).ToList();
+        model.UretimTrendData = trendTarihleri.Select(t => uretimTrendGunluk[t]).ToList();
+        model.HataTrendData = trendTarihleri.Select(t => hataTrendGunluk[t]).ToList();
+        model.DuraklamaTrendData = trendTarihleri.Select(t => duraklamaTrendGunluk[t]).ToList();
 
         var bolumList = bolumKatki.OrderByDescending(x => x.Value).ToList();
         model.BolumUretimLabels = bolumList.Select(x => x.Key).ToList();
@@ -260,7 +312,7 @@ public class DashboardQueryService : IDashboardQueryService
 
         model.HataNedenLabels = hataNedenList.Select(x => x.Key).ToList();
         model.HataNedenData = hataNedenList.Select(x => x.Total).ToList();
-        model.RaporTarihi = rangeEnd;
+        model.RaporTarihi = ozetEnd;
 
         return new DashboardPageResult<GenelFabrikaOzetViewModel>
         {
@@ -357,7 +409,8 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.HataUrunSonucAdetleri = hataUrunGruplari.Select(x => x.Toplam).ToList();
 
         var pastaGrafikData = gununVerileri
-            .GroupBy(x => x.ProfilTipi)
+            .AsEnumerable()
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.ProfilTipi))
             .Select(g => new { Profil = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
             .OrderByDescending(x => x.ToplamUretim)
             .ToList();
@@ -366,7 +419,8 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.ProfilUretimAdetleri = pastaGrafikData.Select(x => x.ToplamUretim).ToList();
 
         var urunBazliSureData = gununVerileri
-            .GroupBy(x => x.ProfilTipi)
+            .AsEnumerable()
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.ProfilTipi))
             .Select(g => new { Urun = g.Key, ToplamSure = g.Sum(x => x.CalismaSuresi) })
             .OrderByDescending(x => x.ToplamSure)
             .ToList();
@@ -541,6 +595,34 @@ public class DashboardQueryService : IDashboardQueryService
         var islenecekTarih = raporTarihi ?? DateTime.Today;
         var bag = new Dictionary<string, object?>();
 
+        static string NormalizePvcDuraklamaNedeni(string? neden)
+        {
+            if (string.IsNullOrWhiteSpace(neden))
+            {
+                return string.Empty;
+            }
+
+            var trimmed = neden.Trim();
+            var key = DashboardParsingHelper.NormalizeHeaderForMatch(trimmed);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return trimmed;
+            }
+
+            var remaining = key;
+            remaining = remaining.Replace("temizlik", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("hazirlik", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("ilkisinma", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("isinma", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(remaining))
+            {
+                return "Temizlik/Hazırlık/İlk Isınma";
+            }
+
+            return trimmed;
+        }
+
         var viewModel = new PvcDashboardViewModel { RaporTarihi = islenecekTarih };
         var excelData = snapshot.PvcRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
@@ -625,9 +707,9 @@ public class DashboardQueryService : IDashboardQueryService
         var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in filtreliVeri)
         {
-            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni1, row.Duraklama1);
-            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni2, row.Duraklama2);
-            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni3, row.Duraklama3);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, NormalizePvcDuraklamaNedeni(row.DuraklamaNedeni1), row.Duraklama1);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, NormalizePvcDuraklamaNedeni(row.DuraklamaNedeni2), row.Duraklama2);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, NormalizePvcDuraklamaNedeni(row.DuraklamaNedeni3), row.Duraklama3);
         }
 
         var duraklamaList = duraklamaNedenleri.OrderByDescending(x => x.Value).ToList();

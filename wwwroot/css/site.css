@@ -153,6 +153,14 @@ html[data-theme="dark"] .nav-tile .icon {
     border: 1px solid #2a3547;
 }
 
+html[data-theme="dark"] .nav-tile h5 {
+    color: #e8edf5 !important;
+}
+
+html[data-theme="dark"] .nav-tile p {
+    color: #c3cedd !important;
+}
+
 html[data-theme="dark"] .daily-page {
     background: radial-gradient(1200px 350px at 20% -10%, rgba(59, 84, 127, 0.2) 0%, rgba(15, 20, 27, 0) 60%),
                 radial-gradient(900px 300px at 85% 0%, rgba(127, 93, 38, 0.18) 0%, rgba(15, 20, 27, 0) 55%),

@@ -105,19 +105,29 @@ document.addEventListener('DOMContentLoaded', function () {
     
                 const kisiTrendCtx = document.getElementById('kisiTrendGrafigi').getContext('2d');
                 new Chart(kisiTrendCtx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
                         labels: data.TrendLabels,
                         datasets: [{
                             label: 'Kişi Sayısı',
                             data: data.KisiTrendData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
                             borderColor: 'rgba(75, 192, 192, 0.9)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            tension: 0.2,
-                            fill: true
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
                         }]
                     },
-                    options: { responsive: true }
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                suggestedMin: 0,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
                 });
     
                 const oranTrendCtx = document.getElementById('oranTrendGrafigi').getContext('2d');

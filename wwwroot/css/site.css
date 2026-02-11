@@ -85,6 +85,14 @@ html[data-theme="dark"] .user-chip {
     color: #e5e7eb;
 }
 
+html[data-theme="dark"] .navbar-light .navbar-nav .user-chip,
+html[data-theme="dark"] .navbar-light .navbar-nav .user-chip:hover,
+html[data-theme="dark"] .navbar-light .navbar-nav .user-chip:focus,
+html[data-theme="dark"] .navbar-light .navbar-nav .show > .user-chip,
+html[data-theme="dark"] .navbar-light .navbar-nav .user-chip.active {
+    color: #e5e7eb !important;
+}
+
 html[data-theme="dark"] .bg-light {
     background-color: #1a2330 !important;
 }

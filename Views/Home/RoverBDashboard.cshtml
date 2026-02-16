@@ -1,0 +1,168 @@
+@model ONERI.Models.RoverBDashboardViewModel
+@{
+    ViewData["Title"] = "Rover-B Verileri";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/boyahane.css" />
+}
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+}
+
+<div class="container">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="display-6">ROVER-B Üretim Raporu</h2>
+        </div>
+        <div class="col-md-6">
+            <form asp-action="RoverBDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+                <div class="form-group">
+                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
+                    <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="ay" class="visually-hidden">Ay Seç</label>
+                    <select id="ay" name="ay" class="form-select">
+                        <option value="">Ay Seçin</option>
+                        <option value="1">Ocak</option>
+                        <option value="2">Şubat</option>
+                        <option value="3">Mart</option>
+                        <option value="4">Nisan</option>
+                        <option value="5">Mayıs</option>
+                        <option value="6">Haziran</option>
+                        <option value="7">Temmuz</option>
+                        <option value="8">Ağustos</option>
+                        <option value="9">Eylül</option>
+                        <option value="10">Ekim</option>
+                        <option value="11">Kasım</option>
+                        <option value="12">Aralık</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="yil" class="visually-hidden">Yıl Seç</label>
+                    <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
+                </div>
+                <button type="submit" class="btn btn-success">Filtrele</button>
+                <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>Delik + Freeze</h5>
+                    <p class="card-text">@Model.ToplamDelikFreeze.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-diagram-3 me-2"></i>Delik + Freeze + PVC</h5>
+                    <p class="card-text">@Model.ToplamDelikFreezePvc.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Toplam Duraklama (dk)</h5>
+                    <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
+                    <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h5>
+                    <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
+                    <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-graph-up me-2"></i>OEE</h5>
+                    <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.RoverBOeeTitle ?? "OEE Skoru Trendi (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="oeeTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.RoverBTrendTitle ?? "Üretim Trendi (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="uretimTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Performans / Kayıp Süre Trendleri
+                </div>
+                <div class="card-body">
+                    <canvas id="oranTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    Duraklama Nedenleri
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie-wrap">
+                        <canvas id="duraklamaNedenGrafigi" class="chart-pie"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script id="roverb-dashboard-data" type="application/json">
+        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = (int?)null }))
+    </script>
+    <script src="~/js/pages/dashboards/roverb-dashboard.js" asp-append-version="true"></script>
+}

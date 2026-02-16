@@ -167,6 +167,7 @@ public class DashboardIngestionService : IDashboardIngestionService
             PvcRows = ParsePvcRows(excelRoot),
             MasterwoodRows = ParseMasterwoodRows(excelRoot),
             SkipperRows = ParseSkipperRows(excelRoot),
+            RoverBRows = ParseRoverBRows(excelRoot),
             TezgahRows = ParseTezgahRows(excelRoot),
             EbatlamaRows = ParseEbatlamaRows(excelRoot),
             HataliParcaRows = ParseHataliParcaRows(excelRoot)
@@ -694,6 +695,137 @@ public class DashboardIngestionService : IDashboardIngestionService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Skipper satırı parse edilemedi. Satır: {Row}", row);
+            }
+        }
+
+        return result.Where(x => x.Tarih != DateTime.MinValue).ToList();
+    }
+
+    private List<RoverBSatirModel> ParseRoverBRows(string excelRoot)
+    {
+        var result = new List<RoverBSatirModel>();
+        var fileCandidates = new[]
+        {
+            "MARWOOD Rover-B Veri Ekranı 2026.xlsm",
+            "MARWOOD Rover-B Veri Ekranı.xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
+        if (!File.Exists(filePath))
+        {
+            return result;
+        }
+
+        using var package = new ExcelPackage(new FileInfo(filePath));
+        var worksheet = package.Workbook.Worksheets
+            .FirstOrDefault(ws =>
+                ws.Name.Equals("GİRDİ RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("GIRDI RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("ANA RAPOR", StringComparison.OrdinalIgnoreCase));
+        if (worksheet?.Dimension == null)
+        {
+            return result;
+        }
+
+        int colCount = worksheet.Dimension.Columns;
+        int duraklama2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI 2 (DK)", "DURAKLAMA ZAMANI 2", "DURAKLAMA2");
+        int duraklamaNeden2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 2", "DURAKLAMA NEDENI 2");
+        int duraklama3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI 3 (DK)", "DURAKLAMA ZAMANI 3", "DURAKLAMA3");
+        int duraklamaNeden3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 3", "DURAKLAMA NEDENI 3");
+        int duraklama4Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI 4 (DK)", "DURAKLAMA ZAMANI 4", "DURAKLAMA4");
+        int duraklamaNeden4Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 4", "DURAKLAMA NEDENI 4");
+        int hataliParcaCol = DashboardParsingHelper.FindColumn(worksheet, "HATALI PARÇA SAYISI", "HATALI PARCA SAYISI", "HATALI PARÇA", "HATALI PARCA");
+        int aciklamaCol = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int performansCol = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS", "PERFONMANS");
+        int kayipSureCol = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE", "KAYIP SURE", "KAYIPSURE");
+        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int kaliteCol = DashboardParsingHelper.FindColumn(worksheet, "KALİTE ORANI", "KALITE ORANI", "KALİTE", "KALITE");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
+
+        for (int row = 2; row <= worksheet.Dimension.Rows; row++)
+        {
+            try
+            {
+                var dateCell = worksheet.Cells[row, 1];
+                var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
+
+                var duraklama2 = duraklama2Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, duraklama2Col].Value)
+                    : (colCount >= 8 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 8].Value) : 0);
+                var duraklamaNeden2 = duraklamaNeden2Col > 0
+                    ? worksheet.Cells[row, duraklamaNeden2Col].Value?.ToString()?.Trim()
+                    : (colCount >= 9 ? worksheet.Cells[row, 9].Value?.ToString()?.Trim() : null);
+                var duraklama3 = duraklama3Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, duraklama3Col].Value)
+                    : (colCount >= 10 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 10].Value) : 0);
+                var duraklamaNeden3 = duraklamaNeden3Col > 0
+                    ? worksheet.Cells[row, duraklamaNeden3Col].Value?.ToString()?.Trim()
+                    : (colCount >= 11 ? worksheet.Cells[row, 11].Value?.ToString()?.Trim() : null);
+                var duraklama4 = duraklama4Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, duraklama4Col].Value)
+                    : (colCount >= 12 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 12].Value) : 0);
+                var duraklamaNeden4 = duraklamaNeden4Col > 0
+                    ? worksheet.Cells[row, duraklamaNeden4Col].Value?.ToString()?.Trim()
+                    : (colCount >= 13 ? worksheet.Cells[row, 13].Value?.ToString()?.Trim() : null);
+
+                var hataliParca = hataliParcaCol > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, hataliParcaCol].Value)
+                    : (colCount >= 14 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 14].Value) : 0);
+                var aciklama = aciklamaCol > 0
+                    ? worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim()
+                    : (colCount >= 15 ? worksheet.Cells[row, 15].Value?.ToString()?.Trim() : null);
+                var performans = performansCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, performansCol].Value)
+                    : (colCount >= 16 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 16].Value) : 0);
+                var kayipSure = kayipSureCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kayipSureCol].Value)
+                    : (colCount >= 17 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 17].Value) : 0);
+                var kullanilabilirlik = kullanilabilirlikCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
+                    : (colCount >= 18 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 18].Value) : 0);
+                var kalite = kaliteCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kaliteCol].Value)
+                    : (colCount >= 19 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 19].Value) : 0);
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
+                    : (colCount >= 20 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 20].Value) : 0);
+
+                var normalizedPerformans = DashboardParsingHelper.NormalizePercentValue(performans);
+                var normalizedKayipSure = DashboardParsingHelper.NormalizePercentValue(kayipSure);
+                var normalizedKullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik);
+                var normalizedKalite = DashboardParsingHelper.NormalizePercentValue(kalite);
+                var normalizedOee = DashboardParsingHelper.NormalizePercentValue(oee);
+
+                result.Add(new RoverBSatirModel
+                {
+                    Tarih = parsedDate,
+                    KisiSayisi = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 2].Value),
+                    DelikFreezeSayisi = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 3].Value),
+                    DelikFreezePvcSayisi = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 4].Value),
+                    CalismaKosulu = worksheet.Cells[row, 5].Value?.ToString()?.Trim(),
+                    Duraklama1 = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 6].Value),
+                    DuraklamaNedeni1 = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
+                    Duraklama2 = duraklama2,
+                    DuraklamaNedeni2 = duraklamaNeden2,
+                    Duraklama3 = duraklama3,
+                    DuraklamaNedeni3 = duraklamaNeden3,
+                    Duraklama4 = duraklama4,
+                    DuraklamaNedeni4 = duraklamaNeden4,
+                    HataliParca = hataliParca,
+                    Aciklama = aciklama,
+                    Performans = normalizedPerformans,
+                    UretimOrani = normalizedPerformans,
+                    KayipSureOrani = normalizedKayipSure,
+                    Kullanilabilirlik = normalizedKullanilabilirlik,
+                    Kalite = normalizedKalite,
+                    Oee = normalizedOee,
+                    FiiliCalismaOrani = normalizedKullanilabilirlik
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Rover-B satırı parse edilemedi. Satır: {Row}", row);
             }
         }
 

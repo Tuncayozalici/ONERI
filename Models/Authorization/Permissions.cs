@@ -17,6 +17,7 @@ namespace ONERI.Models.Authorization
             public const string Pvc = "dashboard.pvc.view";
             public const string Masterwood = "dashboard.masterwood.view";
             public const string Skipper = "dashboard.skipper.view";
+            public const string RoverB = "dashboard.roverb.view";
             public const string Tezgah = "dashboard.tezgah.view";
             public const string Ebatlama = "dashboard.ebatlama.view";
             public const string HataliParca = "dashboard.hataliparca.view";
@@ -63,6 +64,7 @@ namespace ONERI.Models.Authorization
             new(Dashboards.Pvc, "PVC Bölümü", "Dashboards"),
             new(Dashboards.Masterwood, "Masterwood Makinesi", "Dashboards"),
             new(Dashboards.Skipper, "Skipper Makinesi", "Dashboards"),
+            new(Dashboards.RoverB, "Rover-B Makinesi", "Dashboards"),
             new(Dashboards.Tezgah, "Tezgah Bölümü", "Dashboards"),
             new(Dashboards.Ebatlama, "Ebatlama Bölümü", "Dashboards"),
             new(Dashboards.HataliParca, "Hatalı Parça Analizi", "Dashboards"),

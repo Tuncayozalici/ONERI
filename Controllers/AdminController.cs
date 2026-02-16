@@ -263,6 +263,8 @@ namespace ONERI.Controllers
                 ["MARWOOD Masterwood Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Masterwood Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["MARWOOD Skipper Veri Ekranı 2026.xlsm"] = (Path.Combine(excelPath, "MARWOOD Skipper Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm"] = (Path.Combine(excelPath, "MARWOOD Skipper Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
+                ["MARWOOD Rover-B Veri Ekranı 2026.xlsm"] = (Path.Combine(excelPath, "MARWOOD Rover-B Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
+                ["MARWOOD Rover-B Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Rover-B Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"), "ANA RAPOR"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),

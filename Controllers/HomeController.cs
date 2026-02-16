@@ -76,6 +76,14 @@ public class HomeController : Controller
         return View(result.Model);
     }
 
+    [Authorize(Policy = Permissions.Dashboards.RoverB)]
+    public async Task<IActionResult> RoverBDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    {
+        var result = await _dashboardQueryService.GetRoverBAsync(raporTarihi, ay, yil, cancellationToken);
+        ApplyViewBagValues(result.ViewBagValues);
+        return View(result.Model);
+    }
+
     [Authorize(Policy = Permissions.Dashboards.Tezgah)]
     public async Task<IActionResult> TezgahDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {

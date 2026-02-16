@@ -63,14 +63,6 @@
         <div class="col-lg col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Ortalama Kişi Sayısı</h5>
-                    <p class="card-text">@Model.OrtalamaKisiSayisi.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Toplam Duraklama (dk)</h5>
                     <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
                 </div>
@@ -79,14 +71,48 @@
         <div class="col-lg col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Fiili Çalışma</h5>
-                    <p class="card-text">@Model.OrtalamaFiiliCalismaOrani.ToString("F2") %</p>
+                    <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
+                    <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h5>
+                    <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
+                    <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>OEE</h5>
+                    <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.SkipperOeeTitle ?? "OEE Skoru Trendi (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="oeeTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
@@ -100,17 +126,7 @@
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    @(ViewBag.SkipperKisiTrendTitle ?? "Kişi Sayısı (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="kisiTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Üretim / Kayıp / Fiili Oran Trendleri
+                    Performans / Kayıp Süre Trendleri
                 </div>
                 <div class="card-body">
                     <canvas id="oranTrendGrafigi"></canvas>

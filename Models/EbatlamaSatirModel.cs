@@ -19,5 +19,9 @@ namespace ONERI.Models
         public string? DuraklamaNedeni1 { get; set; }
         public double Duraklama2 { get; set; }
         public string? DuraklamaNedeni2 { get; set; }
+        public double Performans { get; set; }
+        public double Kullanilabilirlik { get; set; }
+        public double Kalite { get; set; }
+        public double Oee { get; set; }
     }
 }

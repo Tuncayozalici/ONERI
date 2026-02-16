@@ -189,16 +189,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     options: { responsive: true }
                 });
     
-                new Chart(document.getElementById('hazirlikTrendGrafigi').getContext('2d'), {
+                new Chart(document.getElementById('oeeTrendGrafigi').getContext('2d'), {
                     type: 'line',
                     data: {
                         labels: data.TrendLabels,
                         datasets: [{
-                            label: 'Hazırlık / Malzeme (dk)',
-                            data: data.HazirlikTrendData,
-                            borderColor: 'rgba(201, 203, 207, 0.9)',
-                            backgroundColor: 'rgba(201, 203, 207, 0.2)',
-                            tension: 0.2,
+                            label: 'OEE (%)',
+                            data: data.OeeTrendData,
+                            borderColor: 'rgba(16, 185, 129, 0.95)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            tension: 0.25,
                             fill: true
                         }]
                     },
@@ -214,21 +214,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             data: data.MakineKesimData,
                             backgroundColor: 'rgba(54, 162, 235, 0.6)',
                             borderColor: 'rgba(54, 162, 235, 0.9)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
-                new Chart(document.getElementById('mesaiDurumGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.MesaiLabels,
-                        datasets: [{
-                            label: 'Toplam Kesim',
-                            data: data.MesaiData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                            borderColor: 'rgba(75, 192, 192, 0.9)',
                             borderWidth: 1
                         }]
                     },

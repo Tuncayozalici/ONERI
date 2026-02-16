@@ -351,12 +351,59 @@ public class DashboardIngestionService : IDashboardIngestionService
             return result;
         }
 
+        int colCount = worksheet.Dimension.Columns;
+        int hataliParcaCol = DashboardParsingHelper.FindColumn(worksheet, "HATALI PARÇA", "HATALI PARCA");
+        int aciklamaCol = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int performansCol = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS");
+        int uretimOraniCol = DashboardParsingHelper.FindColumn(worksheet, "ÜRETİM ORANI", "URETIM ORANI", "ÜRETİMORANI", "URETIMORANI");
+        int kayipSureCol = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE", "KAYIP SURE", "KAYIP SÜRE ORANI", "KAYIP SURE ORANI");
+        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int kaliteCol = DashboardParsingHelper.FindColumn(worksheet, "KALİTE", "KALITE");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
+        int fiiliCalismaCol = DashboardParsingHelper.FindColumn(worksheet, "FİİLİ ÇALIŞMA ORANI", "FIILI CALISMA ORANI", "FIILI CALISMAORANI", "FİİLİ ÇALIŞMA");
+
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
             try
             {
                 var dateCell = worksheet.Cells[row, 1];
                 var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
+
+                var hataliParca = hataliParcaCol > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, hataliParcaCol].Value)
+                    : (colCount >= 12 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 12].Value) : 0);
+                var aciklama = aciklamaCol > 0
+                    ? worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim()
+                    : (colCount >= 13 ? worksheet.Cells[row, 13].Value?.ToString()?.Trim() : (colCount >= 12 ? worksheet.Cells[row, 12].Value?.ToString()?.Trim() : null));
+                var performans = performansCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, performansCol].Value)
+                    : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : (uretimOraniCol > 0 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, uretimOraniCol].Value) : 0));
+                var kayipSure = kayipSureCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kayipSureCol].Value)
+                    : (colCount >= 15 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 15].Value) : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : 0));
+                var kullanilabilirlik = kullanilabilirlikCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
+                    : (colCount >= 16 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 16].Value) : 0);
+                var kalite = kaliteCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kaliteCol].Value)
+                    : (colCount >= 17 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 17].Value) : 0);
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
+                    : (colCount >= 18 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 18].Value) : 0);
+                var fiiliCalisma = fiiliCalismaCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, fiiliCalismaCol].Value)
+                    : 0;
+
+                var normalizedPerformans = DashboardParsingHelper.NormalizePercentValue(performans);
+                var normalizedKayipSure = DashboardParsingHelper.NormalizePercentValue(kayipSure);
+                var normalizedKullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik);
+                var normalizedKalite = DashboardParsingHelper.NormalizePercentValue(kalite);
+                var normalizedOee = DashboardParsingHelper.NormalizePercentValue(oee);
+                var normalizedFiiliCalisma = DashboardParsingHelper.NormalizePercentValue(fiiliCalisma);
+                if (normalizedFiiliCalisma <= 0 && normalizedKullanilabilirlik > 0)
+                {
+                    normalizedFiiliCalisma = normalizedKullanilabilirlik;
+                }
 
                 result.Add(new PvcSatirModel
                 {
@@ -371,10 +418,15 @@ public class DashboardIngestionService : IDashboardIngestionService
                     DuraklamaNedeni2 = worksheet.Cells[row, 9].Value?.ToString()?.Trim(),
                     Duraklama3 = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 10].Value),
                     DuraklamaNedeni3 = worksheet.Cells[row, 11].Value?.ToString()?.Trim(),
-                    Aciklama = worksheet.Cells[row, 12].Value?.ToString()?.Trim(),
-                    UretimOrani = DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 13].Value)),
-                    KayipSure = DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value)),
-                    FiiliCalismaOrani = DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 15].Value))
+                    HataliParca = hataliParca,
+                    Aciklama = aciklama,
+                    Performans = normalizedPerformans,
+                    UretimOrani = normalizedPerformans,
+                    KayipSure = normalizedKayipSure,
+                    Kullanilabilirlik = normalizedKullanilabilirlik,
+                    Kalite = normalizedKalite,
+                    Oee = normalizedOee,
+                    FiiliCalismaOrani = normalizedFiiliCalisma
                 });
             }
             catch (Exception ex)
@@ -389,14 +441,25 @@ public class DashboardIngestionService : IDashboardIngestionService
     private List<MasterwoodSatirModel> ParseMasterwoodRows(string excelRoot)
     {
         var result = new List<MasterwoodSatirModel>();
-        var filePath = Path.Combine(excelRoot, "MARWOOD Masterwood Veri Ekranı.xlsm");
+        var fileCandidates = new[]
+        {
+            "MARWOOD Masterwood Veri Ekranı 2026.xlsm",
+            "MARWOOD Masterwood Veri Ekranı.xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
         if (!File.Exists(filePath))
         {
             return result;
         }
 
         using var package = new ExcelPackage(new FileInfo(filePath));
-        var worksheet = package.Workbook.Worksheets["ANA RAPOR"];
+        var worksheet = package.Workbook.Worksheets
+            .FirstOrDefault(ws =>
+                ws.Name.Equals("GİRDİ RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("GIRDI RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("ANA RAPOR", StringComparison.OrdinalIgnoreCase));
         if (worksheet?.Dimension == null)
         {
             return result;
@@ -407,8 +470,14 @@ public class DashboardIngestionService : IDashboardIngestionService
         int duraklamaNeden2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 2", "DURAKLAMA NEDENI 2");
         int duraklama3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI 3 (DK)", "DURAKLAMA ZAMANI 3", "DURAKLAMA3");
         int duraklamaNeden3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 3", "DURAKLAMA NEDENI 3");
+        int hataliParcaCol = DashboardParsingHelper.FindColumn(worksheet, "HATALI PARÇA (MASTERWOOD)", "HATALI PARCA (MASTERWOOD)", "HATALI PARÇA", "HATALI PARCA");
+        int aciklamaCol = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int performansCol = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS");
         int uretimOraniCol = DashboardParsingHelper.FindColumn(worksheet, "ÜRETİM ORANI", "URETIM ORANI", "ÜRETİMORANI", "URETIMORANI");
         int kayipSureCol = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE", "KAYIP SURE", "KAYIPSURE");
+        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int kaliteCol = DashboardParsingHelper.FindColumn(worksheet, "KALİTE", "KALITE");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
         int fiiliCalismaCol = DashboardParsingHelper.FindColumn(worksheet, "FİİLİ ÇALIŞMA ORANI", "FIILI CALISMA ORANI", "FIILI CALISMAORANI", "FİİLİ ÇALIŞMA");
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
@@ -431,15 +500,41 @@ public class DashboardIngestionService : IDashboardIngestionService
                     ? worksheet.Cells[row, duraklamaNeden3Col].Value?.ToString()?.Trim()
                     : (colCount >= 11 ? worksheet.Cells[row, 11].Value?.ToString()?.Trim() : null);
 
-                var uretimOrani = uretimOraniCol > 0
-                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, uretimOraniCol].Value)
-                    : (colCount >= 13 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 13].Value) : 0);
+                var hataliParca = hataliParcaCol > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, hataliParcaCol].Value)
+                    : (colCount >= 12 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 12].Value) : 0);
+                var aciklama = aciklamaCol > 0
+                    ? worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim()
+                    : (colCount >= 13 ? worksheet.Cells[row, 13].Value?.ToString()?.Trim() : null);
+                var performans = performansCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, performansCol].Value)
+                    : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : (uretimOraniCol > 0 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, uretimOraniCol].Value) : 0));
                 var kayipSure = kayipSureCol > 0
                     ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kayipSureCol].Value)
-                    : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : 0);
+                    : (colCount >= 15 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 15].Value) : 0);
+                var kullanilabilirlik = kullanilabilirlikCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
+                    : (colCount >= 16 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 16].Value) : 0);
+                var kalite = kaliteCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kaliteCol].Value)
+                    : (colCount >= 17 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 17].Value) : 0);
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
+                    : (colCount >= 18 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 18].Value) : 0);
                 var fiiliCalisma = fiiliCalismaCol > 0
                     ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, fiiliCalismaCol].Value)
-                    : (colCount >= 15 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 15].Value) : 0);
+                    : 0;
+
+                var normalizedPerformans = DashboardParsingHelper.NormalizePercentValue(performans);
+                var normalizedKayipSure = DashboardParsingHelper.NormalizePercentValue(kayipSure);
+                var normalizedKullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik);
+                var normalizedKalite = DashboardParsingHelper.NormalizePercentValue(kalite);
+                var normalizedOee = DashboardParsingHelper.NormalizePercentValue(oee);
+                var normalizedFiiliCalisma = DashboardParsingHelper.NormalizePercentValue(fiiliCalisma);
+                if (normalizedFiiliCalisma <= 0 && normalizedKullanilabilirlik > 0)
+                {
+                    normalizedFiiliCalisma = normalizedKullanilabilirlik;
+                }
 
                 result.Add(new MasterwoodSatirModel
                 {
@@ -454,9 +549,15 @@ public class DashboardIngestionService : IDashboardIngestionService
                     DuraklamaNedeni2 = duraklamaNeden2,
                     Duraklama3 = duraklama3,
                     DuraklamaNedeni3 = duraklamaNeden3,
-                    UretimOrani = DashboardParsingHelper.NormalizePercentValue(uretimOrani),
-                    KayipSureOrani = DashboardParsingHelper.NormalizePercentValue(kayipSure),
-                    FiiliCalismaOrani = DashboardParsingHelper.NormalizePercentValue(fiiliCalisma)
+                    HataliParca = hataliParca,
+                    Aciklama = aciklama,
+                    Performans = normalizedPerformans,
+                    UretimOrani = normalizedPerformans,
+                    KayipSureOrani = normalizedKayipSure,
+                    Kullanilabilirlik = normalizedKullanilabilirlik,
+                    Kalite = normalizedKalite,
+                    Oee = normalizedOee,
+                    FiiliCalismaOrani = normalizedFiiliCalisma
                 });
             }
             catch (Exception ex)
@@ -471,14 +572,26 @@ public class DashboardIngestionService : IDashboardIngestionService
     private List<SkipperSatirModel> ParseSkipperRows(string excelRoot)
     {
         var result = new List<SkipperSatirModel>();
-        var filePath = Path.Combine(excelRoot, "MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm");
+        var fileCandidates = new[]
+        {
+            "MARWOOD Skipper Veri Ekranı 2026.xlsm",
+            "MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm",
+            "MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
         if (!File.Exists(filePath))
         {
             return result;
         }
 
         using var package = new ExcelPackage(new FileInfo(filePath));
-        var worksheet = package.Workbook.Worksheets["ANA RAPOR"];
+        var worksheet = package.Workbook.Worksheets
+            .FirstOrDefault(ws =>
+                ws.Name.Equals("GİRDİ RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("GIRDI RAPORU", StringComparison.OrdinalIgnoreCase) ||
+                ws.Name.Equals("ANA RAPOR", StringComparison.OrdinalIgnoreCase));
         if (worksheet?.Dimension == null)
         {
             return result;
@@ -489,8 +602,14 @@ public class DashboardIngestionService : IDashboardIngestionService
         int duraklamaNeden2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 2", "DURAKLAMA NEDENI 2");
         int duraklama3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI 3 (DK)", "DURAKLAMA ZAMANI 3", "DURAKLAMA3");
         int duraklamaNeden3Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 3", "DURAKLAMA NEDENI 3");
+        int hataliParcaCol = DashboardParsingHelper.FindColumn(worksheet, "HATALI PARÇA", "HATALI PARCA");
+        int aciklamaCol = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int performansCol = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS");
         int uretimOraniCol = DashboardParsingHelper.FindColumn(worksheet, "ÜRETİM ORANI", "URETIM ORANI", "ÜRETİMORANI", "URETIMORANI");
         int kayipSureCol = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE ORANI", "KAYIP SURE ORANI", "KAYIP SÜRE", "KAYIP SURE");
+        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int kaliteCol = DashboardParsingHelper.FindColumn(worksheet, "KALİTE", "KALITE");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
         int fiiliCalismaCol = DashboardParsingHelper.FindColumn(worksheet, "FİİLİ ÇALIŞMA ORANI", "FIILI CALISMA ORANI", "FIILI CALISMAORANI", "FİİLİ ÇALIŞMA");
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
@@ -513,15 +632,41 @@ public class DashboardIngestionService : IDashboardIngestionService
                     ? worksheet.Cells[row, duraklamaNeden3Col].Value?.ToString()?.Trim()
                     : (colCount >= 10 ? worksheet.Cells[row, 10].Value?.ToString()?.Trim() : null);
 
-                var uretimOrani = uretimOraniCol > 0
-                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, uretimOraniCol].Value)
-                    : (colCount >= 12 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 12].Value) : 0);
+                var hataliParca = hataliParcaCol > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, hataliParcaCol].Value)
+                    : (colCount >= 11 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 11].Value) : 0);
+                var aciklama = aciklamaCol > 0
+                    ? worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim()
+                    : (colCount >= 12 ? worksheet.Cells[row, 12].Value?.ToString()?.Trim() : null);
+                var performans = performansCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, performansCol].Value)
+                    : (colCount >= 13 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 13].Value) : (uretimOraniCol > 0 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, uretimOraniCol].Value) : 0));
                 var kayipSure = kayipSureCol > 0
                     ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kayipSureCol].Value)
-                    : (colCount >= 13 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 13].Value) : 0);
+                    : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : 0);
+                var kullanilabilirlik = kullanilabilirlikCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
+                    : (colCount >= 15 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 15].Value) : 0);
+                var kalite = kaliteCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kaliteCol].Value)
+                    : (colCount >= 16 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 16].Value) : 0);
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
+                    : (colCount >= 17 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 17].Value) : 0);
                 var fiiliCalisma = fiiliCalismaCol > 0
                     ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, fiiliCalismaCol].Value)
-                    : (colCount >= 14 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 14].Value) : 0);
+                    : 0;
+
+                var normalizedPerformans = DashboardParsingHelper.NormalizePercentValue(performans);
+                var normalizedKayipSure = DashboardParsingHelper.NormalizePercentValue(kayipSure);
+                var normalizedKullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik);
+                var normalizedKalite = DashboardParsingHelper.NormalizePercentValue(kalite);
+                var normalizedOee = DashboardParsingHelper.NormalizePercentValue(oee);
+                var normalizedFiiliCalisma = DashboardParsingHelper.NormalizePercentValue(fiiliCalisma);
+                if (normalizedFiiliCalisma <= 0 && normalizedKullanilabilirlik > 0)
+                {
+                    normalizedFiiliCalisma = normalizedKullanilabilirlik;
+                }
 
                 result.Add(new SkipperSatirModel
                 {
@@ -535,9 +680,15 @@ public class DashboardIngestionService : IDashboardIngestionService
                     DuraklamaNedeni2 = duraklamaNeden2,
                     Duraklama3 = duraklama3,
                     DuraklamaNedeni3 = duraklamaNeden3,
-                    UretimOrani = DashboardParsingHelper.NormalizePercentValue(uretimOrani),
-                    KayipSureOrani = DashboardParsingHelper.NormalizePercentValue(kayipSure),
-                    FiiliCalismaOrani = DashboardParsingHelper.NormalizePercentValue(fiiliCalisma)
+                    HataliParca = hataliParca,
+                    Aciklama = aciklama,
+                    Performans = normalizedPerformans,
+                    UretimOrani = normalizedPerformans,
+                    KayipSureOrani = normalizedKayipSure,
+                    Kullanilabilirlik = normalizedKullanilabilirlik,
+                    Kalite = normalizedKalite,
+                    Oee = normalizedOee,
+                    FiiliCalismaOrani = normalizedFiiliCalisma
                 });
             }
             catch (Exception ex)
@@ -605,7 +756,16 @@ public class DashboardIngestionService : IDashboardIngestionService
     private List<EbatlamaSatirModel> ParseEbatlamaRows(string excelRoot)
     {
         var result = new List<EbatlamaSatirModel>();
-        var filePath = Path.Combine(excelRoot, "EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm");
+        var fileCandidates = new[]
+        {
+            "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm",
+            "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm",
+            "EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm",
+            "EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
         if (!File.Exists(filePath))
         {
             return result;
@@ -624,6 +784,10 @@ public class DashboardIngestionService : IDashboardIngestionService
         int duraklama2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA ZAMANI (DK) 2", "DURAKLAMA ZAMANI 2 (DK)", "DURAKLAMA ZAMANI 2");
         int duraklamaNeden2Col = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ 2", "DURAKLAMA NEDENI 2");
         int hazirlikCol = DashboardParsingHelper.FindColumn(worksheet, "HAZIRLIK / MALZEME TASIMA (DK)", "HAZIRLIK / MALZEME TAŞIMA (DK)", "HAZIRLIK MALZEME TASIMA");
+        int performansCol = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS");
+        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int kaliteCol = DashboardParsingHelper.FindColumn(worksheet, "KALİTE", "KALITE");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
@@ -647,6 +811,18 @@ public class DashboardIngestionService : IDashboardIngestionService
                 var hazirlik = hazirlikCol > 0
                     ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, hazirlikCol].Value)
                     : (colCount >= 11 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 11].Value) : 0);
+                var performans = performansCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, performansCol].Value)
+                    : (colCount >= 17 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 17].Value) : 0);
+                var kullanilabilirlik = kullanilabilirlikCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
+                    : (colCount >= 18 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 18].Value) : 0);
+                var kalite = kaliteCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kaliteCol].Value)
+                    : (colCount >= 19 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 19].Value) : 0);
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
+                    : (colCount >= 20 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 20].Value) : 0);
 
                 result.Add(new EbatlamaSatirModel
                 {
@@ -664,7 +840,11 @@ public class DashboardIngestionService : IDashboardIngestionService
                     Duraklama1 = duraklama1,
                     DuraklamaNedeni1 = duraklamaNedeni1,
                     Duraklama2 = duraklama2,
-                    DuraklamaNedeni2 = duraklamaNedeni2
+                    DuraklamaNedeni2 = duraklamaNedeni2,
+                    Performans = DashboardParsingHelper.NormalizePercentValue(performans),
+                    Kullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik),
+                    Kalite = DashboardParsingHelper.NormalizePercentValue(kalite),
+                    Oee = DashboardParsingHelper.NormalizePercentValue(oee)
                 });
             }
             catch (Exception ex)

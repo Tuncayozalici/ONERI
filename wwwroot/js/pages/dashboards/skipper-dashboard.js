@@ -103,33 +103,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     options: { responsive: true }
                 });
     
-                const kisiTrendCtx = document.getElementById('kisiTrendGrafigi').getContext('2d');
-                new Chart(kisiTrendCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Kişi Sayısı',
-                            data: data.KisiTrendData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 0.9)',
-                            borderWidth: 1,
-                            borderRadius: 4,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                suggestedMin: 0,
-                                ticks: { precision: 0 }
-                            }
-                        }
-                    }
-                });
-    
                 const oranTrendCtx = document.getElementById('oranTrendGrafigi').getContext('2d');
                 new Chart(oranTrendCtx, {
                     type: 'line',
@@ -137,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         labels: data.TrendLabels,
                         datasets: [
                             {
-                                label: 'Üretim Oranı',
+                                label: 'Performans',
                                 data: data.UretimOraniTrendData,
                                 borderColor: 'rgba(54, 162, 235, 0.9)',
                                 backgroundColor: 'rgba(54, 162, 235, 0.15)',
@@ -151,16 +124,33 @@ document.addEventListener('DOMContentLoaded', function () {
                                 backgroundColor: 'rgba(255, 99, 132, 0.12)',
                                 tension: 0.2,
                                 fill: true
-                            },
-                            {
-                                label: 'Fiili Çalışma',
-                                data: data.FiiliCalismaTrendData,
-                                borderColor: 'rgba(75, 192, 192, 0.9)',
-                                backgroundColor: 'rgba(75, 192, 192, 0.12)',
-                                tension: 0.2,
-                                fill: true
                             }
                         ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                suggestedMin: 0,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
+                });
+
+                const oeeTrendCtx = document.getElementById('oeeTrendGrafigi').getContext('2d');
+                new Chart(oeeTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.TrendLabels,
+                        datasets: [{
+                            label: 'OEE (%)',
+                            data: data.OeeTrendData,
+                            borderColor: 'rgba(16, 185, 129, 0.95)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            tension: 0.25,
+                            fill: true
+                        }]
                     },
                     options: {
                         responsive: true,

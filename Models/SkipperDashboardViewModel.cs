@@ -11,6 +11,10 @@ namespace ONERI.Models
         public double OrtalamaKisiSayisi { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
         public double OrtalamaFiiliCalismaOrani { get; set; }
+        public double OrtalamaPerformans { get; set; }
+        public double OrtalamaKullanilabilirlik { get; set; }
+        public double OrtalamaKalite { get; set; }
+        public double OrtalamaOee { get; set; }
 
         public List<string> TrendLabels { get; set; } = new List<string>();
         public List<double> DelikTrendData { get; set; } = new List<double>();
@@ -19,6 +23,7 @@ namespace ONERI.Models
         public List<double> UretimOraniTrendData { get; set; } = new List<double>();
         public List<double> KayipSureTrendData { get; set; } = new List<double>();
         public List<double> FiiliCalismaTrendData { get; set; } = new List<double>();
+        public List<double> OeeTrendData { get; set; } = new List<double>();
 
         public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
         public List<double> DuraklamaNedenData { get; set; } = new List<double>();

@@ -118,13 +118,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
     
                 const makineParcaCtx = document.getElementById('makineParcaGrafigi').getContext('2d');
+                const parcaMakineItems = (data.MakineLabels || []).map((label, index) => ({
+                    label: label,
+                    value: (data.MakineParcaData || [])[index] ?? 0
+                })).filter(item => !String(item.label || "").toLocaleUpperCase("tr-TR").includes("TURAN"));
+
                 new Chart(makineParcaCtx, {
                     type: 'bar',
                     data: {
-                        labels: data.MakineLabels,
+                        labels: parcaMakineItems.map(x => x.label),
                         datasets: [{
                             label: 'Parça',
-                            data: data.MakineParcaData,
+                            data: parcaMakineItems.map(x => x.value),
                             backgroundColor: 'rgba(54, 162, 235, 0.7)'
                         }]
                     },
@@ -135,10 +140,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 new Chart(fiiliKayipCtx, {
                     type: 'line',
                     data: {
-                        labels: data.FiiliCalismaLabels,
+                        labels: data.UretimTrendLabels,
                         datasets: [{
-                            label: 'Fiili Çalışma (%)',
-                            data: data.FiiliCalismaData,
+                            label: 'Performans (%)',
+                            data: data.UretimOraniTrendData,
                             borderColor: 'rgba(153, 102, 255, 0.9)',
                             backgroundColor: 'rgba(153, 102, 255, 0.2)',
                             tension: 0.2,
@@ -153,6 +158,68 @@ document.addEventListener('DOMContentLoaded', function () {
                         }]
                     },
                     options: { responsive: true }
+                });
+
+                const oeeTrendCtx = document.getElementById('oeeTrendGrafigi').getContext('2d');
+                new Chart(oeeTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.UretimTrendLabels,
+                        datasets: [{
+                            label: 'OEE (%)',
+                            data: data.OeeTrendData,
+                            borderColor: 'rgba(16, 185, 129, 0.95)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            tension: 0.25,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                suggestedMin: 0,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
+                });
+
+                const makineOeeTrendCtx = document.getElementById('makineOeeTrendGrafigi').getContext('2d');
+                const makineOeeLabels = data.MakineOeeSerieLabels || [];
+                const makineOeeSeries = data.MakineOeeTrendSeries || [];
+                const makineOeeItems = makineOeeLabels.map((label, index) => {
+                    const serie = Array.isArray(makineOeeSeries[index]) ? makineOeeSeries[index] : [];
+                    const validValues = serie.filter(v => typeof v === 'number' && v > 0);
+                    const average = validValues.length > 0
+                        ? validValues.reduce((sum, v) => sum + v, 0) / validValues.length
+                        : 0;
+                    return { label, value: average };
+                }).sort((a, b) => b.value - a.value);
+
+                new Chart(makineOeeTrendCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: makineOeeItems.map(x => x.label),
+                        datasets: [{
+                            label: 'OEE (%)',
+                            data: makineOeeItems.map(x => x.value),
+                            backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                            borderColor: 'rgba(16, 185, 129, 0.95)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                suggestedMin: 0,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
                 });
     
                 const duraklamaCtx = document.getElementById('duraklamaNedenGrafigi').getContext('2d');

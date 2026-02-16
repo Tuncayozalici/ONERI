@@ -13,6 +13,10 @@ namespace ONERI.Models
         public double ToplamPlaka30Mm { get; set; }
         public double ToplamGonyelleme { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
+        public double OrtalamaPerformans { get; set; }
+        public double OrtalamaKullanilabilirlik { get; set; }
+        public double OrtalamaKalite { get; set; }
+        public double OrtalamaOee { get; set; }
 
         public List<string> TrendLabels { get; set; } = new List<string>();
         public List<double> KesimTrendData { get; set; } = new List<double>();
@@ -23,6 +27,7 @@ namespace ONERI.Models
         public List<double> Kesim30TrendData { get; set; } = new List<double>();
         public List<double> GonyellemeTrendData { get; set; } = new List<double>();
         public List<double> HazirlikTrendData { get; set; } = new List<double>();
+        public List<double> OeeTrendData { get; set; } = new List<double>();
 
         public List<string> MakineLabels { get; set; } = new List<string>();
         public List<double> MakineKesimData { get; set; } = new List<double>();

@@ -51,8 +51,8 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-5">
-        <div class="col-lg col-md-6">
+    <div class="row g-4 mb-4">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-scissors me-2"></i>Toplam Kesim Adeti</h5>
@@ -60,7 +60,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg col-md-6">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-stack me-2"></i>8mm Plaka</h5>
@@ -68,7 +68,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg col-md-6">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-stack me-2"></i>18mm Plaka</h5>
@@ -76,7 +76,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg col-md-6">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-stack me-2"></i>30mm Plaka</h5>
@@ -84,7 +84,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg col-md-6">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-bounding-box-circles me-2"></i>Toplam Gönyelleme</h5>
@@ -92,7 +92,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg col-md-6">
+        <div class="col-lg-2 col-md-4">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Toplam Duraklama (dk)</h5>
@@ -102,7 +102,52 @@
         </div>
     </div>
 
+    <div class="row g-4 mb-5">
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
+                    <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h5>
+                    <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
+                    <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>OEE</h5>
+                    <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    @(ViewBag.EbatlamaOeeTitle ?? "OEE Skoru Trendi (Son 7 Gün)")
+                </div>
+                <div class="card-body">
+                    <canvas id="oeeTrendGrafigi"></canvas>
+                </div>
+            </div>
+        </div>
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
@@ -146,30 +191,10 @@
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    Hazırlık / Malzeme Taşıma (dk)
-                </div>
-                <div class="card-body">
-                    <canvas id="hazirlikTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
                     Makine Bazlı Kesim Adeti
                 </div>
                 <div class="card-body">
                     <canvas id="makineKesimGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Mesai Durumu Dağılımı
-                </div>
-                <div class="card-body">
-                    <canvas id="mesaiDurumGrafigi"></canvas>
                 </div>
             </div>
         </div>

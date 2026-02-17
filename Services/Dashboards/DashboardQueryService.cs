@@ -29,22 +29,55 @@ public class DashboardQueryService : IDashboardQueryService
 
         var pvcRows = snapshot.PvcRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: x.ParcaSayisi, Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3, Fiili: x.FiiliCalismaOrani))
+            .Select(x => (
+                x.Tarih,
+                Makine: x.Makine,
+                Uretim: x.ParcaSayisi,
+                Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3,
+                Fiili: x.FiiliCalismaOrani,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
             .ToList();
 
         var masterRows = snapshot.MasterwoodRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: x.DelikFreezeSayisi, Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3, Fiili: x.FiiliCalismaOrani))
+            .Select(x => (
+                x.Tarih,
+                Uretim: x.DelikFreezeSayisi,
+                Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3,
+                Fiili: x.FiiliCalismaOrani,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
             .ToList();
 
         var skipperRows = snapshot.SkipperRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: x.DelikSayisi, Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3, Fiili: x.FiiliCalismaOrani))
+            .Select(x => (
+                x.Tarih,
+                Uretim: x.DelikSayisi,
+                Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3,
+                Fiili: x.FiiliCalismaOrani,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
             .ToList();
 
         var roverBRows = snapshot.RoverBRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: x.DelikFreezePvcSayisi, Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4, Fiili: x.FiiliCalismaOrani))
+            .Select(x => (
+                x.Tarih,
+                Uretim: x.DelikFreezePvcSayisi,
+                Duraklama: x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4,
+                Fiili: x.FiiliCalismaOrani,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
             .ToList();
 
         var tezgahRows = snapshot.TezgahRows
@@ -54,7 +87,15 @@ public class DashboardQueryService : IDashboardQueryService
 
         var ebatlamaRows = snapshot.EbatlamaRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: x.ToplamKesimAdet, Duraklama: x.Duraklama1 + x.Duraklama2))
+            .Select(x => (
+                x.Tarih,
+                Makine: x.Makine,
+                Uretim: x.ToplamKesimAdet,
+                Duraklama: x.Duraklama1 + x.Duraklama2,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
             .ToList();
 
         var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
@@ -155,6 +196,65 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 dict[key] = value;
             }
+        }
+
+        static double ReadNumericProperty(object? value)
+        {
+            return value switch
+            {
+                null => 0,
+                double d => d,
+                float f => f,
+                int i => i,
+                long l => l,
+                decimal m => (double)m,
+                _ => double.TryParse(value.ToString(), out var parsed) ? parsed : 0
+            };
+        }
+
+        static IEnumerable<(double Performans, double Kullanilabilirlik, double Kalite, double Oee)> ExtractMetricRows<T>(IEnumerable<T> rows, DateTime start, DateTime end)
+        {
+            var type = typeof(T);
+            var tarihProp = type.GetProperty("Tarih");
+            var performansProp = type.GetProperty("Performans");
+            var kullanilabilirlikProp = type.GetProperty("Kullanilabilirlik");
+            var kaliteProp = type.GetProperty("Kalite");
+            var oeeProp = type.GetProperty("Oee");
+
+            // OEE bileşenlerinden en az birinin bulunması gerekir.
+            if (tarihProp == null || (performansProp == null && kaliteProp == null && oeeProp == null))
+            {
+                return Enumerable.Empty<(double, double, double, double)>();
+            }
+
+            var result = new List<(double Performans, double Kullanilabilirlik, double Kalite, double Oee)>();
+            foreach (var row in rows)
+            {
+                if (row == null)
+                {
+                    continue;
+                }
+
+                if (tarihProp.GetValue(row) is not DateTime tarih || tarih == DateTime.MinValue)
+                {
+                    continue;
+                }
+
+                var date = tarih.Date;
+                if (date < start.Date || date > end.Date)
+                {
+                    continue;
+                }
+
+                result.Add((
+                    ReadNumericProperty(performansProp?.GetValue(row)),
+                    ReadNumericProperty(kullanilabilirlikProp?.GetValue(row)),
+                    ReadNumericProperty(kaliteProp?.GetValue(row)),
+                    ReadNumericProperty(oeeProp?.GetValue(row))
+                ));
+            }
+
+            return result;
         }
 
         foreach (var row in profilRows)
@@ -265,12 +365,82 @@ public class DashboardQueryService : IDashboardQueryService
         model.ToplamHataM2 = filteredHatali.Sum(x => x.M2);
         model.ToplamDuraklamaDakika = duraklamaGunluk.Values.Sum();
 
-        var kullanilabilirlikValues = tezgahRows
+        var oeeMetricRows = new List<(double Performans, double Kullanilabilirlik, double Kalite, double Oee)>();
+        oeeMetricRows.AddRange(pvcRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .Select(x => (x.Performans, x.Kullanilabilirlik, x.Kalite, x.Oee)));
+        oeeMetricRows.AddRange(masterRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .Select(x => (x.Performans, x.Kullanilabilirlik, x.Kalite, x.Oee)));
+        oeeMetricRows.AddRange(skipperRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .Select(x => (x.Performans, x.Kullanilabilirlik, x.Kalite, x.Oee)));
+        oeeMetricRows.AddRange(roverBRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .Select(x => (x.Performans, x.Kullanilabilirlik, x.Kalite, x.Oee)));
+        oeeMetricRows.AddRange(ebatlamaRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .Select(x => (x.Performans, x.Kullanilabilirlik, x.Kalite, x.Oee)));
+
+        // Bu bölümler ileride OEE bileşen alanları eklenince otomatik olarak hesaba katılır.
+        oeeMetricRows.AddRange(ExtractMetricRows(snapshot.ProfilRows, ozetStart, ozetEnd));
+        oeeMetricRows.AddRange(ExtractMetricRows(snapshot.BoyaUretimRows, ozetStart, ozetEnd));
+        oeeMetricRows.AddRange(ExtractMetricRows(snapshot.TezgahRows, ozetStart, ozetEnd));
+
+        var performansValues = oeeMetricRows
+            .Select(x => x.Performans)
+            .Where(x => x > 0)
+            .ToList();
+        model.OrtalamaPerformans = performansValues.Any() ? performansValues.Average() : 0;
+
+        var kullanilabilirlikValues = oeeMetricRows
             .Select(x => x.Kullanilabilirlik)
             .Where(x => x > 0)
             .ToList();
         model.OrtalamaKullanilabilirlik = kullanilabilirlikValues.Any() ? kullanilabilirlikValues.Average() : 0;
+
+        var kaliteValues = oeeMetricRows
+            .Select(x => x.Kalite)
+            .Where(x => x > 0)
+            .ToList();
+        model.OrtalamaKalite = kaliteValues.Any() ? kaliteValues.Average() : 0;
+
+        var oeeValues = oeeMetricRows
+            .Select(x => x.Oee)
+            .Where(x => x > 0)
+            .ToList();
+        model.OrtalamaOee = oeeValues.Any() ? oeeValues.Average() : 0;
+
+        var machineOeeRows = new List<(string Machine, double Oee)>();
+        machineOeeRows.AddRange(pvcRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => (DashboardParsingHelper.NormalizeLabel(x.Makine), x.Oee)));
+        machineOeeRows.AddRange(masterRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("Masterwood", x.Oee)));
+        machineOeeRows.AddRange(skipperRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("Skipper", x.Oee)));
+        machineOeeRows.AddRange(roverBRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("Rover-B", x.Oee)));
+        machineOeeRows.AddRange(ebatlamaRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => (DashboardParsingHelper.NormalizeLabel(x.Makine), x.Oee))
+            .Where(x => x.Item1 != "Bilinmeyen"));
+
+        var machineOeeSummary = machineOeeRows
+            .GroupBy(x => x.Machine)
+            .Select(g => new
+            {
+                Makine = g.Key,
+                OrtalamaOee = g.Average(v => v.Oee)
+            })
+            .OrderByDescending(x => x.OrtalamaOee)
+            .ToList();
+
+        model.MakineOeeLabels = machineOeeSummary.Select(x => x.Makine).ToList();
+        model.MakineOeeData = machineOeeSummary.Select(x => x.OrtalamaOee).ToList();
 
         var fiiliValues = pvcRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)

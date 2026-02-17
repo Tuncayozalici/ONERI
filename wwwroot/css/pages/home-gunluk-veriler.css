@@ -64,6 +64,25 @@
     grid-column: 1 / -1;
 }
 
+.summary-card .oee-components-card .card-body {
+    min-height: 250px;
+}
+
+.summary-card .oee-gauge-card .card-body {
+    min-height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-card .oee-gauge-card canvas {
+    max-height: 220px;
+}
+
+.summary-card .oee-machine-card .card-body {
+    min-height: 250px;
+}
+
 .summary-card.summary-ultra .summary-kpis {
     grid-template-columns: repeat(5, minmax(0, 1fr));
 }

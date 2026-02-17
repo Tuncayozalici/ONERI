@@ -11,7 +11,10 @@ namespace ONERI.Models
         public double ToplamHataAdet { get; set; }
         public double ToplamHataM2 { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
+        public double OrtalamaPerformans { get; set; }
         public double OrtalamaKullanilabilirlik { get; set; }
+        public double OrtalamaKalite { get; set; }
+        public double OrtalamaOee { get; set; }
         public double OrtalamaFiiliCalisma { get; set; }
 
         public string EnCokHataNedeni { get; set; } = "-";
@@ -28,5 +31,8 @@ namespace ONERI.Models
 
         public List<string> HataNedenLabels { get; set; } = new List<string>();
         public List<double> HataNedenData { get; set; } = new List<double>();
+
+        public List<string> MakineOeeLabels { get; set; } = new List<string>();
+        public List<double> MakineOeeData { get; set; } = new List<double>();
     }
 }

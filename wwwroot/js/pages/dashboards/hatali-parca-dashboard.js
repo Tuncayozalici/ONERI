@@ -43,7 +43,37 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
     
+                function getModelDateIso() {
+                    const raw = data.RaporTarihi;
+                    if (!raw) {
+                        return '';
+                    }
+
+                    if (typeof raw === 'string') {
+                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (match) {
+                            return `${match[1]}-${match[2]}-${match[3]}`;
+                        }
+                    }
+
+                    const parsed = new Date(raw);
+                    if (Number.isNaN(parsed.getTime())) {
+                        return '';
+                    }
+
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+
                 function setDefaultDate() {
+                    const modelDateIso = getModelDateIso();
+                    if (modelDateIso) {
+                        dateInput.value = modelDateIso;
+                        return;
+                    }
+
                     const today = new Date();
                     const year = today.getFullYear();
                     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -113,50 +143,94 @@ document.addEventListener('DOMContentLoaded', function () {
                     options: { responsive: true }
                 });
     
-                new Chart(document.getElementById('hataM2Trend').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Hatalı m²',
-                            data: data.HataM2TrendData,
-                            borderColor: 'rgba(54, 162, 235, 0.9)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.15)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
-                new Chart(document.getElementById('hataNedenGrafigi').getContext('2d'), {
+                const hataNedenCardHeader = document.querySelector('#hataNedenGrafigi')?.closest('.card')?.querySelector('.card-header');
+                const anaHataNedenBaslik = 'Hata Nedenleri';
+                const donutColors = [
+                    '#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff',
+                    '#ff9f40', '#c9cbcf', '#7acbf9', '#f06292', '#81c784'
+                ];
+                const normalizeBolumKey = (value) => String(value ?? '')
+                    .trim()
+                    .toLocaleLowerCase('tr-TR');
+
+                const bolumBazliMap = new Map(
+                    (Array.isArray(data.BolumBazliHataNedenleri) ? data.BolumBazliHataNedenleri : []).map(item => [
+                        normalizeBolumKey(item.Bolum),
+                        {
+                            labels: Array.isArray(item.NedenLabels) ? item.NedenLabels : [],
+                            values: Array.isArray(item.NedenData) ? item.NedenData : []
+                        }
+                    ])
+                );
+
+                const hataNedenChart = new Chart(document.getElementById('hataNedenGrafigi').getContext('2d'), {
                     type: 'doughnut',
                     data: {
                         labels: data.HataNedenLabels,
                         datasets: [{
                             data: data.HataNedenData,
-                            backgroundColor: [
-                                '#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff',
-                                '#ff9f40', '#c9cbcf', '#7acbf9', '#f06292', '#81c784'
-                            ]
+                            backgroundColor: donutColors
                         }]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
                 });
-    
-                new Chart(document.getElementById('bolumGrafigi').getContext('2d'), {
+
+                let seciliBolum = null;
+                const bolumBarDefault = 'rgba(54, 162, 235, 0.6)';
+                const bolumBarSelected = 'rgba(59, 130, 246, 0.95)';
+
+                function updateHataNedenByBolum(bolum) {
+                    const detay = bolum ? bolumBazliMap.get(normalizeBolumKey(bolum)) : null;
+                    if (detay && detay.labels.length > 0) {
+                        hataNedenChart.data.labels = detay.labels;
+                        hataNedenChart.data.datasets[0].data = detay.values;
+                        if (hataNedenCardHeader) {
+                            hataNedenCardHeader.textContent = `Hata Nedenleri - ${bolum}`;
+                        }
+                    } else {
+                        hataNedenChart.data.labels = data.HataNedenLabels;
+                        hataNedenChart.data.datasets[0].data = data.HataNedenData;
+                        if (hataNedenCardHeader) {
+                            hataNedenCardHeader.textContent = anaHataNedenBaslik;
+                        }
+                    }
+                    hataNedenChart.update();
+                }
+
+                const bolumChart = new Chart(document.getElementById('bolumGrafigi').getContext('2d'), {
                     type: 'bar',
                     data: {
                         labels: data.BolumLabels,
                         datasets: [{
                             label: 'Hatalı Adet',
                             data: data.BolumData,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            backgroundColor: data.BolumLabels.map(() => bolumBarDefault),
                             borderColor: 'rgba(54, 162, 235, 0.9)',
                             borderWidth: 1
                         }]
                     },
-                    options: { responsive: true }
+                    options: {
+                        responsive: true,
+                        onClick: function (_, elements) {
+                            if (!elements || !elements.length) {
+                                return;
+                            }
+
+                            const index = elements[0].index;
+                            const tiklananBolum = data.BolumLabels[index];
+                            seciliBolum = seciliBolum === tiklananBolum ? null : tiklananBolum;
+
+                            bolumChart.data.datasets[0].backgroundColor = data.BolumLabels.map(label =>
+                                label === seciliBolum ? bolumBarSelected : bolumBarDefault
+                            );
+                            bolumChart.update();
+
+                            updateHataNedenByBolum(seciliBolum);
+                        },
+                        onHover: function (event, elements) {
+                            event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                        }
+                    }
                 });
     
                 new Chart(document.getElementById('operatorGrafigi').getContext('2d'), {
@@ -174,57 +248,4 @@ document.addEventListener('DOMContentLoaded', function () {
                     options: { responsive: true }
                 });
     
-                new Chart(document.getElementById('kalinlikGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.KalinlikLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.KalinlikData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                            borderColor: 'rgba(75, 192, 192, 0.9)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
-                new Chart(document.getElementById('renkGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.RenkLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.RenkData,
-                            backgroundColor: 'rgba(255, 159, 64, 0.6)',
-                            borderColor: 'rgba(255, 159, 64, 0.9)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
-                new Chart(document.getElementById('kesimDurumGrafigi').getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.KesimDurumLabels,
-                        datasets: [{
-                            data: data.KesimDurumData,
-                            backgroundColor: ['#36a2eb', '#ffcd56', '#ff6384', '#4bc0c0', '#9966ff']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-    
-                new Chart(document.getElementById('pvcDurumGrafigi').getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.PvcDurumLabels,
-                        datasets: [{
-                            data: data.PvcDurumData,
-                            backgroundColor: ['#4bc0c0', '#ff9f40', '#c9cbcf', '#ff6384', '#36a2eb']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
 });

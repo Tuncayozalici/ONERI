@@ -1,6 +1,21 @@
 @model ONERI.Models.CncDashboardViewModel
 @{
     ViewData["Title"] = "CNC Bölümü";
+
+    var queryRaporTarihi = Context.Request.Query["raporTarihi"].ToString();
+    var queryAy = Context.Request.Query["ay"].ToString();
+    var queryYil = Context.Request.Query["yil"].ToString();
+
+    var routeValues = new
+    {
+        raporTarihi = string.IsNullOrWhiteSpace(queryRaporTarihi) ? null : queryRaporTarihi,
+        ay = string.IsNullOrWhiteSpace(queryAy) ? null : queryAy,
+        yil = string.IsNullOrWhiteSpace(queryYil) ? null : queryYil
+    };
+
+    var masterwoodUrl = Url.Action("MasterwoodDashboard", "Home", routeValues);
+    var skipperUrl = Url.Action("SkipperDashboard", "Home", routeValues);
+    var roverBUrl = Url.Action("RoverBDashboard", "Home", routeValues);
 }
 
 @section Styles {
@@ -119,7 +134,7 @@
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
             <div class="col">
-                <a href="@Url.Action("MasterwoodDashboard", "Home")" class="nav-tile">
+                <a href="@masterwoodUrl" class="nav-tile">
                     <div class="status-dot active"></div>
                     <div class="text-center">
                         <div class="icon">
@@ -131,7 +146,7 @@
                 </a>
             </div>
             <div class="col">
-                <a href="@Url.Action("SkipperDashboard", "Home")" class="nav-tile">
+                <a href="@skipperUrl" class="nav-tile">
                     <div class="status-dot active"></div>
                     <div class="text-center">
                         <div class="icon">
@@ -143,7 +158,7 @@
                 </a>
             </div>
             <div class="col">
-                <a href="@Url.Action("RoverBDashboard", "Home")" class="nav-tile">
+                <a href="@roverBUrl" class="nav-tile">
                     <div class="status-dot active"></div>
                     <div class="text-center">
                         <div class="icon">

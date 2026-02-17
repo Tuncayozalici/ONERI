@@ -1,6 +1,9 @@
 @model ONERI.Models.GenelFabrikaOzetViewModel
 @{
     ViewData["Title"] = "Günlük Veriler Panosu";
+    var toplamDuraklamaDakika = (int)Math.Round(Model.ToplamDuraklamaDakika, MidpointRounding.AwayFromZero);
+    var toplamDuraklamaSaat = toplamDuraklamaDakika / 60;
+    var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
 }
 
 @section Styles {
@@ -51,101 +54,81 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="summary-kpis mb-4">
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Toplam Üretim</h6>
-                                <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
+                    <div class="summary-top-hub mb-4">
+                        <div class="summary-side-stack summary-side-stack-left">
+                            <div class="kpi-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Toplam Üretim</h6>
+                                    <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
+                                </div>
+                            </div>
+                            <div class="kpi-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-x-circle me-2"></i>Hatalı Adet</h6>
+                                    <p class="card-text">@Model.ToplamHataAdet.ToString("N0")</p>
+                                </div>
+                            </div>
+                            <div class="kpi-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-stopwatch me-2"></i>Duraklama (sa/dk)</h6>
+                                    <p class="card-text">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-x-circle me-2"></i>Hatalı Adet</h6>
-                                <p class="card-text">@Model.ToplamHataAdet.ToString("N0")</p>
-                            </div>
-                        </div>
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-square me-2"></i>Hatalı m²</h6>
-                                <p class="card-text">@Model.ToplamHataM2.ToString("N2")</p>
-                            </div>
-                        </div>
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-stopwatch me-2"></i>Duraklama (dk)</h6>
-                                <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
-                            </div>
-                        </div>
-                        <div class="kpi-card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-activity me-2"></i>Fiili Çalışma</h6>
-                                <p class="card-text">@Model.OrtalamaFiiliCalisma.ToString("F2") %</p>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="summary-metrics mb-4">
-                        <div class="kpi-card kpi-card-info h-100">
+                        <div class="card shadow-sm h-100 oee-gauge-card summary-hub-chart">
+                            <div class="card-header">Genel OEE Skoru</div>
                             <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>En Çok Hata Nedeni</h6>
-                                <p class="card-text">@Model.EnCokHataNedeni</p>
+                                <canvas id="genelOeeGaugeGrafigi"></canvas>
                             </div>
                         </div>
-                        <div class="kpi-card kpi-card-info h-100">
+
+                        <div class="card shadow-sm h-100 oee-machine-card summary-hub-chart">
+                            <div class="card-header">Makine Bazlı OEE (Genel Ortalama)</div>
                             <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-diagram-3 me-2"></i>En Çok Hata Bölümü</h6>
-                                <p class="card-text">@Model.EnCokHataBolum</p>
+                                <canvas id="makineOeeGrafigi"></canvas>
                             </div>
                         </div>
-                        <div class="kpi-card kpi-card-info h-100">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-person-badge me-2"></i>En Çok Hata Operatörü</h6>
-                                <p class="card-text">@Model.EnCokHataOperator</p>
+
+                        <div class="summary-side-stack summary-side-stack-right">
+                            <div class="kpi-card kpi-card-info h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>En Çok Hata Nedeni</h6>
+                                    <p class="card-text">@Model.EnCokHataNedeni</p>
+                                </div>
+                            </div>
+                            <div class="kpi-card kpi-card-info h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-diagram-3 me-2"></i>En Çok Hata Bölümü</h6>
+                                    <p class="card-text">@Model.EnCokHataBolum</p>
+                                </div>
+                            </div>
+                            <div class="kpi-card kpi-card-info h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-person-badge me-2"></i>En Çok Hata Operatörü</h6>
+                                    <p class="card-text">@Model.EnCokHataOperator</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="summary-charts">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header">Birleşik Üretim Trendi</div>
-                            <div class="card-body">
-                                <canvas id="genelUretimTrend"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header">Hata Trendi</div>
-                            <div class="card-body">
-                                <canvas id="genelHataTrend"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header">Bölüm Katkısı (Üretim)</div>
-                            <div class="card-body">
-                                <canvas id="bolumKatkiGrafigi"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header">Duraklama Trendi</div>
-                            <div class="card-body">
-                                <canvas id="duraklamaTrendGrafigi"></canvas>
-                            </div>
-                        </div>
                         <div class="card shadow-sm h-100 oee-components-card">
                             <div class="card-header">OEE Bileşenleri (Genel Ortalama)</div>
                             <div class="card-body">
                                 <canvas id="genelBilesenGrafigi"></canvas>
                             </div>
                         </div>
-                        <div class="card shadow-sm h-100 oee-gauge-card">
-                            <div class="card-header">Genel OEE Skoru</div>
+                        <div class="card shadow-sm h-100 trend-line-card">
+                            <div class="card-header">Hata Trendi</div>
                             <div class="card-body">
-                                <canvas id="genelOeeGaugeGrafigi"></canvas>
+                                <canvas id="genelHataTrend" class="chart-fill"></canvas>
                             </div>
                         </div>
-                        <div class="card shadow-sm h-100 oee-machine-card">
-                            <div class="card-header">Makine Bazlı OEE (Genel Ortalama)</div>
+                        <div class="card shadow-sm h-100 trend-line-card">
+                            <div class="card-header">Duraklama Trendi</div>
                             <div class="card-body">
-                                <canvas id="makineOeeGrafigi"></canvas>
+                                <canvas id="duraklamaTrendGrafigi" class="chart-fill"></canvas>
                             </div>
                         </div>
                         <div class="card shadow-sm h-100">

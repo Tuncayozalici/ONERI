@@ -43,7 +43,37 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
     
+                function getModelDateIso() {
+                    const raw = data.RaporTarihi;
+                    if (!raw) {
+                        return '';
+                    }
+
+                    if (typeof raw === 'string') {
+                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (match) {
+                            return `${match[1]}-${match[2]}-${match[3]}`;
+                        }
+                    }
+
+                    const parsed = new Date(raw);
+                    if (Number.isNaN(parsed.getTime())) {
+                        return '';
+                    }
+
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+
                 function setDefaultDate() {
+                    const modelDateIso = getModelDateIso();
+                    if (modelDateIso) {
+                        dateInput.value = modelDateIso;
+                        return;
+                    }
+
                     const today = new Date();
                     const year = today.getFullYear();
                     const month = String(today.getMonth() + 1).padStart(2, '0');

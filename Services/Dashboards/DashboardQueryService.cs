@@ -11,6 +11,25 @@ public class DashboardQueryService : IDashboardQueryService
         _ingestionService = ingestionService;
     }
 
+    private static DateTime ResolveClosestAvailableDate(IEnumerable<DateTime> dates, DateTime referenceDate)
+    {
+        var available = dates
+            .Where(x => x != DateTime.MinValue)
+            .Select(x => x.Date)
+            .Distinct()
+            .ToList();
+
+        if (!available.Any())
+        {
+            return referenceDate.Date;
+        }
+
+        return available
+            .OrderBy(x => Math.Abs((x - referenceDate.Date).TotalDays))
+            .ThenByDescending(x => x)
+            .First();
+    }
+
     public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
@@ -154,11 +173,12 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            ozetEnd = maxDate.Date;
-            ozetStart = ozetEnd.AddDays(-6);
-            trendStart = ozetStart;
+            var varsayilanOzetTarihi = ResolveClosestAvailableDate(allDates, DateTime.Today.AddDays(-1));
+            ozetEnd = varsayilanOzetTarihi;
+            ozetStart = varsayilanOzetTarihi;
+            trendStart = varsayilanOzetTarihi.AddDays(-6);
             trendEnd = ozetEnd;
-            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
+            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy}";
         }
 
         var ozetTarihleri = Enumerable.Range(0, (ozetEnd - ozetStart).Days + 1)
@@ -513,11 +533,11 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<GunlukVerilerViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
 
         var viewModel = new GunlukVerilerViewModel
         {
-            RaporTarihi = islenecekTarih,
+            RaporTarihi = secilenTarih ?? DateTime.Today,
             ProfilIsimleri = new List<string>(),
             ProfilUretimAdetleri = new List<int>(),
             Son7GunTarihleri = new List<string>(),
@@ -540,6 +560,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<GunlukVerilerViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var gununVerileri = excelData.AsQueryable();
         if (ay.HasValue && yil.HasValue)
@@ -630,7 +653,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
             bag["TrendTitle"] = "Son 7 Günlük Üretim Trendi";
@@ -672,7 +695,7 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<BoyaDashboardViewModel>> GetBoyahaneAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
         var viewModel = new BoyaDashboardViewModel();
@@ -684,6 +707,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<BoyaDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var tarihKaynaklari = uretimListesi.Select(x => x.Tarih).Concat(hataListesi.Select(x => x.Tarih));
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynaklari, DateTime.Today);
 
         var gununUretimVerileri = uretimListesi.AsQueryable();
         var gununHataVerileri = hataListesi.AsQueryable();
@@ -728,7 +754,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
             bag["UretimDagilimiTitle"] = "Üretim Dağılımı (Panel vs Döşeme)";
@@ -781,7 +807,7 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<PvcDashboardViewModel>> GetPvcAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
         static string NormalizePvcDuraklamaNedeni(string? neden)
@@ -812,7 +838,7 @@ public class DashboardQueryService : IDashboardQueryService
             return trimmed;
         }
 
-        var viewModel = new PvcDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new PvcDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.PvcRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -820,6 +846,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<PvcDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         if (ay.HasValue && yil.HasValue)
@@ -857,7 +886,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -952,10 +981,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<CncDashboardViewModel>> GetCncAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new CncDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new CncDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var masterRows = snapshot.MasterwoodRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
         var skipperRows = snapshot.SkipperRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
         var roverRows = snapshot.RoverBRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
@@ -970,6 +999,8 @@ public class DashboardQueryService : IDashboardQueryService
             .Concat(skipperRows.Select(x => x.Tarih.Date))
             .Concat(roverRows.Select(x => x.Tarih.Date))
             .ToList();
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(allDates, DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
 
         DateTime periodStart;
@@ -1100,10 +1131,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<MasterwoodDashboardViewModel>> GetMasterwoodAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new MasterwoodDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new MasterwoodDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.MasterwoodRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1111,6 +1142,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<MasterwoodDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         if (ay.HasValue && yil.HasValue)
@@ -1146,7 +1180,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1215,10 +1249,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<SkipperDashboardViewModel>> GetSkipperAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new SkipperDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new SkipperDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.SkipperRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1226,6 +1260,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<SkipperDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         if (ay.HasValue && yil.HasValue)
@@ -1261,7 +1298,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1317,10 +1354,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<RoverBDashboardViewModel>> GetRoverBAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new RoverBDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new RoverBDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.RoverBRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1328,6 +1365,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<RoverBDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         if (ay.HasValue && yil.HasValue)
@@ -1361,7 +1401,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1423,10 +1463,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<TezgahDashboardViewModel>> GetTezgahAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new TezgahDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new TezgahDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.TezgahRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1434,6 +1474,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<TezgahDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         int? yearToUse = null;
@@ -1474,7 +1517,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1518,10 +1561,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<EbatlamaDashboardViewModel>> GetEbatlamaAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new EbatlamaDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new EbatlamaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.EbatlamaRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1529,6 +1572,9 @@ public class DashboardQueryService : IDashboardQueryService
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<EbatlamaDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
 
         var filtreliVeri = excelData.AsQueryable();
         int? yearToUse = null;
@@ -1593,7 +1639,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1660,10 +1706,10 @@ public class DashboardQueryService : IDashboardQueryService
     public async Task<DashboardPageResult<HataliParcaDashboardViewModel>> GetHataliParcaAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
-        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new HataliParcaDashboardViewModel { RaporTarihi = islenecekTarih };
+        var viewModel = new HataliParcaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.HataliParcaRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
         if (!excelData.Any())
@@ -1672,11 +1718,23 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<HataliParcaDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
-        var filtreliVeri = excelData.AsQueryable();
+        bool IsMakineHatasi(string? neden)
+        {
+            var normalized = DashboardParsingHelper.NormalizeLabel(neden);
+            return normalized.Contains("makine hatası", StringComparison.OrdinalIgnoreCase);
+        }
+
+        var analizVerisi = excelData.Where(x => !IsMakineHatasi(x.HataNedeni)).ToList();
+        var tarihKaynak = analizVerisi.Any() ? analizVerisi : excelData;
+
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
+
+        var filtreliVeri = analizVerisi.AsQueryable();
         int? yearToUse = null;
         if (ay.HasValue)
         {
-            var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(excelData.Select(x => x.Tarih), ay.Value, yil);
+            var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(tarihKaynak.Select(x => x.Tarih), ay.Value, yil);
             yearToUse = resolvedYear ?? yil ?? islenecekTarih.Year;
             if (resolvedYear.HasValue && (!yil.HasValue || yil.Value != resolvedYear.Value))
             {
@@ -1737,7 +1795,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = raporTarihi ?? DateTime.Today;
+            var referansTarih = islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1746,10 +1804,10 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(offset => trendBaslangic.Date.AddDays(offset))
             .ToList();
 
-        var hataAdetGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var hataAdetGunluk = analizVerisi.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
-        var hataM2Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var hataM2Gunluk = analizVerisi.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.ToplamM2));
 
@@ -1772,6 +1830,27 @@ public class DashboardQueryService : IDashboardQueryService
             .ToList();
         viewModel.BolumLabels = bolumList.Select(x => x.Key).ToList();
         viewModel.BolumData = bolumList.Select(x => x.Total).ToList();
+
+        viewModel.BolumBazliHataNedenleri = filtreliVeri
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.BolumAdi))
+            .AsEnumerable()
+            .Select(g =>
+            {
+                var nedenler = g
+                    .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
+                    .Select(ng => new { Neden = ng.Key, Toplam = ng.Sum(x => x.Adet) })
+                    .OrderByDescending(x => x.Toplam)
+                    .ToList();
+
+                return new BolumBazliHataNedenViewModel
+                {
+                    Bolum = g.Key,
+                    NedenLabels = nedenler.Select(x => x.Neden).ToList(),
+                    NedenData = nedenler.Select(x => x.Toplam).ToList()
+                };
+            })
+            .OrderBy(x => x.Bolum)
+            .ToList();
 
         var operatorList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.OperatorAdi))

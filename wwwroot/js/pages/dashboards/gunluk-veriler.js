@@ -19,6 +19,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
+                function getModelDateIso() {
+                    const raw = data.RaporTarihi;
+                    if (!raw) {
+                        return '';
+                    }
+
+                    if (typeof raw === 'string') {
+                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (match) {
+                            return `${match[1]}-${match[2]}-${match[3]}`;
+                        }
+                    }
+
+                    const parsed = new Date(raw);
+                    if (Number.isNaN(parsed.getTime())) {
+                        return '';
+                    }
+
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
                 const summaryCard = document.getElementById('summaryCard');
                 const summaryToggle = document.getElementById('summaryUltraToggle');
                 if (summaryCard && summaryToggle) {
@@ -70,6 +93,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         summaryMonth.value = ay;
                         summaryYear.value = resolvedYear ?? yil;
                         summaryDate.value = '';
+                    } else {
+                        summaryDate.value = getModelDateIso();
                     }
                 }
     
@@ -95,22 +120,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     window.location.href = '/Home/GunlukVeriler';
                 });
     
-                new Chart(document.getElementById('genelUretimTrend').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Toplam Üretim',
-                            data: data.UretimTrendData,
-                            borderColor: 'rgba(54, 162, 235, 0.9)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.15)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
                 new Chart(document.getElementById('genelHataTrend').getContext('2d'), {
                     type: 'line',
                     data: {
@@ -124,22 +133,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             fill: true
                         }]
                     },
-                    options: { responsive: true }
-                });
-    
-                new Chart(document.getElementById('bolumKatkiGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.BolumUretimLabels,
-                        datasets: [{
-                            label: 'Üretim',
-                            data: data.BolumUretimData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                            borderColor: 'rgba(75, 192, 192, 0.9)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: { responsive: true }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
                 });
     
                 new Chart(document.getElementById('hataNedenGenelGrafigi').getContext('2d'), {
@@ -167,7 +164,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             fill: true
                         }]
                     },
-                    options: { responsive: true }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
                 });
 
                 const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';

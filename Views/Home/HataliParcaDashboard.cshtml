@@ -55,16 +55,8 @@
         <div class="col-lg col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-x-circle me-2"></i>Toplam Hatalı Adet</h5>
+                    <h5 class="card-title"><i class="bi bi-x-circle me-2"></i>Toplam Hatalı Adet (Makine Hatası Hariç)</h5>
                     <p class="card-text">@Model.ToplamHataAdet.ToString("N0")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-square me-2"></i>Toplam Hatalı m²</h5>
-                    <p class="card-text">@Model.ToplamHataM2.ToString("N2")</p>
                 </div>
             </div>
         </div>
@@ -107,16 +99,6 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.HataliM2Title ?? "Hatalı m² Trendi (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="hataM2Trend"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
                 <div class="card-header">Hata Nedenleri</div>
                 <div class="card-body">
                     <div class="chart-pie-wrap">
@@ -138,42 +120,6 @@
                 <div class="card-header">Operatöre Göre Hata (Top 10)</div>
                 <div class="card-body">
                     <canvas id="operatorGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Kalınlık Dağılımı</div>
-                <div class="card-body">
-                    <canvas id="kalinlikGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Renk Dağılımı (Top 10)</div>
-                <div class="card-body">
-                    <canvas id="renkGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Kesim Durumu</div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="kesimDurumGrafigi" class="chart-pie"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">PVC Durumu</div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="pvcDurumGrafigi" class="chart-pie"></canvas>
-                    </div>
                 </div>
             </div>
         </div>

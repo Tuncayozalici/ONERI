@@ -1,0 +1,79 @@
+@using Microsoft.AspNetCore.Authorization
+@using ONERI.Models.Authorization
+@inject IAuthorizationService AuthorizationService
+@{
+    ViewData["Title"] = "CNC Bölümü";
+
+    var canMasterwood = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Masterwood)).Succeeded;
+    var canSkipper = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Skipper)).Succeeded;
+    var canRoverB = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.RoverB)).Succeeded;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+}
+
+<div class="daily-page">
+    <div class="container">
+        <div class="daily-hero">
+            <div class="hero-kicker"><i class="bi bi-cpu"></i> CNC Bölümü</div>
+            <h2>CNC Makine Panosu</h2>
+            <p class="text-muted mb-0">Masterwood, Skipper ve Rover-B makinelerini tek ekranda yönetin.</p>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+            @if (canMasterwood)
+            {
+                <div class="col">
+                    <a href="@Url.Action("MasterwoodDashboard", "Home")" class="nav-tile">
+                        <div class="status-dot active"></div>
+                        <div class="text-center">
+                            <div class="icon">
+                                <i class="bi bi-tree"></i>
+                            </div>
+                            <h5>Masterwood Makinesi</h5>
+                            <p>Delik, freeze ve duraklama analizleri.</p>
+                        </div>
+                    </a>
+                </div>
+            }
+            @if (canSkipper)
+            {
+                <div class="col">
+                    <a href="@Url.Action("SkipperDashboard", "Home")" class="nav-tile">
+                        <div class="status-dot active"></div>
+                        <div class="text-center">
+                            <div class="icon">
+                                <i class="bi bi-cpu"></i>
+                            </div>
+                            <h5>Skipper Makinesi</h5>
+                            <p>Delik, duraklama ve oran trendleri.</p>
+                        </div>
+                    </a>
+                </div>
+            }
+            @if (canRoverB)
+            {
+                <div class="col">
+                    <a href="@Url.Action("RoverBDashboard", "Home")" class="nav-tile">
+                        <div class="status-dot active"></div>
+                        <div class="text-center">
+                            <div class="icon">
+                                <i class="bi bi-hdd-rack"></i>
+                            </div>
+                            <h5>Rover-B Makinesi</h5>
+                            <p>Delik-freeze, PVC ve duraklama analizleri.</p>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+
+        @if (!canMasterwood && !canSkipper && !canRoverB)
+        {
+            <div class="alert alert-warning mt-4">
+                CNC altındaki makinelere erişim yetkiniz yok.
+            </div>
+        }
+    </div>
+</div>

@@ -113,6 +113,7 @@
                 || path.StartsWith("/home/profillazerverileri")
                 || path.StartsWith("/home/boyahanedashboard")
                 || path.StartsWith("/home/pvcdashboard")
+                || path.StartsWith("/home/cncdashboard")
                 || path.StartsWith("/home/masterwooddashboard")
                 || path.StartsWith("/home/skipperdashboard")
                 || path.StartsWith("/home/roverbdashboard")
@@ -127,9 +128,7 @@
             var canProfil = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.ProfilLazer)).Succeeded;
             var canBoyahane = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Boyahane)).Succeeded;
             var canPvc = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Pvc)).Succeeded;
-            var canMasterwood = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Masterwood)).Succeeded;
-            var canSkipper = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Skipper)).Succeeded;
-            var canRoverB = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.RoverB)).Succeeded;
+            var canCnc = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Cnc)).Succeeded;
             var canTezgah = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Tezgah)).Succeeded;
             var canEbatlama = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Ebatlama)).Succeeded;
             var canHatali = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.HataliParca)).Succeeded;
@@ -138,7 +137,7 @@
             var canOneriYeni = true;
             var canOneriSorgu = true;
 
-            var hasGunlukChildren = canProfil || canBoyahane || canPvc || canMasterwood || canSkipper || canRoverB || canTezgah || canEbatlama || canHatali;
+            var hasGunlukChildren = canProfil || canBoyahane || canPvc || canCnc || canTezgah || canEbatlama || canHatali;
             var hasAnyGunluk = canGunluk || hasGunlukChildren;
             var hasFikirChildren = true;
             var hasAnyFikir = true;
@@ -190,22 +189,10 @@
                                         <i class="bi bi-bounding-box me-2"></i> PVC Bölümü
                                     </a>
                                 }
-                                @if (canMasterwood)
+                                @if (canCnc)
                                 {
-                                    <a asp-controller="Home" asp-action="MasterwoodDashboard" class="list-group-item list-group-item-action ps-5">
-                                        <i class="bi bi-tree me-2"></i> Masterwood Makinesi
-                                    </a>
-                                }
-                                @if (canSkipper)
-                                {
-                                    <a asp-controller="Home" asp-action="SkipperDashboard" class="list-group-item list-group-item-action ps-5">
-                                        <i class="bi bi-cpu me-2"></i> Skipper Makinesi
-                                    </a>
-                                }
-                                @if (canRoverB)
-                                {
-                                    <a asp-controller="Home" asp-action="RoverBDashboard" class="list-group-item list-group-item-action ps-5">
-                                        <i class="bi bi-hdd-rack me-2"></i> Rover-B Makinesi
+                                    <a asp-controller="Home" asp-action="CncDashboard" class="list-group-item list-group-item-action ps-5">
+                                        <i class="bi bi-cpu me-2"></i> CNC Bölümü
                                     </a>
                                 }
                                 @if (canTezgah)

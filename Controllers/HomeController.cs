@@ -60,6 +60,12 @@ public class HomeController : Controller
         return View(result.Model);
     }
 
+    [Authorize(Policy = Permissions.Dashboards.Cnc)]
+    public IActionResult CncDashboard()
+    {
+        return View();
+    }
+
     [Authorize(Policy = Permissions.Dashboards.Masterwood)]
     public async Task<IActionResult> MasterwoodDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {

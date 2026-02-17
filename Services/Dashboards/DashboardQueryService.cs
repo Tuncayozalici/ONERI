@@ -197,7 +197,7 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-                AddDept(bolumKatki, "Masterwood", row.Uretim);
+                AddDept(bolumKatki, "CNC", row.Uretim);
             }
         }
 
@@ -209,7 +209,7 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-                AddDept(bolumKatki, "Skipper", row.Uretim);
+                AddDept(bolumKatki, "CNC", row.Uretim);
             }
         }
 
@@ -221,7 +221,7 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
-                AddDept(bolumKatki, "Rover-B", row.Uretim);
+                AddDept(bolumKatki, "CNC", row.Uretim);
             }
         }
 

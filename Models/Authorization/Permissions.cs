@@ -15,6 +15,7 @@ namespace ONERI.Models.Authorization
             public const string ProfilLazer = "dashboard.profillazer.view";
             public const string Boyahane = "dashboard.boyahane.view";
             public const string Pvc = "dashboard.pvc.view";
+            public const string Cnc = "dashboard.cnc.view";
             public const string Masterwood = "dashboard.masterwood.view";
             public const string Skipper = "dashboard.skipper.view";
             public const string RoverB = "dashboard.roverb.view";
@@ -62,6 +63,7 @@ namespace ONERI.Models.Authorization
             new(Dashboards.ProfilLazer, "Profil Lazer Bölümü", "Dashboards"),
             new(Dashboards.Boyahane, "Boyahane Bölümü", "Dashboards"),
             new(Dashboards.Pvc, "PVC Bölümü", "Dashboards"),
+            new(Dashboards.Cnc, "CNC Bölümü", "Dashboards"),
             new(Dashboards.Masterwood, "Masterwood Makinesi", "Dashboards"),
             new(Dashboards.Skipper, "Skipper Makinesi", "Dashboards"),
             new(Dashboards.RoverB, "Rover-B Makinesi", "Dashboards"),

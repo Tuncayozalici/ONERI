@@ -1,16 +1,16 @@
-@using Microsoft.AspNetCore.Authorization
-@using ONERI.Models.Authorization
-@inject IAuthorizationService AuthorizationService
+@model ONERI.Models.CncDashboardViewModel
 @{
     ViewData["Title"] = "CNC Bölümü";
-
-    var canMasterwood = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Masterwood)).Succeeded;
-    var canSkipper = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.Skipper)).Succeeded;
-    var canRoverB = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.Dashboards.RoverB)).Succeeded;
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/boyahane.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+}
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
 <div class="daily-page">
@@ -18,62 +18,150 @@
         <div class="daily-hero">
             <div class="hero-kicker"><i class="bi bi-cpu"></i> CNC Bölümü</div>
             <h2>CNC Makine Panosu</h2>
-            <p class="text-muted mb-0">Masterwood, Skipper ve Rover-B makinelerini tek ekranda yönetin.</p>
+            <p class="text-muted mb-0">Masterwood, Skipper ve Rover-B makinelerinin özetini tek ekranda izleyin.</p>
+        </div>
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-6">
+                <small class="text-muted">Seçili Aralık: @ViewBag.CncRange</small>
+            </div>
+            <div class="col-md-6">
+                <form asp-action="CncDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+                    <div class="form-group">
+                        <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
+                        <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label for="ay" class="visually-hidden">Ay Seç</label>
+                        <select id="ay" name="ay" class="form-select">
+                            <option value="">Ay Seçin</option>
+                            <option value="1">Ocak</option>
+                            <option value="2">Şubat</option>
+                            <option value="3">Mart</option>
+                            <option value="4">Nisan</option>
+                            <option value="5">Mayıs</option>
+                            <option value="6">Haziran</option>
+                            <option value="7">Temmuz</option>
+                            <option value="8">Ağustos</option>
+                            <option value="9">Eylül</option>
+                            <option value="10">Ekim</option>
+                            <option value="11">Kasım</option>
+                            <option value="12">Aralık</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="yil" class="visually-hidden">Yıl Seç</label>
+                        <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
+                    </div>
+                    <button type="submit" class="btn btn-success">Filtrele</button>
+                    <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="kpi-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-collection me-2"></i>CNC Toplam Üretim</h5>
+                        <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="kpi-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>CNC Duraklama (dk)</h5>
+                        <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="kpi-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-activity me-2"></i>CNC Performans</h5>
+                        <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="kpi-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>CNC OEE</h5>
+                        <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-5 mb-5">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        @(ViewBag.CncUretimTrendTitle ?? "CNC Üretim Trendi")
+                    </div>
+                    <div class="card-body">
+                        <canvas id="cncUretimTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        @(ViewBag.CncOeeTrendTitle ?? "CNC OEE Trendi")
+                    </div>
+                    <div class="card-body">
+                        <canvas id="cncOeeTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-            @if (canMasterwood)
-            {
-                <div class="col">
-                    <a href="@Url.Action("MasterwoodDashboard", "Home")" class="nav-tile">
-                        <div class="status-dot active"></div>
-                        <div class="text-center">
-                            <div class="icon">
-                                <i class="bi bi-tree"></i>
-                            </div>
-                            <h5>Masterwood Makinesi</h5>
-                            <p>Delik, freeze ve duraklama analizleri.</p>
+            <div class="col">
+                <a href="@Url.Action("MasterwoodDashboard", "Home")" class="nav-tile">
+                    <div class="status-dot active"></div>
+                    <div class="text-center">
+                        <div class="icon">
+                            <i class="bi bi-tree"></i>
                         </div>
-                    </a>
-                </div>
-            }
-            @if (canSkipper)
-            {
-                <div class="col">
-                    <a href="@Url.Action("SkipperDashboard", "Home")" class="nav-tile">
-                        <div class="status-dot active"></div>
-                        <div class="text-center">
-                            <div class="icon">
-                                <i class="bi bi-cpu"></i>
-                            </div>
-                            <h5>Skipper Makinesi</h5>
-                            <p>Delik, duraklama ve oran trendleri.</p>
-                        </div>
-                    </a>
-                </div>
-            }
-            @if (canRoverB)
-            {
-                <div class="col">
-                    <a href="@Url.Action("RoverBDashboard", "Home")" class="nav-tile">
-                        <div class="status-dot active"></div>
-                        <div class="text-center">
-                            <div class="icon">
-                                <i class="bi bi-hdd-rack"></i>
-                            </div>
-                            <h5>Rover-B Makinesi</h5>
-                            <p>Delik-freeze, PVC ve duraklama analizleri.</p>
-                        </div>
-                    </a>
-                </div>
-            }
-        </div>
-
-        @if (!canMasterwood && !canSkipper && !canRoverB)
-        {
-            <div class="alert alert-warning mt-4">
-                CNC altındaki makinelere erişim yetkiniz yok.
+                        <h5>Masterwood Makinesi</h5>
+                        <p>Üretim: @Model.Masterwood.Uretim.ToString("N0") | OEE: @Model.Masterwood.Oee.ToString("N2")%</p>
+                    </div>
+                </a>
             </div>
-        }
+            <div class="col">
+                <a href="@Url.Action("SkipperDashboard", "Home")" class="nav-tile">
+                    <div class="status-dot active"></div>
+                    <div class="text-center">
+                        <div class="icon">
+                            <i class="bi bi-cpu"></i>
+                        </div>
+                        <h5>Skipper Makinesi</h5>
+                        <p>Üretim: @Model.Skipper.Uretim.ToString("N0") | OEE: @Model.Skipper.Oee.ToString("N2")%</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="@Url.Action("RoverBDashboard", "Home")" class="nav-tile">
+                    <div class="status-dot active"></div>
+                    <div class="text-center">
+                        <div class="icon">
+                            <i class="bi bi-hdd-rack"></i>
+                        </div>
+                        <h5>Rover-B Makinesi</h5>
+                        <p>Üretim: @Model.RoverB.Uretim.ToString("N0") | OEE: @Model.RoverB.Oee.ToString("N2")%</p>
+                    </div>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script id="cnc-dashboard-data" type="application/json">
+        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.CncResolvedYear }))
+    </script>
+    <script src="~/js/pages/dashboards/cnc-dashboard.js" asp-append-version="true"></script>
+}

@@ -8,6 +8,7 @@ public interface IDashboardQueryService
     Task<DashboardPageResult<GunlukVerilerViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
     Task<DashboardPageResult<BoyaDashboardViewModel>> GetBoyahaneAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
     Task<DashboardPageResult<PvcDashboardViewModel>> GetPvcAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
+    Task<DashboardPageResult<CncDashboardViewModel>> GetCncAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
     Task<DashboardPageResult<MasterwoodDashboardViewModel>> GetMasterwoodAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
     Task<DashboardPageResult<SkipperDashboardViewModel>> GetSkipperAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);
     Task<DashboardPageResult<RoverBDashboardViewModel>> GetRoverBAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default);

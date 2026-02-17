@@ -61,9 +61,11 @@ public class HomeController : Controller
     }
 
     [Authorize(Policy = Permissions.Dashboards.Cnc)]
-    public IActionResult CncDashboard()
+    public async Task<IActionResult> CncDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        return View();
+        var result = await _dashboardQueryService.GetCncAsync(raporTarihi, ay, yil, cancellationToken);
+        ApplyViewBagValues(result.ViewBagValues);
+        return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Masterwood)]

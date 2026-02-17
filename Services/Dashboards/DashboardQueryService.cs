@@ -779,6 +779,154 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
+    public async Task<DashboardPageResult<CncDashboardViewModel>> GetCncAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    {
+        var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
+        var islenecekTarih = raporTarihi ?? DateTime.Today;
+        var bag = new Dictionary<string, object?>();
+
+        var viewModel = new CncDashboardViewModel { RaporTarihi = islenecekTarih };
+        var masterRows = snapshot.MasterwoodRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        var skipperRows = snapshot.SkipperRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        var roverRows = snapshot.RoverBRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+
+        if (!masterRows.Any() && !skipperRows.Any() && !roverRows.Any())
+        {
+            bag["ErrorMessage"] = "CNC verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
+            return new DashboardPageResult<CncDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
+        }
+
+        var allDates = masterRows.Select(x => x.Tarih.Date)
+            .Concat(skipperRows.Select(x => x.Tarih.Date))
+            .Concat(roverRows.Select(x => x.Tarih.Date))
+            .ToList();
+        var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
+
+        DateTime periodStart;
+        DateTime periodEnd;
+        DateTime trendStart;
+        DateTime trendEnd;
+        if (ay.HasValue)
+        {
+            var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(allDates, ay.Value, yil);
+            var yearToUse = resolvedYear ?? yil ?? maxDate.Year;
+            if (resolvedYear.HasValue && (!yil.HasValue || yil.Value != resolvedYear.Value))
+            {
+                bag["CncResolvedYear"] = resolvedYear.Value;
+            }
+
+            periodStart = new DateTime(yearToUse, ay.Value, 1);
+            periodEnd = periodStart.AddMonths(1).AddDays(-1);
+            trendStart = periodStart;
+            trendEnd = periodEnd;
+            bag["CncRange"] = $"{periodStart:dd.MM.yyyy} - {periodEnd:dd.MM.yyyy}";
+            bag["CncUretimTrendTitle"] = "CNC Üretim Trendi (Aylık)";
+            bag["CncOeeTrendTitle"] = "CNC OEE Trendi (Aylık)";
+        }
+        else
+        {
+            periodStart = islenecekTarih.Date;
+            periodEnd = islenecekTarih.Date;
+            trendStart = islenecekTarih.Date.AddDays(-6);
+            trendEnd = islenecekTarih.Date;
+            bag["CncRange"] = $"{periodStart:dd.MM.yyyy}";
+            bag["CncUretimTrendTitle"] = "CNC Üretim Trendi (Son 7 Gün)";
+            bag["CncOeeTrendTitle"] = "CNC OEE Trendi (Son 7 Gün)";
+        }
+
+        var masterPeriod = masterRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
+        var skipperPeriod = skipperRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
+        var roverPeriod = roverRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
+
+        viewModel.Masterwood = new CncMachineSummary
+        {
+            Uretim = masterPeriod.Sum(x => x.DelikFreezeSayisi),
+            DuraklamaDakika = masterPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3),
+            Oee = masterPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
+        };
+        viewModel.Skipper = new CncMachineSummary
+        {
+            Uretim = skipperPeriod.Sum(x => x.DelikSayisi),
+            DuraklamaDakika = skipperPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3),
+            Oee = skipperPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
+        };
+        viewModel.RoverB = new CncMachineSummary
+        {
+            Uretim = roverPeriod.Sum(x => x.DelikFreezePvcSayisi),
+            DuraklamaDakika = roverPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4),
+            Oee = roverPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
+        };
+
+        viewModel.ToplamUretim = viewModel.Masterwood.Uretim + viewModel.Skipper.Uretim + viewModel.RoverB.Uretim;
+        viewModel.ToplamDuraklamaDakika = viewModel.Masterwood.DuraklamaDakika + viewModel.Skipper.DuraklamaDakika + viewModel.RoverB.DuraklamaDakika;
+
+        var perfValues = masterPeriod.Select(x => x.Performans)
+            .Concat(skipperPeriod.Select(x => x.Performans))
+            .Concat(roverPeriod.Select(x => x.Performans))
+            .Where(x => x > 0)
+            .ToList();
+        viewModel.OrtalamaPerformans = perfValues.Any() ? perfValues.Average() : 0;
+
+        var oeeValues = masterPeriod.Select(x => x.Oee)
+            .Concat(skipperPeriod.Select(x => x.Oee))
+            .Concat(roverPeriod.Select(x => x.Oee))
+            .Where(x => x > 0)
+            .ToList();
+        viewModel.OrtalamaOee = oeeValues.Any() ? oeeValues.Average() : 0;
+
+        var trendDates = Enumerable.Range(0, (trendEnd.Date - trendStart.Date).Days + 1)
+            .Select(offset => trendStart.Date.AddDays(offset))
+            .ToList();
+        viewModel.TrendLabels = trendDates.Select(t => t.ToString("dd.MM")).ToList();
+
+        var masterTrendUretim = masterRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikFreezeSayisi));
+        var skipperTrendUretim = skipperRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikSayisi));
+        var roverTrendUretim = roverRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikFreezePvcSayisi));
+
+        viewModel.UretimTrendData = trendDates.Select(t =>
+            (masterTrendUretim.TryGetValue(t, out var m) ? m : 0)
+            + (skipperTrendUretim.TryGetValue(t, out var s) ? s : 0)
+            + (roverTrendUretim.TryGetValue(t, out var r) ? r : 0)
+        ).ToList();
+
+        var masterTrendOee = masterRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average());
+        var skipperTrendOee = skipperRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average());
+        var roverTrendOee = roverRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average());
+
+        viewModel.OeeTrendData = trendDates.Select(t =>
+        {
+            var vals = new List<double>();
+            if (masterTrendOee.TryGetValue(t, out var m) && m > 0) vals.Add(m);
+            if (skipperTrendOee.TryGetValue(t, out var s) && s > 0) vals.Add(s);
+            if (roverTrendOee.TryGetValue(t, out var r) && r > 0) vals.Add(r);
+            return vals.Any() ? vals.Average() : 0;
+        }).ToList();
+
+        return new DashboardPageResult<CncDashboardViewModel>
+        {
+            Model = viewModel,
+            ViewBagValues = bag
+        };
+    }
+
     public async Task<DashboardPageResult<MasterwoodDashboardViewModel>> GetMasterwoodAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);

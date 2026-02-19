@@ -6,6 +6,7 @@ namespace ONERI.Models
     public class EbatlamaDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public string? SeciliMakine { get; set; }
 
         public double ToplamKesimAdet { get; set; }
         public double ToplamPlaka8Mm { get; set; }
@@ -37,5 +38,6 @@ namespace ONERI.Models
 
         public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
         public List<double> DuraklamaNedenData { get; set; } = new List<double>();
+        public List<MakineKartOzetModel> MakineKartlari { get; set; } = new List<MakineKartOzetModel>();
     }
 }

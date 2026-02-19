@@ -4,10 +4,8 @@
 
 namespace ONERI.Migrations
 {
-    /// <inheritdoc />
     public partial class Faz3 : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
@@ -18,7 +16,6 @@ namespace ONERI.Migrations
                 defaultValue: 0);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

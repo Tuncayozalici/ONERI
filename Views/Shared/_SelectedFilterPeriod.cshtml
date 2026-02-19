@@ -1,0 +1,95 @@
+@model DateTime
+@using System.Globalization
+@{
+    var trCulture = CultureInfo.GetCultureInfo("tr-TR");
+
+    DateTime? ParseDate(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        if (DateTime.TryParse(raw, trCulture, DateTimeStyles.None, out var parsed))
+        {
+            return parsed.Date;
+        }
+
+        return DateTime.TryParse(raw, out parsed) ? parsed.Date : null;
+    }
+
+    var startRaw = Context.Request.Query["startDate"].ToString();
+    var endRaw = Context.Request.Query["endDate"].ToString();
+
+    if (string.IsNullOrWhiteSpace(startRaw) && string.IsNullOrWhiteSpace(endRaw))
+    {
+        startRaw = Context.Request.Query["baslangicTarihi"].ToString();
+        endRaw = Context.Request.Query["bitisTarihi"].ToString();
+    }
+
+    if (string.IsNullOrWhiteSpace(startRaw) && string.IsNullOrWhiteSpace(endRaw))
+    {
+        var singleRaw = Context.Request.Query["raporTarihi"].ToString();
+        if (!string.IsNullOrWhiteSpace(singleRaw))
+        {
+            startRaw = singleRaw;
+            endRaw = singleRaw;
+        }
+    }
+
+    var start = ParseDate(startRaw);
+    var end = ParseDate(endRaw);
+
+    if (start.HasValue && !end.HasValue)
+    {
+        end = start;
+    }
+    else if (!start.HasValue && end.HasValue)
+    {
+        start = end;
+    }
+
+    string displayText;
+    if (start.HasValue && end.HasValue)
+    {
+        var startDate = start.Value;
+        var endDate = end.Value;
+        if (endDate < startDate)
+        {
+            (startDate, endDate) = (endDate, startDate);
+        }
+
+        var isSingleDay = startDate == endDate;
+        var isWholeMonth = startDate.Year == endDate.Year
+            && startDate.Month == endDate.Month
+            && startDate.Day == 1
+            && endDate.Day == DateTime.DaysInMonth(endDate.Year, endDate.Month);
+
+        if (isSingleDay)
+        {
+            displayText = startDate.ToString("dd MMMM yyyy", trCulture);
+        }
+        else if (isWholeMonth)
+        {
+            displayText = startDate.ToString("MMMM yyyy", trCulture);
+        }
+        else
+        {
+            displayText = $"{startDate.ToString("dd MMMM yyyy", trCulture)} - {endDate.ToString("dd MMMM yyyy", trCulture)}";
+        }
+    }
+    else
+    {
+        var ayRaw = Context.Request.Query["ay"].ToString();
+        var yilRaw = Context.Request.Query["yil"].ToString();
+        if (int.TryParse(ayRaw, out var ay) && int.TryParse(yilRaw, out var yil) && ay >= 1 && ay <= 12)
+        {
+            displayText = new DateTime(yil, ay, 1).ToString("MMMM yyyy", trCulture);
+        }
+        else
+        {
+            displayText = Model.ToString("dd MMMM yyyy", trCulture);
+        }
+    }
+}
+<h4 class="text-muted mb-0">@displayText</h4>

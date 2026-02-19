@@ -18,36 +18,16 @@
             <h2 class="display-6">Hatalı Parça Analizi</h2>
         </div>
         <div class="col-md-6">
-            <form asp-action="HataliParcaDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
-                <div class="form-group">
-                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
-                    <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="ay" class="visually-hidden">Ay Seç</label>
-                    <select id="ay" name="ay" class="form-select">
-                        <option value="">Ay Seçin</option>
-                        <option value="1">Ocak</option>
-                        <option value="2">Şubat</option>
-                        <option value="3">Mart</option>
-                        <option value="4">Nisan</option>
-                        <option value="5">Mayıs</option>
-                        <option value="6">Haziran</option>
-                        <option value="7">Temmuz</option>
-                        <option value="8">Ağustos</option>
-                        <option value="9">Eylül</option>
-                        <option value="10">Ekim</option>
-                        <option value="11">Kasım</option>
-                        <option value="12">Aralık</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="yil" class="visually-hidden">Yıl Seç</label>
-                    <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
-                </div>
-                <button type="submit" class="btn btn-success">Filtrele</button>
-                <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
+            <form asp-action="HataliParcaDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+                @await Html.PartialAsync("_UnifiedDateFilter")
+                <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
+                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
             </form>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
         </div>
     </div>
 

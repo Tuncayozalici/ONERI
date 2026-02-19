@@ -1,10 +1,36 @@
 @model ONERI.Models.PvcDashboardViewModel
 @{
     ViewData["Title"] = "PVC Verileri";
+
+    var queryStartDate = Context.Request.Query["startDate"].ToString();
+    var queryEndDate = Context.Request.Query["endDate"].ToString();
+    var queryRaporTarihi = Context.Request.Query["raporTarihi"].ToString();
+    var queryBaslangicTarihi = Context.Request.Query["baslangicTarihi"].ToString();
+    var queryBitisTarihi = Context.Request.Query["bitisTarihi"].ToString();
+
+    var routeStartDate = !string.IsNullOrWhiteSpace(queryStartDate)
+        ? queryStartDate
+        : (!string.IsNullOrWhiteSpace(queryBaslangicTarihi) ? queryBaslangicTarihi : queryRaporTarihi);
+    var routeEndDate = !string.IsNullOrWhiteSpace(queryEndDate)
+        ? queryEndDate
+        : (!string.IsNullOrWhiteSpace(queryBitisTarihi) ? queryBitisTarihi : queryRaporTarihi);
+
+    var baseRouteValues = new
+    {
+        startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
+        endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate
+    };
+
+    var tumMakinelerUrl = Url.Action("PvcDashboard", "Home", baseRouteValues);
+    var selectedMachine = (Model.SeciliMakine ?? string.Empty).Trim();
+    var hideMachineBasedCharts = selectedMachine.Equals("STREAM-B", StringComparison.OrdinalIgnoreCase)
+                                 || selectedMachine.Equals("STREAM-C", StringComparison.OrdinalIgnoreCase)
+                                 || selectedMachine.Equals("TURANLAR", StringComparison.OrdinalIgnoreCase);
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/boyahane.css" />
+    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
@@ -12,44 +38,47 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="container">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="display-6">PVC Üretim Raporu</h2>
+<div class="daily-page">
+    <div class="container">
+        <div class="daily-hero">
+            <div class="hero-kicker"><i class="bi bi-bounding-box"></i> PVC Bölümü</div>
+            <h2>
+                PVC Üretim Panosu
+                @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
+                {
+                    <span class="fs-4 text-primary">- @Model.SeciliMakine</span>
+                }
+            </h2>
+            <p class="text-muted mb-0">PVC hatlarının üretim, kalite, duraklama ve OEE performansını tek ekranda izleyin.</p>
+            @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
+            {
+                <a class="btn btn-sm btn-outline-primary mt-2" href="@tumMakinelerUrl">
+                    <i class="bi bi-arrow-left"></i> Tüm Makineleri Göster
+                </a>
+            }
         </div>
-        <div class="col-md-6">
-            <form asp-action="PvcDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
-                <div class="form-group">
-                    <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
-                    <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="ay" class="visually-hidden">Ay Seç</label>
-                    <select id="ay" name="ay" class="form-select">
-                        <option value="">Ay Seçin</option>
-                        <option value="1">Ocak</option>
-                        <option value="2">Şubat</option>
-                        <option value="3">Mart</option>
-                        <option value="4">Nisan</option>
-                        <option value="5">Mayıs</option>
-                        <option value="6">Haziran</option>
-                        <option value="7">Temmuz</option>
-                        <option value="8">Ağustos</option>
-                        <option value="9">Eylül</option>
-                        <option value="10">Ekim</option>
-                        <option value="11">Kasım</option>
-                        <option value="12">Aralık</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="yil" class="visually-hidden">Yıl Seç</label>
-                    <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
-                </div>
-                <button type="submit" class="btn btn-success">Filtrele</button>
-                <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
-            </form>
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-6">
+                <small class="text-muted">Seçili Aralık: @ViewBag.PvcRange</small>
+            </div>
+            <div class="col-md-6">
+                <form asp-action="PvcDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
+                    {
+                        <input type="hidden" name="makine" value="@Model.SeciliMakine" />
+                    }
+                    <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
+                    <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
+                </form>
+            </div>
         </div>
-    </div>
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+            </div>
+        </div>
 
     <div class="row g-4 mb-4">
         <div class="col-lg-3 col-md-6">
@@ -87,7 +116,7 @@
     </div>
 
     <div class="row g-4 mb-5">
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h5>
@@ -95,7 +124,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
@@ -103,11 +132,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
             <div class="kpi-card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>OEE</h5>
                     <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-exclamation-octagon me-2"></i>Toplam Hatalı Parça</h5>
+                    <p class="card-text">@Model.ToplamHataliParca.ToString("N0")</p>
                 </div>
             </div>
         </div>
@@ -124,16 +161,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.PvcMakineOeeTitle ?? "Makine Bazlı OEE Karşılaştırma")
-                </div>
-                <div class="card-body">
-                    <canvas id="makineOeeTrendGrafigi"></canvas>
+        @if (!hideMachineBasedCharts)
+        {
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        @(ViewBag.PvcMakineOeeTitle ?? "Makine Bazlı OEE Karşılaştırma")
+                    </div>
+                    <div class="card-body">
+                        <canvas id="makineOeeTrendGrafigi"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
@@ -144,26 +184,29 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Makine Bazlı Üretim (Metraj)
-                </div>
-                <div class="card-body">
-                    <canvas id="makineUretimGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Makine Bazlı Üretilen Parça
-                </div>
-                <div class="card-body">
-                    <canvas id="makineParcaGrafigi"></canvas>
+        @if (!hideMachineBasedCharts)
+        {
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        Makine Bazlı Üretim (Metraj)
+                    </div>
+                    <div class="card-body">
+                        <canvas id="makineUretimGrafigi"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        Makine Bazlı Üretilen Parça
+                    </div>
+                    <div class="card-body">
+                        <canvas id="makineParcaGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+        }
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
@@ -186,6 +229,34 @@
                 </div>
             </div>
         </div>
+    </div>
+
+        @if (Model.MakineKartlari.Count > 1)
+        {
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mt-2">
+                @foreach (var kart in Model.MakineKartlari)
+                {
+                    var makineUrl = Url.Action("PvcDashboard", "Home", new
+                    {
+                        startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
+                        endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate,
+                        makine = kart.MakineAdi
+                    });
+                    <div class="col">
+                        <a href="@makineUrl" class="nav-tile">
+                            <div class="status-dot active"></div>
+                            <div class="text-center">
+                                <div class="icon">
+                                    <i class="bi bi-cpu"></i>
+                                </div>
+                                <h5>@kart.MakineAdi Makinesi</h5>
+                                <p>Üretim: @kart.Uretim.ToString("N0") | Hatalı: @kart.HataliParca.ToString("N0") | OEE: @kart.Oee.ToString("N2")%</p>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
 

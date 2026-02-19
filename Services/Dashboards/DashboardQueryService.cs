@@ -30,7 +30,19 @@ public class DashboardQueryService : IDashboardQueryService
             .First();
     }
 
-    public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    private static (DateTime? Baslangic, DateTime? Bitis) NormalizeDateRange(DateTime? baslangicTarihi, DateTime? bitisTarihi)
+    {
+        if (!baslangicTarihi.HasValue || !bitisTarihi.HasValue)
+        {
+            return (null, null);
+        }
+
+        var start = baslangicTarihi.Value.Date;
+        var end = bitisTarihi.Value.Date;
+        return start <= end ? (start, end) : (end, start);
+    }
+
+    public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var model = new GenelFabrikaOzetViewModel();
@@ -143,12 +155,23 @@ public class DashboardQueryService : IDashboardQueryService
             .ToList();
 
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
+        var isSingleDayRange = hasDateRange && rangeStart!.Value.Date == rangeEnd!.Value.Date;
 
         DateTime ozetStart;
         DateTime ozetEnd;
         DateTime trendStart;
         DateTime trendEnd;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            ozetStart = rangeStart!.Value;
+            ozetEnd = rangeEnd!.Value;
+            trendStart = ozetStart;
+            trendEnd = ozetEnd;
+            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
+        }
+        else if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(allDates, ay.Value, yil);
             var yearToUse = resolvedYear ?? yil ?? maxDate.Year;
@@ -272,6 +295,45 @@ public class DashboardQueryService : IDashboardQueryService
                     ReadNumericProperty(kaliteProp?.GetValue(row)),
                     ReadNumericProperty(oeeProp?.GetValue(row))
                 ));
+            }
+
+            return result;
+        }
+
+        static IEnumerable<(string Bolum, double Oee)> ExtractDeptOeeRows<T>(IEnumerable<T> rows, string bolum, DateTime start, DateTime end)
+        {
+            var type = typeof(T);
+            var tarihProp = type.GetProperty("Tarih");
+            var oeeProp = type.GetProperty("Oee");
+            if (tarihProp == null || oeeProp == null)
+            {
+                return Enumerable.Empty<(string, double)>();
+            }
+
+            var result = new List<(string Bolum, double Oee)>();
+            foreach (var row in rows)
+            {
+                if (row == null)
+                {
+                    continue;
+                }
+
+                if (tarihProp.GetValue(row) is not DateTime tarih || tarih == DateTime.MinValue)
+                {
+                    continue;
+                }
+
+                var date = tarih.Date;
+                if (date < start.Date || date > end.Date)
+                {
+                    continue;
+                }
+
+                var oee = ReadNumericProperty(oeeProp.GetValue(row));
+                if (oee > 0)
+                {
+                    result.Add((bolum, oee));
+                }
             }
 
             return result;
@@ -445,7 +507,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
             .Select(x => ("Rover-B", x.Oee)));
         machineOeeRows.AddRange(ebatlamaRows
-            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
             .Select(x => (DashboardParsingHelper.NormalizeLabel(x.Makine), x.Oee))
             .Where(x => x.Item1 != "Bilinmeyen"));
 
@@ -454,13 +516,47 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(g => new
             {
                 Makine = g.Key,
-                OrtalamaOee = g.Average(v => v.Oee)
+                OrtalamaOee = g.Where(v => v.Oee > 0).Select(v => v.Oee).DefaultIfEmpty(0).Average()
             })
             .OrderByDescending(x => x.OrtalamaOee)
             .ToList();
 
         model.MakineOeeLabels = machineOeeSummary.Select(x => x.Makine).ToList();
         model.MakineOeeData = machineOeeSummary.Select(x => x.OrtalamaOee).ToList();
+
+        var bolumOeeRows = new List<(string Bolum, double Oee)>();
+        bolumOeeRows.AddRange(pvcRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("PVC", x.Oee)));
+        bolumOeeRows.AddRange(masterRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("CNC", x.Oee)));
+        bolumOeeRows.AddRange(skipperRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("CNC", x.Oee)));
+        bolumOeeRows.AddRange(roverBRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("CNC", x.Oee)));
+        bolumOeeRows.AddRange(ebatlamaRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Select(x => ("Ebatlama", x.Oee)));
+
+        bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.ProfilRows, "Profil Lazer", ozetStart, ozetEnd));
+        bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.BoyaUretimRows, "Boyahane", ozetStart, ozetEnd));
+        bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.TezgahRows, "Tezgah", ozetStart, ozetEnd));
+
+        var bolumOeeSummary = bolumOeeRows
+            .GroupBy(x => x.Bolum)
+            .Select(g => new
+            {
+                Bolum = g.Key,
+                OrtalamaOee = g.Select(v => v.Oee).DefaultIfEmpty(0).Average()
+            })
+            .OrderByDescending(x => x.OrtalamaOee)
+            .ToList();
+
+        model.BolumOeeLabels = bolumOeeSummary.Select(x => x.Bolum).ToList();
+        model.BolumOeeData = bolumOeeSummary.Select(x => x.OrtalamaOee).ToList();
 
         var fiiliValues = pvcRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
@@ -483,14 +579,20 @@ public class DashboardQueryService : IDashboardQueryService
             model.EnCokHataNedeni = $"{topNeden.Key} ({topNeden.Total:N0})";
         }
 
-        var topBolum = filteredHatali
+        var bolumToplamlari = filteredHatali
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Bolum))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
             .OrderByDescending(x => x.Total)
-            .FirstOrDefault();
-        if (topBolum != null)
+            .ThenBy(x => x.Key)
+            .ToList();
+        if (bolumToplamlari.Count > 0)
         {
-            model.EnCokHataBolum = $"{topBolum.Key} ({topBolum.Total:N0})";
+            var maxToplam = bolumToplamlari[0].Total;
+            var enCokBolumler = bolumToplamlari
+                .Where(x => x.Total == maxToplam)
+                .Select(x => x.Key)
+                .ToList();
+            model.EnCokHataBolum = $"{string.Join(", ", enCokBolumler)} ({maxToplam:N0})";
         }
 
         var topOperator = filteredHatali
@@ -512,6 +614,15 @@ public class DashboardQueryService : IDashboardQueryService
         model.BolumUretimLabels = bolumList.Select(x => x.Key).ToList();
         model.BolumUretimData = bolumList.Select(x => x.Value).ToList();
 
+        var bolumHataList = filteredHatali
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Bolum))
+            .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .OrderByDescending(x => x.Total)
+            .Take(8)
+            .ToList();
+        model.BolumHataLabels = bolumHataList.Select(x => x.Key).ToList();
+        model.BolumHataData = bolumHataList.Select(x => x.Total).ToList();
+
         var hataNedenList = filteredHatali
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
@@ -530,7 +641,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<GunlukVerilerViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<GunlukVerilerViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -563,9 +674,15 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var gununVerileri = excelData.AsQueryable();
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             gununVerileri = gununVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
         }
@@ -588,7 +705,11 @@ public class DashboardQueryService : IDashboardQueryService
             })
             .AsQueryable();
 
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
         }
@@ -645,7 +766,13 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+            bag["TrendTitle"] = "Seçili Tarih Aralığı Üretim Trendi";
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -692,13 +819,13 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<BoyaDashboardViewModel>> GetBoyahaneAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<BoyaDashboardViewModel>> GetBoyahaneAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new BoyaDashboardViewModel();
+        var viewModel = new BoyaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var uretimListesi = snapshot.BoyaUretimRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
         var hataListesi = snapshot.BoyaHataRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
 
@@ -710,11 +837,19 @@ public class DashboardQueryService : IDashboardQueryService
 
         var tarihKaynaklari = uretimListesi.Select(x => x.Tarih).Concat(hataListesi.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynaklari, DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var gununUretimVerileri = uretimListesi.AsQueryable();
         var gununHataVerileri = hataListesi.AsQueryable();
 
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
             gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
@@ -744,7 +879,15 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+            bag["UretimDagilimiTitle"] = "Tarih Aralığı Üretim Dağılımı (Panel vs Döşeme)";
+            bag["KaliteTrendTitle"] = "Kalite Trendi (Tarih Aralığı)";
+            bag["UretimTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -804,7 +947,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<PvcDashboardViewModel>> GetPvcAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<PvcDashboardViewModel>> GetPvcAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, string? makine, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -847,13 +990,47 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<PvcDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
-        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
-        viewModel.RaporTarihi = islenecekTarih;
+        string? NormalizeMachine(string? name) => string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        bool IsSameMachine(string? source, string target) =>
+            string.Equals(NormalizeMachine(source), target, StringComparison.OrdinalIgnoreCase);
 
-        var filtreliVeri = excelData.AsQueryable();
-        if (ay.HasValue && yil.HasValue)
+        var seciliMakine = NormalizeMachine(makine);
+        var seciliMakineSatirlari = string.IsNullOrWhiteSpace(seciliMakine)
+            ? new List<PvcSatirModel>()
+            : excelData.Where(x => IsSameMachine(x.Makine, seciliMakine!)).ToList();
+        if (!string.IsNullOrWhiteSpace(seciliMakine) && !seciliMakineSatirlari.Any())
         {
-            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            seciliMakine = null;
+        }
+
+        var tarihKaynak = string.IsNullOrWhiteSpace(seciliMakine) ? excelData : seciliMakineSatirlari;
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
+        viewModel.SeciliMakine = seciliMakine;
+
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
+
+        var periodVeriTumMakineler = excelData.AsQueryable();
+        if (hasDateRange)
+        {
+            var start = rangeStart!.Value;
+            var end = rangeEnd!.Value;
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Date >= start && x.Tarih.Date <= end);
+            bag["PvcRange"] = $"{start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+            bag["UretimTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+            bag["PvcOeeTitle"] = "OEE Skoru Trendi (Tarih Aralığı)";
+            bag["PvcMakineOeeTitle"] = "Makine Bazlı OEE Karşılaştırma (Tarih Aralığı Ort.)";
+            bag["KayipSureTrendTitle"] = "Kayıp Süre (Tarih Aralığı)";
+        }
+        else if (ay.HasValue && yil.HasValue)
+        {
+            var ayValue = ay.Value;
+            var yilValue = yil.Value;
+            var ayBaslangic = new DateTime(yilValue, ayValue, 1);
+            var ayBitis = ayBaslangic.AddMonths(1).AddDays(-1);
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Month == ayValue && x.Tarih.Year == yilValue);
+            bag["PvcRange"] = $"{ayBaslangic:dd.MM.yyyy} - {ayBitis:dd.MM.yyyy}";
             bag["UretimTrendTitle"] = "Üretim Trendi (Aylık)";
             bag["PvcOeeTitle"] = "OEE Skoru Trendi (Aylık)";
             bag["PvcMakineOeeTitle"] = "Makine Bazlı OEE Karşılaştırma (Aylık Ort.)";
@@ -861,15 +1038,27 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            bag["PvcRange"] = $"{islenecekTarih:dd.MM.yyyy}";
             bag["UretimTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
             bag["PvcOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
             bag["PvcMakineOeeTitle"] = $"Makine Bazlı OEE Karşılaştırma ({islenecekTarih:dd.MM.yyyy})";
             bag["KayipSureTrendTitle"] = "Kayıp Süre (Son 7 Gün)";
         }
 
+        var periodVeriQuery = periodVeriTumMakineler;
+        if (!string.IsNullOrWhiteSpace(seciliMakine))
+        {
+            var seciliMakineKey = DashboardParsingHelper.NormalizeLabel(seciliMakine);
+            periodVeriQuery = periodVeriQuery.Where(x => DashboardParsingHelper.NormalizeLabel(x.Makine) == seciliMakineKey);
+        }
+
+        var filtreliVeri = periodVeriQuery.ToList();
+        var periodVeriAllMachinesList = periodVeriTumMakineler.ToList();
+
         viewModel.ToplamUretimMetraj = filtreliVeri.Sum(x => x.UretimMetraj);
         viewModel.ToplamParcaSayisi = filtreliVeri.Sum(x => x.ParcaSayisi);
+        viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
         viewModel.OrtalamaFiiliCalismaOrani = filtreliVeri.Any() ? filtreliVeri.Average(x => x.FiiliCalismaOrani) : 0;
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -879,7 +1068,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -895,7 +1089,11 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(offset => trendBaslangic.Date.AddDays(offset))
             .ToList();
 
-        var uretimGunluk = excelData
+        var trendKaynak = string.IsNullOrWhiteSpace(seciliMakine)
+            ? excelData
+            : excelData.Where(x => IsSameMachine(x.Makine, seciliMakine!)).ToList();
+
+        var uretimGunluk = trendKaynak
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.UretimMetraj));
@@ -903,7 +1101,7 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.UretimTrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
         viewModel.UretimTrendData = tumTarihler.Select(t => uretimGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
-        var performansGunluk = excelData
+        var performansGunluk = trendKaynak
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Where(x => x.Performans > 0).Select(x => x.Performans).DefaultIfEmpty(0).Average());
@@ -912,22 +1110,21 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.FiiliCalismaData = tumTarihler.Select(t => performansGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
         viewModel.UretimOraniTrendData = viewModel.FiiliCalismaData.ToList();
 
-        var kayipGunluk = excelData
+        var kayipGunluk = trendKaynak
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Where(x => x.KayipSure > 0).Select(x => x.KayipSure).DefaultIfEmpty(0).Average());
 
         viewModel.KayipSureData = tumTarihler.Select(t => kayipGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
-        var oeeGunluk = excelData
+        var oeeGunluk = trendKaynak
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average());
 
         viewModel.OeeTrendData = tumTarihler.Select(t => oeeGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
-        var trendAraligiVeri = filtreliVeri.ToList();
-        var makineOeeGruplari = trendAraligiVeri
+        var makineOeeGruplari = filtreliVeri
             .GroupBy(
                 x => string.IsNullOrWhiteSpace(x.Makine) ? "Bilinmeyen" : x.Makine.Trim(),
                 StringComparer.OrdinalIgnoreCase)
@@ -959,6 +1156,19 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.MakineUretimData = makineGruplari.Select(x => x.Metraj).ToList();
         viewModel.MakineParcaData = makineGruplari.Select(x => x.Parca).ToList();
 
+        viewModel.MakineKartlari = periodVeriAllMachinesList
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.Makine) ? "Bilinmeyen" : x.Makine.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => new MakineKartOzetModel
+            {
+                MakineAdi = g.Key,
+                Uretim = g.Sum(x => x.UretimMetraj),
+                HataliParca = g.Sum(x => x.HataliParca),
+                DuraklamaDakika = g.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3),
+                Oee = g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average()
+            })
+            .OrderByDescending(x => x.Uretim)
+            .ToList();
+
         var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in filtreliVeri)
         {
@@ -978,7 +1188,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<CncDashboardViewModel>> GetCncAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<CncDashboardViewModel>> GetCncAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -1002,12 +1212,25 @@ public class DashboardQueryService : IDashboardQueryService
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(allDates, DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         DateTime periodStart;
         DateTime periodEnd;
         DateTime trendStart;
         DateTime trendEnd;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            periodStart = rangeStart!.Value;
+            periodEnd = rangeEnd!.Value;
+            trendStart = periodStart;
+            trendEnd = periodEnd;
+            bag["CncRange"] = $"{periodStart:dd.MM.yyyy} - {periodEnd:dd.MM.yyyy}";
+            bag["CncUretimTrendTitle"] = "CNC Üretim Trendi (Tarih Aralığı)";
+            bag["CncHataliTrendTitle"] = "CNC Hatalı Parça Trendi (Tarih Aralığı)";
+            bag["CncOeeTrendTitle"] = "CNC OEE Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(allDates, ay.Value, yil);
             var yearToUse = resolvedYear ?? yil ?? maxDate.Year;
@@ -1022,6 +1245,7 @@ public class DashboardQueryService : IDashboardQueryService
             trendEnd = periodEnd;
             bag["CncRange"] = $"{periodStart:dd.MM.yyyy} - {periodEnd:dd.MM.yyyy}";
             bag["CncUretimTrendTitle"] = "CNC Üretim Trendi (Aylık)";
+            bag["CncHataliTrendTitle"] = "CNC Hatalı Parça Trendi (Aylık)";
             bag["CncOeeTrendTitle"] = "CNC OEE Trendi (Aylık)";
         }
         else
@@ -1032,6 +1256,7 @@ public class DashboardQueryService : IDashboardQueryService
             trendEnd = islenecekTarih.Date;
             bag["CncRange"] = $"{periodStart:dd.MM.yyyy}";
             bag["CncUretimTrendTitle"] = "CNC Üretim Trendi (Son 7 Gün)";
+            bag["CncHataliTrendTitle"] = "CNC Hatalı Parça Trendi (Son 7 Gün)";
             bag["CncOeeTrendTitle"] = "CNC OEE Trendi (Son 7 Gün)";
         }
 
@@ -1042,23 +1267,27 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.Masterwood = new CncMachineSummary
         {
             Uretim = masterPeriod.Sum(x => x.DelikFreezeSayisi),
+            HataliParca = masterPeriod.Sum(x => x.HataliParca),
             DuraklamaDakika = masterPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3),
             Oee = masterPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
         };
         viewModel.Skipper = new CncMachineSummary
         {
             Uretim = skipperPeriod.Sum(x => x.DelikSayisi),
+            HataliParca = skipperPeriod.Sum(x => x.HataliParca),
             DuraklamaDakika = skipperPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3),
             Oee = skipperPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
         };
         viewModel.RoverB = new CncMachineSummary
         {
             Uretim = roverPeriod.Sum(x => x.DelikFreezePvcSayisi),
+            HataliParca = roverPeriod.Sum(x => x.HataliParca),
             DuraklamaDakika = roverPeriod.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4),
             Oee = roverPeriod.Select(x => x.Oee).Where(x => x > 0).DefaultIfEmpty(0).Average()
         };
 
         viewModel.ToplamUretim = viewModel.Masterwood.Uretim + viewModel.Skipper.Uretim + viewModel.RoverB.Uretim;
+        viewModel.ToplamHataliParca = viewModel.Masterwood.HataliParca + viewModel.Skipper.HataliParca + viewModel.RoverB.HataliParca;
         viewModel.ToplamDuraklamaDakika = viewModel.Masterwood.DuraklamaDakika + viewModel.Skipper.DuraklamaDakika + viewModel.RoverB.DuraklamaDakika;
 
         var perfValues = masterPeriod.Select(x => x.Performans)
@@ -1092,11 +1321,28 @@ public class DashboardQueryService : IDashboardQueryService
             .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikFreezePvcSayisi));
+        var masterTrendHatali = masterRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
+        var skipperTrendHatali = skipperRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
+        var roverTrendHatali = roverRows
+            .Where(x => x.Tarih.Date >= trendStart && x.Tarih.Date <= trendEnd)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
 
         viewModel.UretimTrendData = trendDates.Select(t =>
             (masterTrendUretim.TryGetValue(t, out var m) ? m : 0)
             + (skipperTrendUretim.TryGetValue(t, out var s) ? s : 0)
             + (roverTrendUretim.TryGetValue(t, out var r) ? r : 0)
+        ).ToList();
+        viewModel.HataliParcaTrendData = trendDates.Select(t =>
+            (masterTrendHatali.TryGetValue(t, out var m) ? m : 0)
+            + (skipperTrendHatali.TryGetValue(t, out var s) ? s : 0)
+            + (roverTrendHatali.TryGetValue(t, out var r) ? r : 0)
         ).ToList();
 
         var masterTrendOee = masterRows
@@ -1121,6 +1367,36 @@ public class DashboardQueryService : IDashboardQueryService
             return vals.Any() ? vals.Average() : 0;
         }).ToList();
 
+        var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in masterPeriod)
+        {
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni1, row.Duraklama1);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni2, row.Duraklama2);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni3, row.Duraklama3);
+        }
+
+        foreach (var row in skipperPeriod)
+        {
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni1, row.Duraklama1);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni2, row.Duraklama2);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni3, row.Duraklama3);
+        }
+
+        foreach (var row in roverPeriod)
+        {
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni1, row.Duraklama1);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni2, row.Duraklama2);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni3, row.Duraklama3);
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, row.DuraklamaNedeni4, row.Duraklama4);
+        }
+
+        var duraklamaList = duraklamaNedenleri
+            .OrderByDescending(x => x.Value)
+            .ToList();
+        viewModel.DuraklamaNedenLabels = duraklamaList.Select(x => x.Key).ToList();
+        viewModel.DuraklamaNedenData = duraklamaList.Select(x => x.Value).ToList();
+
         return new DashboardPageResult<CncDashboardViewModel>
         {
             Model = viewModel,
@@ -1128,7 +1404,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<MasterwoodDashboardViewModel>> GetMasterwoodAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<MasterwoodDashboardViewModel>> GetMasterwoodAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -1145,12 +1421,23 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var filtreliVeri = excelData.AsQueryable();
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            bag["MasterwoodTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+            bag["MasterwoodHataliTrendTitle"] = "Hatalı Parça Trendi (Tarih Aralığı)";
+            bag["KisiTrendTitle"] = "Kişi Sayısı (Tarih Aralığı)";
+            bag["MasterwoodOeeTitle"] = "OEE Skoru Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
             bag["MasterwoodTrendTitle"] = "Üretim Trendi (Aylık)";
+            bag["MasterwoodHataliTrendTitle"] = "Hatalı Parça Trendi (Aylık)";
             bag["KisiTrendTitle"] = "Kişi Sayısı (Aylık)";
             bag["MasterwoodOeeTitle"] = "OEE Skoru Trendi (Aylık)";
         }
@@ -1158,12 +1445,14 @@ public class DashboardQueryService : IDashboardQueryService
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
             bag["MasterwoodTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
+            bag["MasterwoodHataliTrendTitle"] = "Hatalı Parça Trendi (Son 7 Gün)";
             bag["KisiTrendTitle"] = "Kişi Sayısı (Son 7 Gün)";
             bag["MasterwoodOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
         viewModel.ToplamDelik = filtreliVeri.Sum(x => x.DelikSayisi);
         viewModel.ToplamDelikFreeze = filtreliVeri.Sum(x => x.DelikFreezeSayisi);
+        viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -1173,7 +1462,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -1195,6 +1489,9 @@ public class DashboardQueryService : IDashboardQueryService
         var delikFreezeGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikFreezeSayisi));
+        var hataliParcaGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
         var kisiGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Average(x => x.KisiSayisi));
@@ -1202,6 +1499,7 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
         viewModel.DelikTrendData = tumTarihler.Select(t => delikGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
         viewModel.DelikFreezeTrendData = tumTarihler.Select(t => delikFreezeGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.HataliParcaTrendData = tumTarihler.Select(t => hataliParcaGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
         viewModel.KisiTrendData = tumTarihler.Select(t => kisiGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
         var performansGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
@@ -1246,7 +1544,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<SkipperDashboardViewModel>> GetSkipperAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<SkipperDashboardViewModel>> GetSkipperAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -1263,12 +1561,23 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var filtreliVeri = excelData.AsQueryable();
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            bag["SkipperTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+            bag["SkipperHataliTrendTitle"] = "Hatalı Parça Trendi (Tarih Aralığı)";
+            bag["SkipperKisiTrendTitle"] = "Kişi Sayısı (Tarih Aralığı)";
+            bag["SkipperOeeTitle"] = "OEE Skoru Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
             bag["SkipperTrendTitle"] = "Üretim Trendi (Aylık)";
+            bag["SkipperHataliTrendTitle"] = "Hatalı Parça Trendi (Aylık)";
             bag["SkipperKisiTrendTitle"] = "Kişi Sayısı (Aylık)";
             bag["SkipperOeeTitle"] = "OEE Skoru Trendi (Aylık)";
         }
@@ -1276,11 +1585,13 @@ public class DashboardQueryService : IDashboardQueryService
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
             bag["SkipperTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
+            bag["SkipperHataliTrendTitle"] = "Hatalı Parça Trendi (Son 7 Gün)";
             bag["SkipperKisiTrendTitle"] = "Kişi Sayısı (Son 7 Gün)";
             bag["SkipperOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
         viewModel.ToplamDelik = filtreliVeri.Sum(x => x.DelikSayisi);
+        viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
         viewModel.OrtalamaFiiliCalismaOrani = filtreliVeri.Any() ? filtreliVeri.Average(x => x.FiiliCalismaOrani) : 0;
@@ -1291,7 +1602,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -1310,12 +1626,16 @@ public class DashboardQueryService : IDashboardQueryService
         var delikGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikSayisi));
+        var hataliParcaGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
         var kisiGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Average(x => x.KisiSayisi));
 
         viewModel.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
         viewModel.DelikTrendData = tumTarihler.Select(t => delikGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.HataliParcaTrendData = tumTarihler.Select(t => hataliParcaGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
         viewModel.KisiTrendData = tumTarihler.Select(t => kisiGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
         var performansGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
@@ -1351,7 +1671,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<RoverBDashboardViewModel>> GetRoverBAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<RoverBDashboardViewModel>> GetRoverBAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -1368,23 +1688,35 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var filtreliVeri = excelData.AsQueryable();
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            bag["RoverBTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+            bag["RoverBHataliTrendTitle"] = "Hatalı Parça Trendi (Tarih Aralığı)";
+            bag["RoverBOeeTitle"] = "OEE Skoru Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
             bag["RoverBTrendTitle"] = "Üretim Trendi (Aylık)";
+            bag["RoverBHataliTrendTitle"] = "Hatalı Parça Trendi (Aylık)";
             bag["RoverBOeeTitle"] = "OEE Skoru Trendi (Aylık)";
         }
         else
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
             bag["RoverBTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
+            bag["RoverBHataliTrendTitle"] = "Hatalı Parça Trendi (Son 7 Gün)";
             bag["RoverBOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
         viewModel.ToplamDelikFreeze = filtreliVeri.Sum(x => x.DelikFreezeSayisi);
         viewModel.ToplamDelikFreezePvc = filtreliVeri.Sum(x => x.DelikFreezePvcSayisi);
+        viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4);
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -1394,7 +1726,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue && yil.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
@@ -1418,10 +1755,15 @@ public class DashboardQueryService : IDashboardQueryService
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.DelikFreezePvcSayisi));
+        var hataliParcaGunluk = excelData
+            .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.HataliParca));
 
         viewModel.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
         viewModel.DelikFreezeTrendData = tumTarihler.Select(t => delikFreezeGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
         viewModel.DelikFreezePvcTrendData = tumTarihler.Select(t => delikFreezePvcGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.HataliParcaTrendData = tumTarihler.Select(t => hataliParcaGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
         var performansGunluk = excelData
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
@@ -1460,7 +1802,7 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<TezgahDashboardViewModel>> GetTezgahAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<TezgahDashboardViewModel>> GetTezgahAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
@@ -1477,10 +1819,19 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var filtreliVeri = excelData.AsQueryable();
         int? yearToUse = null;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            bag["TezgahTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+            bag["TezgahKisiTrendTitle"] = "Kişi Sayısı (Tarih Aralığı)";
+            bag["TezgahKullanilabilirlikTitle"] = "Kullanılabilirlik (Tarih Aralığı)";
+        }
+        else if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(excelData.Select(x => x.Tarih), ay.Value, yil);
             yearToUse = resolvedYear ?? yil ?? islenecekTarih.Year;
@@ -1509,7 +1860,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue)
         {
             var yearForTrend = yearToUse ?? yil ?? islenecekTarih.Year;
             trendBaslangic = new DateTime(yearForTrend, ay.Value, 1);
@@ -1558,11 +1914,23 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<EbatlamaDashboardViewModel>> GetEbatlamaAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<EbatlamaDashboardViewModel>> GetEbatlamaAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, string? makine, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        const double macmazzaOtoDuraklamaDakika = 540d;
+        const string macmazzaOtoDuraklamaNedeni = "Makine çalışmadı";
+
+        static bool IsMacmazzaMachine(string? makine)
+        {
+            if (string.IsNullOrWhiteSpace(makine))
+            {
+                return false;
+            }
+
+            return makine.Trim().Contains("macmazza", StringComparison.OrdinalIgnoreCase);
+        }
 
         var viewModel = new EbatlamaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.EbatlamaRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
@@ -1573,12 +1941,52 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<EbatlamaDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
-        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
-        viewModel.RaporTarihi = islenecekTarih;
+        string? NormalizeMachine(string? name) => string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        bool IsSameMachine(string? source, string target) =>
+            string.Equals(NormalizeMachine(source), target, StringComparison.OrdinalIgnoreCase);
 
-        var filtreliVeri = excelData.AsQueryable();
+        var seciliMakine = NormalizeMachine(makine);
+        var seciliMakineSatirlari = string.IsNullOrWhiteSpace(seciliMakine)
+            ? new List<EbatlamaSatirModel>()
+            : excelData.Where(x => IsSameMachine(x.Makine, seciliMakine!)).ToList();
+        if (!string.IsNullOrWhiteSpace(seciliMakine) && !seciliMakineSatirlari.Any())
+        {
+            seciliMakine = null;
+        }
+
+        var tarihKaynak = string.IsNullOrWhiteSpace(seciliMakine) ? excelData : seciliMakineSatirlari;
+        var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
+        viewModel.RaporTarihi = islenecekTarih;
+        viewModel.SeciliMakine = seciliMakine;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
+        var isSingleDayRange = hasDateRange && rangeStart!.Value.Date == rangeEnd!.Value.Date;
+
+        var periodVeriTumMakineler = excelData.AsQueryable();
         int? yearToUse = null;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            var start = rangeStart!.Value;
+            var end = rangeEnd!.Value;
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Date >= start && x.Tarih.Date <= end);
+            if (isSingleDayRange)
+            {
+                bag["EbatlamaRange"] = $"{start:dd.MM.yyyy}";
+                bag["EbatlamaTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
+                bag["EbatlamaPlakaTrendTitle"] = "Plaka Trendleri (Son 7 Gün)";
+                bag["EbatlamaGonyTitle"] = "Gönyelleme (Son 7 Gün)";
+                bag["EbatlamaOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
+            }
+            else
+            {
+                bag["EbatlamaRange"] = $"{start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+                bag["EbatlamaTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
+                bag["EbatlamaPlakaTrendTitle"] = "Plaka Trendleri (Tarih Aralığı)";
+                bag["EbatlamaGonyTitle"] = "Gönyelleme (Tarih Aralığı)";
+                bag["EbatlamaOeeTitle"] = "OEE Skoru Trendi (Tarih Aralığı)";
+            }
+        }
+        else if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(excelData.Select(x => x.Tarih), ay.Value, yil);
             yearToUse = resolvedYear ?? yil ?? islenecekTarih.Year;
@@ -1587,7 +1995,10 @@ public class DashboardQueryService : IDashboardQueryService
                 bag["EbatlamaResolvedYear"] = resolvedYear.Value;
             }
 
-            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yearToUse.Value);
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yearToUse.Value);
+            var ayBaslangic = new DateTime(yearToUse.Value, ay.Value, 1);
+            var ayBitis = ayBaslangic.AddMonths(1).AddDays(-1);
+            bag["EbatlamaRange"] = $"{ayBaslangic:dd.MM.yyyy} - {ayBitis:dd.MM.yyyy}";
             bag["EbatlamaTrendTitle"] = "Üretim Trendi (Aylık)";
             bag["EbatlamaPlakaTrendTitle"] = "Plaka Trendleri (Aylık)";
             bag["EbatlamaGonyTitle"] = "Gönyelleme (Aylık)";
@@ -1595,19 +2006,37 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            periodVeriTumMakineler = periodVeriTumMakineler.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            bag["EbatlamaRange"] = $"{islenecekTarih:dd.MM.yyyy}";
             bag["EbatlamaTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
             bag["EbatlamaPlakaTrendTitle"] = "Plaka Trendleri (Son 7 Gün)";
             bag["EbatlamaGonyTitle"] = "Gönyelleme (Son 7 Gün)";
             bag["EbatlamaOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
+        var filtreliVeriQuery = periodVeriTumMakineler;
+        if (!string.IsNullOrWhiteSpace(seciliMakine))
+        {
+            var seciliMakineKey = DashboardParsingHelper.NormalizeLabel(seciliMakine);
+            filtreliVeriQuery = filtreliVeriQuery.Where(x => DashboardParsingHelper.NormalizeLabel(x.Makine) == seciliMakineKey);
+        }
+
+        var filtreliVeri = filtreliVeriQuery.ToList();
+        var periodVeriAllMachinesList = periodVeriTumMakineler.ToList();
+
+        var seciliMakineMacmazza = IsMacmazzaMachine(seciliMakine);
+        var macmazzaKaydiVarTumMakineler = periodVeriAllMachinesList.Any(x => IsMacmazzaMachine(x.Makine));
+        var tekGunModu = !ay.HasValue && (!hasDateRange || isSingleDayRange);
+        var macmazzaTekGunEksik = tekGunModu && !macmazzaKaydiVarTumMakineler;
+        var macmazzaOtoDuraklamaEkle = macmazzaTekGunEksik && (string.IsNullOrWhiteSpace(seciliMakine) || seciliMakineMacmazza);
+        var macmazzaEkDuraklama = macmazzaOtoDuraklamaEkle ? macmazzaOtoDuraklamaDakika : 0d;
+
         viewModel.ToplamKesimAdet = filtreliVeri.Sum(x => x.ToplamKesimAdet);
         viewModel.ToplamPlaka8Mm = filtreliVeri.Sum(x => x.Plaka8Mm);
         viewModel.ToplamPlaka18Mm = filtreliVeri.Sum(x => x.Plaka18Mm);
         viewModel.ToplamPlaka30Mm = filtreliVeri.Sum(x => x.Plaka30Mm);
         viewModel.ToplamGonyelleme = filtreliVeri.Sum(x => x.Gonyelleme);
-        viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2);
+        viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2) + macmazzaEkDuraklama;
         viewModel.OrtalamaPerformans = filtreliVeri
             .Select(x => x.Performans)
             .Where(x => x > 0)
@@ -1631,7 +2060,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue)
+        if (hasDateRange && !isSingleDayRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue)
         {
             var yearForTrend = yearToUse ?? yil ?? islenecekTarih.Year;
             trendBaslangic = new DateTime(yearForTrend, ay.Value, 1);
@@ -1639,7 +2073,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
         else
         {
-            var referansTarih = islenecekTarih;
+            var referansTarih = isSingleDayRange ? rangeStart!.Value : islenecekTarih;
             trendBaslangic = referansTarih.AddDays(-6);
             trendBitis = referansTarih;
         }
@@ -1648,21 +2082,25 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(offset => trendBaslangic.Date.AddDays(offset))
             .ToList();
 
-        var kesimGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var trendKaynak = string.IsNullOrWhiteSpace(seciliMakine)
+            ? excelData
+            : excelData.Where(x => IsSameMachine(x.Makine, seciliMakine!)).ToList();
+
+        var kesimGunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.ToplamKesimAdet));
-        var plaka8Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var plaka8Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Plaka8Mm));
-        var plaka18Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var plaka18Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Plaka18Mm));
-        var plaka30Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var plaka30Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Plaka30Mm));
-        var kesim8Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var kesim8Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Kesim8MmAdet));
-        var kesim30Gunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var kesim30Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Kesim30MmAdet));
-        var gonyGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var gonyGunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Gonyelleme));
-        var oeeGunluk = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var oeeGunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average());
 
         viewModel.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
@@ -1680,8 +2118,56 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(g => new { Makine = g.Key, Toplam = g.Sum(x => x.ToplamKesimAdet) })
             .OrderByDescending(x => x.Toplam)
             .ToList();
+
+        var ebatlamaMakineAdlari = new[] { "SELCO", "MACMAZZA" };
+        foreach (var makineAdi in ebatlamaMakineAdlari)
+        {
+            if (!makineList.Any(x => string.Equals(x.Makine, makineAdi, StringComparison.OrdinalIgnoreCase)))
+            {
+                makineList.Add(new { Makine = makineAdi, Toplam = 0d });
+            }
+        }
+        makineList = makineList
+            .OrderByDescending(x => x.Toplam)
+            .ThenBy(x => x.Makine)
+            .ToList();
+
         viewModel.MakineLabels = makineList.Select(x => x.Makine).ToList();
         viewModel.MakineKesimData = makineList.Select(x => x.Toplam).ToList();
+
+        viewModel.MakineKartlari = periodVeriAllMachinesList
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.Makine) ? "Bilinmeyen" : x.Makine.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => new MakineKartOzetModel
+            {
+                MakineAdi = g.Key,
+                Uretim = g.Sum(x => x.ToplamKesimAdet),
+                DuraklamaDakika = g.Sum(x => x.Duraklama1 + x.Duraklama2),
+                Oee = g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average()
+            })
+            .ToList();
+
+        foreach (var makineAdi in ebatlamaMakineAdlari)
+        {
+            if (viewModel.MakineKartlari.Any(x => string.Equals(x.MakineAdi, makineAdi, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            viewModel.MakineKartlari.Add(new MakineKartOzetModel
+            {
+                MakineAdi = makineAdi,
+                Uretim = 0,
+                DuraklamaDakika = string.Equals(makineAdi, "MACMAZZA", StringComparison.OrdinalIgnoreCase) && macmazzaTekGunEksik
+                    ? macmazzaOtoDuraklamaDakika
+                    : 0,
+                Oee = 0
+            });
+        }
+
+        viewModel.MakineKartlari = viewModel.MakineKartlari
+            .OrderByDescending(x => x.Uretim)
+            .ThenBy(x => x.MakineAdi)
+            .ToList();
 
         var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in filtreliVeri)
@@ -1690,6 +2176,11 @@ public class DashboardQueryService : IDashboardQueryService
             var neden2 = string.IsNullOrWhiteSpace(row.DuraklamaNedeni2) ? "Bilinmiyor" : row.DuraklamaNedeni2;
             DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, neden1, row.Duraklama1);
             DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, neden2, row.Duraklama2);
+        }
+
+        if (macmazzaOtoDuraklamaEkle)
+        {
+            DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, macmazzaOtoDuraklamaNedeni, macmazzaOtoDuraklamaDakika);
         }
 
         var duraklamaList = duraklamaNedenleri.OrderByDescending(x => x.Value).ToList();
@@ -1703,14 +2194,38 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<HataliParcaDashboardViewModel>> GetHataliParcaAsync(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<HataliParcaDashboardViewModel>> GetHataliParcaAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
         var viewModel = new HataliParcaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
-        var excelData = snapshot.HataliParcaRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        var excelData = snapshot.HataliParcaRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .ToList();
+
+        excelData.AddRange(snapshot.ProfilHataRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .Select(x => new HataliParcaSatirModel
+            {
+                Tarih = x.Tarih,
+                BolumAdi = x.BolumAdi,
+                Adet = x.Adet,
+                ToplamM2 = 0,
+                HataNedeni = x.HataNedeni
+            }));
+
+        excelData.AddRange(snapshot.BoyaHataRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .Select(x => new HataliParcaSatirModel
+            {
+                Tarih = x.Tarih,
+                BolumAdi = "Boyahane",
+                Adet = x.HataliAdet,
+                ToplamM2 = 0,
+                HataNedeni = x.HataNedeni
+            }));
 
         if (!excelData.Any())
         {
@@ -1729,10 +2244,18 @@ public class DashboardQueryService : IDashboardQueryService
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+        var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
+        var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
         var filtreliVeri = analizVerisi.AsQueryable();
         int? yearToUse = null;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            bag["HataliTrendTitle"] = "Hatalı Parça Trendi (Tarih Aralığı)";
+            bag["HataliM2Title"] = "Hatalı m² Trendi (Tarih Aralığı)";
+        }
+        else if (ay.HasValue)
         {
             var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(tarihKaynak.Select(x => x.Tarih), ay.Value, yil);
             yearToUse = resolvedYear ?? yil ?? islenecekTarih.Year;
@@ -1787,7 +2310,12 @@ public class DashboardQueryService : IDashboardQueryService
 
         DateTime trendBaslangic;
         DateTime trendBitis;
-        if (ay.HasValue)
+        if (hasDateRange)
+        {
+            trendBaslangic = rangeStart!.Value;
+            trendBitis = rangeEnd!.Value;
+        }
+        else if (ay.HasValue)
         {
             var yearForTrend = yearToUse ?? yil ?? islenecekTarih.Year;
             trendBaslangic = new DateTime(yearForTrend, ay.Value, 1);

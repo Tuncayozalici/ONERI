@@ -2,15 +2,23 @@
 @{
     ViewData["Title"] = "CNC Bölümü";
 
+    var queryStartDate = Context.Request.Query["startDate"].ToString();
+    var queryEndDate = Context.Request.Query["endDate"].ToString();
     var queryRaporTarihi = Context.Request.Query["raporTarihi"].ToString();
-    var queryAy = Context.Request.Query["ay"].ToString();
-    var queryYil = Context.Request.Query["yil"].ToString();
+    var queryBaslangicTarihi = Context.Request.Query["baslangicTarihi"].ToString();
+    var queryBitisTarihi = Context.Request.Query["bitisTarihi"].ToString();
+
+    var routeStartDate = !string.IsNullOrWhiteSpace(queryStartDate)
+        ? queryStartDate
+        : (!string.IsNullOrWhiteSpace(queryBaslangicTarihi) ? queryBaslangicTarihi : queryRaporTarihi);
+    var routeEndDate = !string.IsNullOrWhiteSpace(queryEndDate)
+        ? queryEndDate
+        : (!string.IsNullOrWhiteSpace(queryBitisTarihi) ? queryBitisTarihi : queryRaporTarihi);
 
     var routeValues = new
     {
-        raporTarihi = string.IsNullOrWhiteSpace(queryRaporTarihi) ? null : queryRaporTarihi,
-        ay = string.IsNullOrWhiteSpace(queryAy) ? null : queryAy,
-        yil = string.IsNullOrWhiteSpace(queryYil) ? null : queryYil
+        startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
+        endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate
     };
 
     var masterwoodUrl = Url.Action("MasterwoodDashboard", "Home", routeValues);
@@ -41,41 +49,21 @@
                 <small class="text-muted">Seçili Aralık: @ViewBag.CncRange</small>
             </div>
             <div class="col-md-6">
-                <form asp-action="CncDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
-                    <div class="form-group">
-                        <label for="raporTarihi" class="visually-hidden">Tarih Seç</label>
-                        <input type="date" id="raporTarihi" name="raporTarihi" class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label for="ay" class="visually-hidden">Ay Seç</label>
-                        <select id="ay" name="ay" class="form-select">
-                            <option value="">Ay Seçin</option>
-                            <option value="1">Ocak</option>
-                            <option value="2">Şubat</option>
-                            <option value="3">Mart</option>
-                            <option value="4">Nisan</option>
-                            <option value="5">Mayıs</option>
-                            <option value="6">Haziran</option>
-                            <option value="7">Temmuz</option>
-                            <option value="8">Ağustos</option>
-                            <option value="9">Eylül</option>
-                            <option value="10">Ekim</option>
-                            <option value="11">Kasım</option>
-                            <option value="12">Aralık</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="yil" class="visually-hidden">Yıl Seç</label>
-                        <input type="number" id="yil" name="yil" class="form-control" placeholder="Yıl" value="@DateTime.Now.Year" />
-                    </div>
-                    <button type="submit" class="btn btn-success">Filtrele</button>
-                    <button type="button" id="clearFilter" class="btn btn-secondary">Temizle</button>
+                <form asp-action="CncDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
+                    <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
                 </form>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
             </div>
         </div>
 
         <div class="row g-4 mb-5">
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg col-md-6">
                 <div class="kpi-card h-100">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-collection me-2"></i>CNC Toplam Üretim</h5>
@@ -83,7 +71,15 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg col-md-6">
+                <div class="kpi-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-exclamation-octagon me-2"></i>CNC Hatalı Parça</h5>
+                        <p class="card-text">@Model.ToplamHataliParca.ToString("N0")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg col-md-6">
                 <div class="kpi-card h-100">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>CNC Duraklama (dk)</h5>
@@ -91,7 +87,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg col-md-6">
                 <div class="kpi-card h-100">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-activity me-2"></i>CNC Performans</h5>
@@ -99,7 +95,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg col-md-6">
                 <div class="kpi-card h-100">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>CNC OEE</h5>
@@ -130,6 +126,28 @@
                     </div>
                 </div>
             </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        @(ViewBag.CncHataliTrendTitle ?? "CNC Hatalı Parça Trendi")
+                    </div>
+                    <div class="card-body">
+                        <canvas id="cncHataliTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        Duraklama Nedenleri
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-pie-wrap">
+                            <canvas id="cncDuraklamaNedenGrafigi" class="chart-pie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
@@ -141,7 +159,7 @@
                             <i class="bi bi-tree"></i>
                         </div>
                         <h5>Masterwood Makinesi</h5>
-                        <p>Üretim: @Model.Masterwood.Uretim.ToString("N0") | OEE: @Model.Masterwood.Oee.ToString("N2")%</p>
+                        <p>Üretim: @Model.Masterwood.Uretim.ToString("N0") | Hatalı: @Model.Masterwood.HataliParca.ToString("N0") | OEE: @Model.Masterwood.Oee.ToString("N2")%</p>
                     </div>
                 </a>
             </div>
@@ -153,7 +171,7 @@
                             <i class="bi bi-cpu"></i>
                         </div>
                         <h5>Skipper Makinesi</h5>
-                        <p>Üretim: @Model.Skipper.Uretim.ToString("N0") | OEE: @Model.Skipper.Oee.ToString("N2")%</p>
+                        <p>Üretim: @Model.Skipper.Uretim.ToString("N0") | Hatalı: @Model.Skipper.HataliParca.ToString("N0") | OEE: @Model.Skipper.Oee.ToString("N2")%</p>
                     </div>
                 </a>
             </div>
@@ -165,7 +183,7 @@
                             <i class="bi bi-hdd-rack"></i>
                         </div>
                         <h5>Rover-B Makinesi</h5>
-                        <p>Üretim: @Model.RoverB.Uretim.ToString("N0") | OEE: @Model.RoverB.Oee.ToString("N2")%</p>
+                        <p>Üretim: @Model.RoverB.Uretim.ToString("N0") | Hatalı: @Model.RoverB.HataliParca.ToString("N0") | OEE: @Model.RoverB.Oee.ToString("N2")%</p>
                     </div>
                 </a>
             </div>

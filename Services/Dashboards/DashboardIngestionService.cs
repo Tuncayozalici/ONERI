@@ -227,26 +227,39 @@ public class DashboardIngestionService : IDashboardIngestionService
         }
 
         using var package = new ExcelPackage(new FileInfo(filePath));
-        var worksheet = package.Workbook.Worksheets["VERİ KAYIT"];
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault(x =>
+            x.Name.Equals("VERİ KAYIT", StringComparison.OrdinalIgnoreCase) ||
+            x.Name.Equals("VERI KAYIT", StringComparison.OrdinalIgnoreCase));
         if (worksheet?.Dimension == null)
         {
             return result;
         }
 
+        int colTarih = DashboardParsingHelper.FindColumn(worksheet, "TARİH", "TARIH");
+        int colBolum = DashboardParsingHelper.FindColumn(worksheet, "BÖLÜM ADI", "BOLUM ADI");
+        int colAdet = DashboardParsingHelper.FindColumn(worksheet, "ADET");
+        int colSonuc = DashboardParsingHelper.FindColumn(worksheet, "HATALI ÜRÜN NE OLACAK?", "HATALI URUN NE OLACAK");
+        int colNeden = DashboardParsingHelper.FindColumn(worksheet, "HATA NEDENİ", "HATA NEDENI");
+
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
             try
             {
-                var dateValue = worksheet.Cells[row, 1].Value;
-                var dateString = dateValue?.ToString() ?? string.Empty;
+                int tarihCol = colTarih > 0 ? colTarih : 1;
+                int bolumCol = colBolum > 0 ? colBolum : 2;
+                int adetCol = colAdet > 0 ? colAdet : 5;
+                int sonucCol = colSonuc > 0 ? colSonuc : 6;
+                int nedenCol = colNeden > 0 ? colNeden : 7;
+                var dateCell = worksheet.Cells[row, tarihCol];
+                var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
 
                 result.Add(new ProfilHataSatir
                 {
-                    Tarih = DashboardParsingHelper.ParseTurkishDate(dateString),
-                    BolumAdi = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
-                    HataUrunSonucu = worksheet.Cells[row, 6].Value?.ToString()?.Trim(),
-                    HataNedeni = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
-                    Adet = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, 5].Value)
+                    Tarih = parsedDate,
+                    BolumAdi = worksheet.Cells[row, bolumCol].Value?.ToString()?.Trim(),
+                    HataUrunSonucu = worksheet.Cells[row, sonucCol].Value?.ToString()?.Trim(),
+                    HataNedeni = worksheet.Cells[row, nedenCol].Value?.ToString()?.Trim(),
+                    Adet = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, adetCol].Value)
                 });
             }
             catch (Exception ex)

@@ -8,6 +8,7 @@ namespace ONERI.Models
         public DateTime RaporTarihi { get; set; }
 
         public double ToplamDelik { get; set; }
+        public double ToplamHataliParca { get; set; }
         public double OrtalamaKisiSayisi { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
         public double OrtalamaFiiliCalismaOrani { get; set; }
@@ -18,6 +19,7 @@ namespace ONERI.Models
 
         public List<string> TrendLabels { get; set; } = new List<string>();
         public List<double> DelikTrendData { get; set; } = new List<double>();
+        public List<double> HataliParcaTrendData { get; set; } = new List<double>();
         public List<double> KisiTrendData { get; set; } = new List<double>();
 
         public List<double> UretimOraniTrendData { get; set; } = new List<double>();

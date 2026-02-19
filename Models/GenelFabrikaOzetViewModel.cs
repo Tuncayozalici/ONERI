@@ -28,11 +28,16 @@ namespace ONERI.Models
 
         public List<string> BolumUretimLabels { get; set; } = new List<string>();
         public List<double> BolumUretimData { get; set; } = new List<double>();
+        public List<string> BolumHataLabels { get; set; } = new List<string>();
+        public List<double> BolumHataData { get; set; } = new List<double>();
 
         public List<string> HataNedenLabels { get; set; } = new List<string>();
         public List<double> HataNedenData { get; set; } = new List<double>();
 
         public List<string> MakineOeeLabels { get; set; } = new List<string>();
         public List<double> MakineOeeData { get; set; } = new List<double>();
+
+        public List<string> BolumOeeLabels { get; set; } = new List<string>();
+        public List<double> BolumOeeData { get; set; } = new List<double>();
     }
 }

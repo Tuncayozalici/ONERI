@@ -6,9 +6,11 @@ namespace ONERI.Models
     public class PvcDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public string? SeciliMakine { get; set; }
 
         public double ToplamUretimMetraj { get; set; }
         public double ToplamParcaSayisi { get; set; }
+        public double ToplamHataliParca { get; set; }
         public double OrtalamaFiiliCalismaOrani { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
         public double OrtalamaPerformans { get; set; }
@@ -33,5 +35,6 @@ namespace ONERI.Models
         public List<double> OeeTrendData { get; set; } = new List<double>();
         public List<string> MakineOeeSerieLabels { get; set; } = new List<string>();
         public List<List<double>> MakineOeeTrendSeries { get; set; } = new List<List<double>>();
+        public List<MakineKartOzetModel> MakineKartlari { get; set; } = new List<MakineKartOzetModel>();
     }
 }

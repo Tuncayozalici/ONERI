@@ -29,89 +29,100 @@ public class HomeController : Controller
     }
 
     [Authorize(Policy = Permissions.Dashboards.GunlukVeriler)]
-    public async Task<IActionResult> GunlukVeriler(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> GunlukVeriler(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetGunlukVerilerAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetGunlukVerilerAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.ProfilLazer)]
-    public async Task<IActionResult> ProfilLazerVerileri(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> ProfilLazerVerileri(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetProfilLazerAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetProfilLazerAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Boyahane)]
-    public async Task<IActionResult> BoyahaneDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> BoyahaneDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetBoyahaneAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetBoyahaneAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Pvc)]
-    public async Task<IActionResult> PvcDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> PvcDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, string? makine, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetPvcAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetPvcAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, makine, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Cnc)]
-    public async Task<IActionResult> CncDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> CncDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetCncAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetCncAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Masterwood)]
-    public async Task<IActionResult> MasterwoodDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> MasterwoodDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetMasterwoodAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetMasterwoodAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Skipper)]
-    public async Task<IActionResult> SkipperDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> SkipperDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetSkipperAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetSkipperAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.RoverB)]
-    public async Task<IActionResult> RoverBDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> RoverBDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetRoverBAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetRoverBAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Tezgah)]
-    public async Task<IActionResult> TezgahDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> TezgahDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetTezgahAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetTezgahAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.Ebatlama)]
-    public async Task<IActionResult> EbatlamaDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> EbatlamaDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, string? makine, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetEbatlamaAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetEbatlamaAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, makine, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
 
     [Authorize(Policy = Permissions.Dashboards.HataliParca)]
-    public async Task<IActionResult> HataliParcaDashboard(DateTime? raporTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> HataliParcaDashboard(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
     {
-        var result = await _dashboardQueryService.GetHataliParcaAsync(raporTarihi, ay, yil, cancellationToken);
+        var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
+        var result = await _dashboardQueryService.GetHataliParcaAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
         return View(result.Model);
     }
@@ -130,5 +141,23 @@ public class HomeController : Controller
         {
             ViewData[kvp.Key] = kvp.Value;
         }
+    }
+
+    private static (DateTime? RaporTarihi, DateTime? BaslangicTarihi, DateTime? BitisTarihi, int? Ay, int? Yil) NormalizeDateFilter(
+        DateTime? startDate,
+        DateTime? endDate,
+        DateTime? raporTarihi,
+        DateTime? baslangicTarihi,
+        DateTime? bitisTarihi,
+        int? ay,
+        int? yil)
+    {
+        if (startDate.HasValue || endDate.HasValue)
+        {
+            var normalized = DateRangeNormalizer.Normalize(startDate ?? endDate ?? DateTime.Today, endDate ?? startDate ?? DateTime.Today);
+            return (null, normalized.StartDate, normalized.EndDate, null, null);
+        }
+
+        return (raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
     }
 }

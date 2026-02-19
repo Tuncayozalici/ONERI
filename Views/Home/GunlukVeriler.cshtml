@@ -30,35 +30,22 @@
                             <input class="form-check-input" type="checkbox" id="summaryUltraToggle">
                             <label class="form-check-label" for="summaryUltraToggle">Ultrawide</label>
                         </div>
-                        <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="d-flex align-items-center gap-2">
-                            <input type="date" id="summaryDate" name="raporTarihi" class="form-control form-control-sm" />
-                            <select id="summaryMonth" name="ay" class="form-select form-select-sm">
-                                <option value="">Ay</option>
-                                <option value="1">Ocak</option>
-                                <option value="2">Şubat</option>
-                                <option value="3">Mart</option>
-                                <option value="4">Nisan</option>
-                                <option value="5">Mayıs</option>
-                                <option value="6">Haziran</option>
-                                <option value="7">Temmuz</option>
-                                <option value="8">Ağustos</option>
-                                <option value="9">Eylül</option>
-                                <option value="10">Ekim</option>
-                                <option value="11">Kasım</option>
-                                <option value="12">Aralık</option>
-                            </select>
-                            <input type="number" id="summaryYear" name="yil" class="form-control form-control-sm" placeholder="Yıl" value="@DateTime.Now.Year" />
-                            <button type="submit" class="btn btn-sm btn-primary">Filtrele</button>
-                            <button type="button" id="summaryClear" class="btn btn-sm btn-outline-secondary">Temizle</button>
+                        <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="d-flex align-items-center gap-2 js-unified-date-filter-form">
+                            @await Html.PartialAsync("_UnifiedDateFilter")
+                            <button type="submit" class="btn btn-sm btn-primary js-unified-filter-apply" disabled>Filtrele</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
                         </form>
                     </div>
                 </div>
                 <div class="card-body">
+                    <div class="text-center mb-4">
+                        @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                    </div>
                     <div class="summary-top-hub mb-4">
                         <div class="summary-side-stack summary-side-stack-left">
                             <div class="kpi-card h-100">
                                 <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Toplam Üretim</h6>
+                                    <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Toplam Üretilen Parça</h6>
                                     <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
                                 </div>
                             </div>
@@ -70,7 +57,7 @@
                             </div>
                             <div class="kpi-card h-100">
                                 <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-stopwatch me-2"></i>Duraklama (sa/dk)</h6>
+                                    <h6 class="card-title"><i class="bi bi-stopwatch me-2"></i>Makine Bazlı Toplam Duraklama</h6>
                                     <p class="card-text">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</p>
                                 </div>
                             </div>
@@ -119,16 +106,16 @@
                                 <canvas id="genelBilesenGrafigi"></canvas>
                             </div>
                         </div>
-                        <div class="card shadow-sm h-100 trend-line-card">
-                            <div class="card-header">Hata Trendi</div>
+                        <div class="card shadow-sm h-100 oee-dept-card">
+                            <div class="card-header">Bölüm Bazlı OEE (Genel Ortalama)</div>
                             <div class="card-body">
-                                <canvas id="genelHataTrend" class="chart-fill"></canvas>
+                                <canvas id="bolumOeeGrafigi"></canvas>
                             </div>
                         </div>
-                        <div class="card shadow-sm h-100 trend-line-card">
-                            <div class="card-header">Duraklama Trendi</div>
+                        <div class="card shadow-sm h-100 bolum-hata-card">
+                            <div class="card-header">Bölüm Bazlı Hata (Toplam Adet)</div>
                             <div class="card-body">
-                                <canvas id="duraklamaTrendGrafigi" class="chart-fill"></canvas>
+                                <canvas id="bolumHataGrafigi"></canvas>
                             </div>
                         </div>
                         <div class="card shadow-sm h-100">
@@ -139,6 +126,18 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="card shadow-sm h-100 trend-line-card">
+                            <div class="card-header">Duraklama Trendi</div>
+                            <div class="card-body">
+                                <canvas id="duraklamaTrendGrafigi" class="chart-fill"></canvas>
+                            </div>
+                        </div>
+                        <div class="card shadow-sm h-100 trend-line-card">
+                            <div class="card-header">Hata Trendi</div>
+                            <div class="card-body">
+                                <canvas id="genelHataTrend" class="chart-fill"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -146,7 +145,7 @@
     </div>
 
     <!-- Bölüm Navigasyon Kartları -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-4">
+    <div id="sectionNavGrid" class="section-nav-grid row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-4">
         <div class="col">
             <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="nav-tile">
                 <div class="status-dot active"></div>
@@ -198,9 +197,6 @@
                 </div>
             </a>
         </div>
-    </div>
-
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
         <div class="col">
             <a href="@Url.Action("EbatlamaDashboard", "Home")" class="nav-tile">
                 <div class="status-dot active"></div>

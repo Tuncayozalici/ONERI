@@ -44,81 +44,196 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 const summaryCard = document.getElementById('summaryCard');
                 const summaryToggle = document.getElementById('summaryUltraToggle');
+                const sectionNavGrid = document.getElementById('sectionNavGrid');
                 if (summaryCard && summaryToggle) {
                     const saved = localStorage.getItem('summary_ultra');
                     const enabled = saved === '1';
                     summaryCard.classList.toggle('summary-ultra', enabled);
+                    sectionNavGrid?.classList.toggle('section-nav-grid-ultra', enabled);
                     summaryToggle.checked = enabled;
                     summaryToggle.addEventListener('change', function() {
                         summaryCard.classList.toggle('summary-ultra', summaryToggle.checked);
+                        sectionNavGrid?.classList.toggle('section-nav-grid-ultra', summaryToggle.checked);
                         localStorage.setItem('summary_ultra', summaryToggle.checked ? '1' : '0');
                     });
                 }
     
+                                const summaryFilterInput = document.getElementById('summaryTarihFiltre');
                 const summaryDate = document.getElementById('summaryDate');
+                const summaryStartDate = document.getElementById('summaryStartDate');
+                const summaryEndDate = document.getElementById('summaryEndDate');
                 const summaryMonth = document.getElementById('summaryMonth');
                 const summaryYear = document.getElementById('summaryYear');
                 const summaryClear = document.getElementById('summaryClear');
                 const summaryForm = document.getElementById('summaryFilterForm');
-    
-                function toggleSummaryFilters() {
-                    if (summaryMonth.value) {
-                        summaryDate.disabled = true;
-                        summaryDate.value = '';
-                    } else {
-                        summaryDate.disabled = false;
+
+                function pad2(value) {
+                    return String(value).padStart(2, '0');
+                }
+
+                function isValidIsoDate(isoDate) {
+                    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+                    if (!match) {
+                        return false;
                     }
-    
-                    if (summaryDate.value) {
-                        summaryMonth.disabled = true;
-                        summaryYear.disabled = true;
-                        summaryMonth.value = '';
-                        summaryYear.value = String(defaultYear);
-                    } else {
-                        summaryMonth.disabled = false;
-                        summaryYear.disabled = false;
+
+                    const year = Number(match[1]);
+                    const month = Number(match[2]);
+                    const day = Number(match[3]);
+                    const candidate = new Date(Date.UTC(year, month - 1, day));
+                    return candidate.getUTCFullYear() == year
+                        && candidate.getUTCMonth() + 1 == month
+                        && candidate.getUTCDate() == day;
+                }
+
+                function parseDateToIso(value) {
+                    const raw = String(value || '').trim();
+                    if (!raw) {
+                        return null;
+                    }
+
+                    if (isValidIsoDate(raw)) {
+                        return raw;
+                    }
+
+                    const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
+                    if (!trMatch) {
+                        return null;
+                    }
+
+                    const day = pad2(Number(trMatch[1]));
+                    const month = pad2(Number(trMatch[2]));
+                    const year = trMatch[3];
+                    const iso = `${year}-${month}-${day}`;
+                    return isValidIsoDate(iso) ? iso : null;
+                }
+
+                function parseMonthValue(value) {
+                    const raw = String(value || '').trim();
+                    if (!raw) {
+                        return null;
+                    }
+
+                    let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
+                    if (match) {
+                        const month = Number(match[1]);
+                        const year = Number(match[2]);
+                        if (month >= 1 && month <= 12) {
+                            return { ay: month, yil: year };
+                        }
+                    }
+
+                    match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
+                    if (match) {
+                        const year = Number(match[1]);
+                        const month = Number(match[2]);
+                        if (month >= 1 && month <= 12) {
+                            return { ay: month, yil: year };
+                        }
+                    }
+
+                    return null;
+                }
+
+                function parseRangeValue(value) {
+                    const raw = String(value || '').trim();
+                    const match = /^(.+)\s-\s(.+)$/.exec(raw);
+                    if (!match) {
+                        return null;
+                    }
+
+                    const startIso = parseDateToIso(match[1]);
+                    const endIso = parseDateToIso(match[2]);
+                    if (!startIso || !endIso) {
+                        return null;
+                    }
+
+                    return { baslangic: startIso, bitis: endIso };
+                }
+
+                function isoToDisplay(isoDate) {
+                    if (!isValidIsoDate(isoDate)) {
+                        return '';
+                    }
+
+                    const [year, month, day] = isoDate.split('-');
+                    return `${day}.${month}.${year}`;
+                }
+
+                function clearSummaryHiddenFilters() {
+                    summaryDate.value = '';
+                    summaryStartDate.value = '';
+                    summaryEndDate.value = '';
+                    summaryMonth.value = '';
+                    summaryYear.value = '';
+                }
+
+                function syncSummaryHiddenFilters() {
+                    clearSummaryHiddenFilters();
+
+                    const raw = String(summaryFilterInput.value || '').trim();
+                    if (!raw) {
+                        return;
+                    }
+
+                    const parsedRange = parseRangeValue(raw);
+                    if (parsedRange) {
+                        summaryStartDate.value = parsedRange.baslangic;
+                        summaryEndDate.value = parsedRange.bitis;
+                        summaryFilterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
+                        return;
+                    }
+
+                    const parsedMonth = parseMonthValue(raw);
+                    if (parsedMonth) {
+                        summaryMonth.value = String(parsedMonth.ay);
+                        summaryYear.value = String(parsedMonth.yil);
+                        summaryFilterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
+                        return;
+                    }
+
+                    const parsedDate = parseDateToIso(raw);
+                    if (parsedDate) {
+                        summaryDate.value = parsedDate;
+                        summaryFilterInput.value = isoToDisplay(parsedDate);
                     }
                 }
-    
-                if (summaryDate) {
+
+                if (summaryFilterInput) {
                     const urlParams = new URLSearchParams(window.location.search);
                     const raporTarihi = urlParams.get('raporTarihi');
+                    const baslangicTarihi = urlParams.get('baslangicTarihi');
+                    const bitisTarihi = urlParams.get('bitisTarihi');
                     const ay = urlParams.get('ay');
                     const yil = urlParams.get('yil');
-                    const resolvedYear = payload.resolvedYear;
-    
+
                     if (raporTarihi) {
-                        summaryDate.value = raporTarihi;
+                        summaryFilterInput.value = isoToDisplay(raporTarihi);
+                    } else if (baslangicTarihi && bitisTarihi) {
+                        summaryFilterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
                     } else if (ay && yil) {
-                        summaryMonth.value = ay;
-                        summaryYear.value = resolvedYear ?? yil;
-                        summaryDate.value = '';
+                        summaryFilterInput.value = `${pad2(Number(ay))}.${yil}`;
                     } else {
-                        summaryDate.value = getModelDateIso();
+                        const modelDateIso = getModelDateIso();
+                        summaryFilterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
                     }
-                }
-    
-                toggleSummaryFilters();
-    
-                summaryMonth.addEventListener('change', toggleSummaryFilters);
-                summaryDate.addEventListener('input', toggleSummaryFilters);
-    
-                if (summaryForm) {
-                    summaryForm.addEventListener('submit', function() {
-                        if (summaryMonth.value) {
-                            summaryDate.value = '';
-                            summaryDate.disabled = true;
-                        }
+
+                    syncSummaryHiddenFilters();
+
+                    summaryFilterInput.addEventListener('blur', syncSummaryHiddenFilters);
+
+                    if (summaryForm) {
+                        summaryForm.addEventListener('submit', function() {
+                            syncSummaryHiddenFilters();
+                        });
+                    }
+
+                    summaryClear.addEventListener('click', function() {
+                        summaryFilterInput.value = '';
+                        clearSummaryHiddenFilters();
+                        window.location.href = '/Home/GunlukVeriler';
                     });
                 }
-    
-                summaryClear.addEventListener('click', function() {
-                    summaryMonth.value = '';
-                    summaryYear.value = String(defaultYear);
-                    summaryDate.value = '';
-                    toggleSummaryFilters();
-                    window.location.href = '/Home/GunlukVeriler';
-                });
     
                 new Chart(document.getElementById('genelHataTrend').getContext('2d'), {
                     type: 'line',
@@ -174,9 +289,87 @@ document.addEventListener('DOMContentLoaded', function () {
                 const axisTickColor = isDarkTheme ? '#cbd5e1' : '#1f2937';
                 const axisGridColor = isDarkTheme ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.45)';
                 const oeeAccentColor = isDarkTheme ? '#34d399' : '#16a34a';
+                const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
+                    textColor: axisTickColor,
+                    insideTextColor: '#ffffff',
+                    font: '600 12px Poppins, sans-serif'
+                });
                 const clampPercent = (value) => {
                     const num = Number(value) || 0;
                     return Math.max(0, Math.min(100, num));
+                };
+                const horizontalValueLabelPlugin = {
+                    id: 'horizontalValueLabels',
+                    afterDatasetsDraw(chart) {
+                        if (!chart || !chart.options || chart.options.indexAxis !== 'y') {
+                            return;
+                        }
+
+                        const { ctx, chartArea } = chart;
+                        if (!ctx || !chartArea) {
+                            return;
+                        }
+
+                        ctx.save();
+                        ctx.font = '600 12px Poppins, sans-serif';
+                        ctx.textBaseline = 'middle';
+
+                        chart.data.datasets.forEach((dataset, datasetIndex) => {
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            if (!meta || meta.hidden) {
+                                return;
+                            }
+
+                            meta.data.forEach((bar, dataIndex) => {
+                                const value = Number(dataset.data[dataIndex]);
+                                if (!Number.isFinite(value) || value <= 0) {
+                                    return;
+                                }
+
+                                const label = value.toLocaleString('tr-TR', {
+                                    maximumFractionDigits: 0
+                                });
+                                const barStartX = Math.min(bar.base, bar.x);
+                                const barEndX = Math.max(bar.base, bar.x);
+                                const barWidth = Math.max(0, barEndX - barStartX);
+                                if (barWidth <= 0) {
+                                    return;
+                                }
+                                const y = bar.y;
+                                const labelWidth = ctx.measureText(label).width;
+                                const fitsInside = barWidth >= (labelWidth + 14);
+
+                                if (fitsInside) {
+                                    const x = barEndX - 8;
+                                    ctx.save();
+                                    ctx.beginPath();
+                                    ctx.rect(
+                                        barStartX + 1,
+                                        y - (Math.max(0, bar.height || 0) / 2) + 1,
+                                        Math.max(0, barWidth - 2),
+                                        Math.max(0, Math.max(0, bar.height || 0) - 2)
+                                    );
+                                    ctx.clip();
+
+                                    ctx.textAlign = 'right';
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillText(label, x, y);
+                                    ctx.restore();
+                                } else {
+                                    const preferredX = barEndX + 8;
+                                    const clampedX = Math.min(
+                                        preferredX,
+                                        chartArea.right - labelWidth - 2
+                                    );
+                                    ctx.textAlign = 'left';
+                                    ctx.fillStyle = axisTickColor;
+                                    ctx.fillText(label, clampedX, y);
+                                }
+                            });
+                        });
+
+                        ctx.restore();
+                    }
                 };
 
                 const genelBilesenCanvas = document.getElementById('genelBilesenGrafigi');
@@ -229,7 +422,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             plugins: {
                                 legend: { labels: { color: axisTickColor } }
                             }
-                        }
+                        },
+                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
                     });
                 }
 
@@ -293,6 +487,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
                     const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
                     const hasMachineData = machineLabels.length > 0 && machineValues.some(v => v > 0);
+                    const machinePalette = [
+                        { bg: 'rgba(59, 130, 246, 0.78)', border: 'rgba(59, 130, 246, 1)' },
+                        { bg: 'rgba(16, 185, 129, 0.78)', border: 'rgba(16, 185, 129, 1)' },
+                        { bg: 'rgba(249, 115, 22, 0.78)', border: 'rgba(249, 115, 22, 1)' },
+                        { bg: 'rgba(168, 85, 247, 0.78)', border: 'rgba(168, 85, 247, 1)' },
+                        { bg: 'rgba(236, 72, 153, 0.78)', border: 'rgba(236, 72, 153, 1)' },
+                        { bg: 'rgba(234, 179, 8, 0.78)', border: 'rgba(234, 179, 8, 1)' },
+                        { bg: 'rgba(20, 184, 166, 0.78)', border: 'rgba(20, 184, 166, 1)' },
+                        { bg: 'rgba(239, 68, 68, 0.78)', border: 'rgba(239, 68, 68, 1)' }
+                    ];
+                    const machineBarColors = hasMachineData
+                        ? machineValues.map((_, index) => machinePalette[index % machinePalette.length].bg)
+                        : ['rgba(148, 163, 184, 0.35)'];
+                    const machineBorderColors = hasMachineData
+                        ? machineValues.map((_, index) => machinePalette[index % machinePalette.length].border)
+                        : ['rgba(100, 116, 139, 0.7)'];
 
                     new Chart(makineOeeCanvas.getContext('2d'), {
                         type: 'bar',
@@ -301,11 +511,58 @@ document.addEventListener('DOMContentLoaded', function () {
                             datasets: [{
                                 label: 'Ortalama OEE (%)',
                                 data: hasMachineData ? machineValues : [0],
-                                backgroundColor: hasMachineData
-                                    ? 'rgba(22, 163, 74, 0.78)'
+                                backgroundColor: machineBarColors,
+                                borderColor: machineBorderColors,
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                barThickness: 22
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    min: 0,
+                                    max: 100,
+                                    ticks: {
+                                        color: axisTickColor,
+                                        callback: (value) => `${value}%`
+                                    },
+                                    grid: { color: axisGridColor }
+                                },
+                                y: {
+                                    ticks: { color: axisTickColor },
+                                    grid: { color: axisGridColor }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        },
+                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+                    });
+                }
+
+                const bolumOeeCanvas = document.getElementById('bolumOeeGrafigi');
+                if (bolumOeeCanvas) {
+                    const deptLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
+                    const deptValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
+                    const hasDeptData = deptLabels.length > 0 && deptValues.some(v => v > 0);
+
+                    new Chart(bolumOeeCanvas.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: hasDeptData ? deptLabels : ['Veri Yok'],
+                            datasets: [{
+                                label: 'Ortalama OEE (%)',
+                                data: hasDeptData ? deptValues : [0],
+                                backgroundColor: hasDeptData
+                                    ? 'rgba(14, 165, 233, 0.76)'
                                     : 'rgba(148, 163, 184, 0.35)',
-                                borderColor: hasMachineData
-                                    ? 'rgba(22, 163, 74, 1)'
+                                borderColor: hasDeptData
+                                    ? 'rgba(14, 165, 233, 1)'
                                     : 'rgba(100, 116, 139, 0.7)',
                                 borderWidth: 1,
                                 borderRadius: 8,
@@ -334,7 +591,58 @@ document.addEventListener('DOMContentLoaded', function () {
                             plugins: {
                                 legend: { labels: { color: axisTickColor } }
                             }
-                        }
+                        },
+                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+                    });
+                }
+
+                const bolumHataCanvas = document.getElementById('bolumHataGrafigi');
+                if (bolumHataCanvas) {
+                    const deptHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
+                    const deptHataValues = (Array.isArray(data.BolumHataData) ? data.BolumHataData : []).map(v => Math.max(0, Number(v) || 0));
+                    const hasDeptHataData = deptHataLabels.length > 0 && deptHataValues.some(v => v > 0);
+
+                    new Chart(bolumHataCanvas.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: hasDeptHataData ? deptHataLabels : ['Veri Yok'],
+                            datasets: [{
+                                label: 'Hatalı Adet',
+                                data: hasDeptHataData ? deptHataValues : [0],
+                                backgroundColor: hasDeptHataData
+                                    ? 'rgba(244, 63, 94, 0.72)'
+                                    : 'rgba(148, 163, 184, 0.35)',
+                                borderColor: hasDeptHataData
+                                    ? 'rgba(244, 63, 94, 1)'
+                                    : 'rgba(100, 116, 139, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                barThickness: 22
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: axisTickColor,
+                                        precision: 0
+                                    },
+                                    grid: { color: axisGridColor }
+                                },
+                                y: {
+                                    ticks: { color: axisTickColor },
+                                    grid: { color: axisGridColor }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        },
+                        plugins: [horizontalValueLabelPlugin]
                     });
                 }
 });

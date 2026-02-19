@@ -19,101 +19,215 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-                const dateInput = document.getElementById('raporTarihi');
-                const monthInput = document.getElementById('ay');
-                const yearInput = document.getElementById('yil');
-                const clearButton = document.getElementById('clearFilter');
-    
-                function toggleFilters() {
-                    if (monthInput.value) {
-                        dateInput.disabled = true;
-                        dateInput.value = '';
-                    } else {
-                        dateInput.disabled = false;
-                    }
-    
-                    if (dateInput.value) {
-                        monthInput.disabled = true;
-                        yearInput.disabled = true;
-                        monthInput.value = '';
-                        yearInput.value = String(defaultYear);
-                    } else {
-                        monthInput.disabled = false;
-                        yearInput.disabled = false;
-                    }
-                }
-    
-                function getModelDateIso() {
-                    const raw = data.RaporTarihi;
-                    if (!raw) {
-                        return '';
-                    }
+                        const filterInput = document.getElementById('tarihFiltre');
+    const dateInput = document.getElementById('raporTarihi');
+    const startDateInput = document.getElementById('baslangicTarihi');
+    const endDateInput = document.getElementById('bitisTarihi');
+    const monthInput = document.getElementById('ay');
+    const yearInput = document.getElementById('yil');
+    const clearButton = document.getElementById('clearFilter');
 
-                    if (typeof raw === 'string') {
-                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                        if (match) {
-                            return `${match[1]}-${match[2]}-${match[3]}`;
-                        }
-                    }
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
 
-                    const parsed = new Date(raw);
-                    if (Number.isNaN(parsed.getTime())) {
-                        return '';
-                    }
+    function isValidIsoDate(isoDate) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+        if (!match) {
+            return false;
+        }
 
-                    const year = parsed.getFullYear();
-                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-                    const day = String(parsed.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                }
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const candidate = new Date(Date.UTC(year, month - 1, day));
+        return candidate.getUTCFullYear() == year
+            && candidate.getUTCMonth() + 1 == month
+            && candidate.getUTCDate() == day;
+    }
 
-                function setDefaultDate() {
-                    const modelDateIso = getModelDateIso();
-                    if (modelDateIso) {
-                        dateInput.value = modelDateIso;
-                        return;
-                    }
+    function parseDateToIso(value) {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return null;
+        }
 
-                    const today = new Date();
-                    const year = today.getFullYear();
-                    const month = String(today.getMonth() + 1).padStart(2, '0');
-                    const day = String(today.getDate()).padStart(2, '0');
-                    dateInput.value = `${year}-${month}-${day}`;
-                }
-    
-                if (dateInput) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const raporTarihi = urlParams.get('raporTarihi');
-                    const ay = urlParams.get('ay');
-                    const yil = urlParams.get('yil');
-                    const clear = urlParams.get('clear');
-    
-                    if (clear === '1') {
-                        dateInput.value = '';
-                        monthInput.value = '';
-                        yearInput.value = String(defaultYear);
-                    } else if (raporTarihi) {
-                        dateInput.value = raporTarihi;
-                    } else if (ay && yil) {
-                        monthInput.value = ay;
-                        yearInput.value = yil;
-                        dateInput.value = '';
-                    } else {
-                        setDefaultDate();
-                    }
-                }
-    
-                toggleFilters();
-    
-                monthInput.addEventListener('change', toggleFilters);
-                dateInput.addEventListener('input', toggleFilters);
-    
-                clearButton.addEventListener('click', function() {
-                    monthInput.value = '';
-                    yearInput.value = String(defaultYear);
-                    dateInput.value = '';
-                    toggleFilters();
-                    window.location.href = '/Home/PvcDashboard?clear=1';
+        if (isValidIsoDate(raw)) {
+            return raw;
+        }
+
+        const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
+        if (!trMatch) {
+            return null;
+        }
+
+        const day = pad2(Number(trMatch[1]));
+        const month = pad2(Number(trMatch[2]));
+        const year = trMatch[3];
+        const iso = `${year}-${month}-${day}`;
+        return isValidIsoDate(iso) ? iso : null;
+    }
+
+    function parseMonthValue(value) {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return null;
+        }
+
+        let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
+        if (match) {
+            const month = Number(match[1]);
+            const year = Number(match[2]);
+            if (month >= 1 && month <= 12) {
+                return { ay: month, yil: year };
+            }
+        }
+
+        match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
+        if (match) {
+            const year = Number(match[1]);
+            const month = Number(match[2]);
+            if (month >= 1 && month <= 12) {
+                return { ay: month, yil: year };
+            }
+        }
+
+        return null;
+    }
+
+    function parseRangeValue(value) {
+        const raw = String(value || '').trim();
+        const match = /^(.+)\s-\s(.+)$/.exec(raw);
+        if (!match) {
+            return null;
+        }
+
+        const startIso = parseDateToIso(match[1]);
+        const endIso = parseDateToIso(match[2]);
+        if (!startIso || !endIso) {
+            return null;
+        }
+
+        return { baslangic: startIso, bitis: endIso };
+    }
+
+    function isoToDisplay(isoDate) {
+        if (!isValidIsoDate(isoDate)) {
+            return '';
+        }
+
+        const [year, month, day] = isoDate.split('-');
+        return `${day}.${month}.${year}`;
+    }
+
+    function getModelDateIso() {
+        const raw = data.RaporTarihi;
+        if (!raw) {
+            return '';
+        }
+
+        if (typeof raw === 'string') {
+            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+                return `${match[1]}-${match[2]}-${match[3]}`;
+            }
+        }
+
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) {
+            return '';
+        }
+
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function clearHiddenFilters() {
+        dateInput.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        monthInput.value = '';
+        yearInput.value = '';
+    }
+
+    function syncHiddenFiltersFromText() {
+        clearHiddenFilters();
+
+        const raw = String(filterInput.value || '').trim();
+        if (!raw) {
+            return;
+        }
+
+        const parsedRange = parseRangeValue(raw);
+        if (parsedRange) {
+            startDateInput.value = parsedRange.baslangic;
+            endDateInput.value = parsedRange.bitis;
+            filterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
+            return;
+        }
+
+        const parsedMonth = parseMonthValue(raw);
+        if (parsedMonth) {
+            monthInput.value = String(parsedMonth.ay);
+            yearInput.value = String(parsedMonth.yil);
+            filterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
+            return;
+        }
+
+        const parsedDate = parseDateToIso(raw);
+        if (parsedDate) {
+            dateInput.value = parsedDate;
+            filterInput.value = isoToDisplay(parsedDate);
+        }
+    }
+
+    if (filterInput) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const raporTarihi = urlParams.get('raporTarihi');
+        const baslangicTarihi = urlParams.get('baslangicTarihi');
+        const bitisTarihi = urlParams.get('bitisTarihi');
+        const ay = urlParams.get('ay');
+        const yil = urlParams.get('yil');
+        const clear = urlParams.get('clear');
+
+        if (clear === '1') {
+            filterInput.value = '';
+        } else if (raporTarihi) {
+            filterInput.value = isoToDisplay(raporTarihi);
+        } else if (baslangicTarihi && bitisTarihi) {
+            filterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
+        } else if (ay && yil) {
+            filterInput.value = `${pad2(Number(ay))}.${yil}`;
+        } else {
+            const modelDateIso = getModelDateIso();
+            filterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
+        }
+
+        syncHiddenFiltersFromText();
+
+        filterInput.addEventListener('blur', syncHiddenFiltersFromText);
+
+        const filterForm = filterInput.closest('form');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function () {
+                syncHiddenFiltersFromText();
+            });
+        }
+
+        clearButton.addEventListener('click', function () {
+            filterInput.value = '';
+            clearHiddenFilters();
+            window.location.href = `${window.location.pathname}?clear=1`;
+        });
+    }
+
+                const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+                const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
+                    textColor: isDarkTheme ? '#cbd5e1' : '#1f2937',
+                    insideTextColor: '#ffffff',
+                    font: '600 12px Poppins, sans-serif'
                 });
     
                 const uretimTrendCtx = document.getElementById('uretimTrendGrafigi').getContext('2d');
@@ -133,38 +247,44 @@ document.addEventListener('DOMContentLoaded', function () {
                     options: { responsive: true }
                 });
     
-                const makineUretimCtx = document.getElementById('makineUretimGrafigi').getContext('2d');
-                new Chart(makineUretimCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.MakineLabels,
-                        datasets: [{
-                            label: 'Metraj',
-                            data: data.MakineUretimData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)'
-                        }]
-                    },
-                    options: { responsive: true }
-                });
+                const makineUretimEl = document.getElementById('makineUretimGrafigi');
+                if (makineUretimEl) {
+                    const makineUretimCtx = makineUretimEl.getContext('2d');
+                    new Chart(makineUretimCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.MakineLabels,
+                            datasets: [{
+                                label: 'Metraj',
+                                data: data.MakineUretimData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
     
-                const makineParcaCtx = document.getElementById('makineParcaGrafigi').getContext('2d');
-                const parcaMakineItems = (data.MakineLabels || []).map((label, index) => ({
-                    label: label,
-                    value: (data.MakineParcaData || [])[index] ?? 0
-                })).filter(item => !String(item.label || "").toLocaleUpperCase("tr-TR").includes("TURAN"));
+                const makineParcaEl = document.getElementById('makineParcaGrafigi');
+                if (makineParcaEl) {
+                    const makineParcaCtx = makineParcaEl.getContext('2d');
+                    const parcaMakineItems = (data.MakineLabels || []).map((label, index) => ({
+                        label: label,
+                        value: (data.MakineParcaData || [])[index] ?? 0
+                    })).filter(item => !String(item.label || "").toLocaleUpperCase("tr-TR").includes("TURAN"));
 
-                new Chart(makineParcaCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: parcaMakineItems.map(x => x.label),
-                        datasets: [{
-                            label: 'Parça',
-                            data: parcaMakineItems.map(x => x.value),
-                            backgroundColor: 'rgba(54, 162, 235, 0.7)'
-                        }]
-                    },
-                    options: { responsive: true }
-                });
+                    new Chart(makineParcaCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: parcaMakineItems.map(x => x.label),
+                            datasets: [{
+                                label: 'Parça',
+                                data: parcaMakineItems.map(x => x.value),
+                                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
     
                 const fiiliKayipCtx = document.getElementById('fiiliKayipGrafigi').getContext('2d');
                 new Chart(fiiliKayipCtx, {
@@ -215,42 +335,46 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
 
-                const makineOeeTrendCtx = document.getElementById('makineOeeTrendGrafigi').getContext('2d');
-                const makineOeeLabels = data.MakineOeeSerieLabels || [];
-                const makineOeeSeries = data.MakineOeeTrendSeries || [];
-                const makineOeeItems = makineOeeLabels.map((label, index) => {
-                    const serie = Array.isArray(makineOeeSeries[index]) ? makineOeeSeries[index] : [];
-                    const validValues = serie.filter(v => typeof v === 'number' && v > 0);
-                    const average = validValues.length > 0
-                        ? validValues.reduce((sum, v) => sum + v, 0) / validValues.length
-                        : 0;
-                    return { label, value: average };
-                }).sort((a, b) => b.value - a.value);
+                const makineOeeTrendEl = document.getElementById('makineOeeTrendGrafigi');
+                if (makineOeeTrendEl) {
+                    const makineOeeTrendCtx = makineOeeTrendEl.getContext('2d');
+                    const makineOeeLabels = data.MakineOeeSerieLabels || [];
+                    const makineOeeSeries = data.MakineOeeTrendSeries || [];
+                    const makineOeeItems = makineOeeLabels.map((label, index) => {
+                        const serie = Array.isArray(makineOeeSeries[index]) ? makineOeeSeries[index] : [];
+                        const validValues = serie.filter(v => typeof v === 'number' && v > 0);
+                        const average = validValues.length > 0
+                            ? validValues.reduce((sum, v) => sum + v, 0) / validValues.length
+                            : 0;
+                        return { label, value: average };
+                    }).sort((a, b) => b.value - a.value);
 
-                new Chart(makineOeeTrendCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: makineOeeItems.map(x => x.label),
-                        datasets: [{
-                            label: 'OEE (%)',
-                            data: makineOeeItems.map(x => x.value),
-                            backgroundColor: 'rgba(16, 185, 129, 0.65)',
-                            borderColor: 'rgba(16, 185, 129, 0.95)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                suggestedMin: 0,
-                                suggestedMax: 100
+                    new Chart(makineOeeTrendCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: makineOeeItems.map(x => x.label),
+                            datasets: [{
+                                label: 'OEE (%)',
+                                data: makineOeeItems.map(x => x.value),
+                                backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                                borderColor: 'rgba(16, 185, 129, 0.95)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    suggestedMin: 0,
+                                    suggestedMax: 100
+                                }
                             }
-                        }
-                    }
-                });
+                        },
+                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+                    });
+                }
     
                 const duraklamaCtx = document.getElementById('duraklamaNedenGrafigi').getContext('2d');
                 if ((data.DuraklamaNedenLabels || []).length > 0) {

@@ -1,4 +1,4 @@
-
+using System;
 using System.Collections.Generic;
 
 namespace ONERI.Models
@@ -12,6 +12,7 @@ namespace ONERI.Models
         }
 
         public double GunlukToplamBoyama { get; set; }
+        public DateTime RaporTarihi { get; set; }
         public double PanelToplamBoyama { get; set; }
         public double DosemeToplamBoyama { get; set; }
         public double GunlukHataSayisi { get; set; }

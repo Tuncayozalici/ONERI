@@ -8,13 +8,17 @@ namespace ONERI.Models
         public DateTime RaporTarihi { get; set; }
 
         public double ToplamUretim { get; set; }
+        public double ToplamHataliParca { get; set; }
         public double ToplamDuraklamaDakika { get; set; }
         public double OrtalamaPerformans { get; set; }
         public double OrtalamaOee { get; set; }
 
         public List<string> TrendLabels { get; set; } = new List<string>();
         public List<double> UretimTrendData { get; set; } = new List<double>();
+        public List<double> HataliParcaTrendData { get; set; } = new List<double>();
         public List<double> OeeTrendData { get; set; } = new List<double>();
+        public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
+        public List<double> DuraklamaNedenData { get; set; } = new List<double>();
 
         public CncMachineSummary Masterwood { get; set; } = new CncMachineSummary();
         public CncMachineSummary Skipper { get; set; } = new CncMachineSummary();
@@ -24,6 +28,7 @@ namespace ONERI.Models
     public class CncMachineSummary
     {
         public double Uretim { get; set; }
+        public double HataliParca { get; set; }
         public double DuraklamaDakika { get; set; }
         public double Oee { get; set; }
     }

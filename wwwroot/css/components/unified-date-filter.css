@@ -1,0 +1,57 @@
+.unified-date-filter {
+    position: relative;
+    min-width: 270px;
+}
+
+.unified-date-filter__trigger {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+}
+
+.unified-date-filter__popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    z-index: 1100;
+}
+
+.unified-date-filter__month-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.unified-date-filter__month-btn {
+    border: 1px solid var(--panel-border, #d0d7e4);
+    background: transparent;
+    color: inherit;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+}
+
+.unified-date-filter__month-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+html[data-theme="dark"] .unified-date-filter__popover input[type="date"] {
+    color-scheme: dark;
+    padding-right: 2.5rem;
+}
+
+html[data-theme="dark"] .unified-date-filter__popover input[type="date"]::-webkit-calendar-picker-indicator {
+    background-color: rgba(37, 99, 235, 0.28);
+    border: 1px solid rgba(96, 165, 250, 0.55);
+    border-radius: 6px;
+    padding: 3px;
+    margin-right: 2px;
+    filter: invert(1) brightness(1.45);
+    opacity: 1;
+    cursor: pointer;
+}

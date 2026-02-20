@@ -260,6 +260,23 @@ public class DashboardQueryService : IDashboardQueryService
             }
         }
 
+        static bool IsProfilLazerHataBolumu(string? bolumAdi)
+        {
+            if (string.IsNullOrWhiteSpace(bolumAdi))
+            {
+                return false;
+            }
+
+            var bolum = bolumAdi.ToLowerInvariant();
+            return bolum.Contains("metal") || bolum.Contains("profil") || bolum.Contains("lazer");
+        }
+
+        static bool IsMakineHatasi(string? hataNedeni)
+        {
+            var normalized = DashboardParsingHelper.NormalizeLabel(hataNedeni);
+            return normalized.Contains("makine hatası", StringComparison.OrdinalIgnoreCase);
+        }
+
         static double ReadNumericProperty(object? value)
         {
             return value switch
@@ -460,9 +477,38 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var filteredHatali = hataliRows.Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd).ToList();
+        var profilDashboardHataAdedi = snapshot.ProfilHataRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && IsProfilLazerHataBolumu(x.BolumAdi))
+            .Sum(x => (double)x.Adet);
+        var boyahaneDashboardHataAdedi = snapshot.BoyaHataRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd)
+            .Sum(x => (double)x.HataliAdet);
+        var hataliParcaDashboardHataAdedi = snapshot.HataliParcaRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !IsMakineHatasi(x.HataNedeni))
+            .Sum(x => x.Adet)
+            + snapshot.ProfilHataRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd
+                    && !IsMakineHatasi(x.HataNedeni))
+                .Sum(x => (double)x.Adet)
+            + snapshot.BoyaHataRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd
+                    && !IsMakineHatasi(x.HataNedeni))
+                .Sum(x => (double)x.HataliAdet);
 
         model.ToplamUretim = uretimGunluk.Values.Sum();
-        model.ToplamHataAdet = filteredHatali.Sum(x => x.Adet);
+        model.ToplamHataAdet = profilDashboardHataAdedi + boyahaneDashboardHataAdedi + hataliParcaDashboardHataAdedi;
         model.ToplamHataM2 = filteredHatali.Sum(x => x.M2);
         model.ToplamDuraklamaDakika = duraklamaGunluk.Values.Sum();
 

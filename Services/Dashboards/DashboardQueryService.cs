@@ -129,6 +129,14 @@ public class DashboardQueryService : IDashboardQueryService
                 Oee: x.Oee))
             .ToList();
 
+        var personelRows = snapshot.PersonelRows
+            .Where(x => x.Tarih != DateTime.MinValue && !string.IsNullOrWhiteSpace(x.BolumAdi))
+            .Select(x => (
+                x.Tarih,
+                Bolum: DashboardParsingHelper.NormalizeLabel(x.BolumAdi),
+                Personel: Math.Max(0, x.PersonelSayisi)))
+            .ToList();
+
         var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
 
         hataliRows.AddRange(snapshot.HataliParcaRows
@@ -151,6 +159,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Concat(roverBRows.Select(x => x.Tarih.Date))
             .Concat(tezgahRows.Select(x => x.Tarih.Date))
             .Concat(ebatlamaRows.Select(x => x.Tarih.Date))
+            .Concat(personelRows.Select(x => x.Tarih.Date))
             .Concat(hataliRows.Select(x => x.Tarih.Date))
             .ToList();
 
@@ -167,9 +176,19 @@ public class DashboardQueryService : IDashboardQueryService
         {
             ozetStart = rangeStart!.Value;
             ozetEnd = rangeEnd!.Value;
-            trendStart = ozetStart;
-            trendEnd = ozetEnd;
-            bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
+            if (isSingleDayRange)
+            {
+                // Tek gün seçiminde trendler seçilen gün + önceki 5 gün olarak gösterilir.
+                trendEnd = ozetEnd;
+                trendStart = ozetEnd.AddDays(-5);
+                bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy}";
+            }
+            else
+            {
+                trendStart = ozetStart;
+                trendEnd = ozetEnd;
+                bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
+            }
         }
         else if (ay.HasValue)
         {
@@ -622,6 +641,21 @@ public class DashboardQueryService : IDashboardQueryService
             .ToList();
         model.BolumHataLabels = bolumHataList.Select(x => x.Key).ToList();
         model.BolumHataData = bolumHataList.Select(x => x.Total).ToList();
+
+        var personelBolumList = personelRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
+            .GroupBy(x => x.Bolum)
+            .Select(g => new
+            {
+                Key = g.Key,
+                Total = g.Sum(x => (double)x.Personel)
+            })
+            .Where(x => x.Total > 0)
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        model.PersonelBolumLabels = personelBolumList.Select(x => x.Key).ToList();
+        model.PersonelBolumData = personelBolumList.Select(x => x.Total).ToList();
 
         var hataNedenList = filteredHatali
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))

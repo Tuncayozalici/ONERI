@@ -170,6 +170,7 @@ public class DashboardIngestionService : IDashboardIngestionService
             RoverBRows = ParseRoverBRows(excelRoot),
             TezgahRows = ParseTezgahRows(excelRoot),
             EbatlamaRows = ParseEbatlamaRows(excelRoot),
+            PersonelRows = ParsePersonelRows(excelRoot),
             HataliParcaRows = ParseHataliParcaRows(excelRoot)
         };
 
@@ -999,6 +1000,75 @@ public class DashboardIngestionService : IDashboardIngestionService
         }
 
         return result.Where(x => x.Tarih != DateTime.MinValue).ToList();
+    }
+
+    private List<PersonelYoklamaSatirModel> ParsePersonelRows(string excelRoot)
+    {
+        var result = new List<PersonelYoklamaSatirModel>();
+        var fileCandidates = new[]
+        {
+            "Günlük Personel Sayısı.xlsm",
+            "Günlük Personel Sayısı (1).xlsm",
+            "Günlük Personel Sayısı (1).xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return result;
+        }
+
+        using var package = new ExcelPackage(new FileInfo(filePath));
+        var worksheet = package.Workbook.Worksheets
+            .FirstOrDefault(ws => ws.Name.Equals("YOKLAMA TABLOSU", StringComparison.OrdinalIgnoreCase));
+        if (worksheet?.Dimension == null)
+        {
+            return result;
+        }
+
+        int colTarih = DashboardParsingHelper.FindColumn(worksheet, "TARİH", "TARIH");
+        int colBolum = DashboardParsingHelper.FindColumn(worksheet, "BÖLÜM", "BOLUM", "BÖLÜM ADI", "BOLUM ADI");
+        int colPersonelSayisi = DashboardParsingHelper.FindColumn(worksheet, "PERSONEL SAYISI", "PERSONEL");
+        int colAciklama = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+
+        for (int row = 2; row <= worksheet.Dimension.Rows; row++)
+        {
+            try
+            {
+                int tarihCol = colTarih > 0 ? colTarih : 1;
+                int bolumCol = colBolum > 0 ? colBolum : 2;
+                int personelCol = colPersonelSayisi > 0 ? colPersonelSayisi : 3;
+                int aciklamaCol = colAciklama > 0 ? colAciklama : 4;
+
+                var dateCell = worksheet.Cells[row, tarihCol];
+                var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
+                var bolumAdi = worksheet.Cells[row, bolumCol].Value?.ToString()?.Trim();
+                var personelSayisi = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, personelCol].Value);
+                var aciklama = worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim();
+
+                if (parsedDate == DateTime.MinValue && string.IsNullOrWhiteSpace(bolumAdi) && personelSayisi == 0)
+                {
+                    continue;
+                }
+
+                result.Add(new PersonelYoklamaSatirModel
+                {
+                    Tarih = parsedDate,
+                    BolumAdi = bolumAdi,
+                    PersonelSayisi = personelSayisi,
+                    Aciklama = aciklama
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Personel yoklama satırı parse edilemedi. Satır: {Row}", row);
+            }
+        }
+
+        return result
+            .Where(x => x.Tarih != DateTime.MinValue && !string.IsNullOrWhiteSpace(x.BolumAdi))
+            .ToList();
     }
 
     private List<HataliParcaSatirModel> ParseHataliParcaRows(string excelRoot)

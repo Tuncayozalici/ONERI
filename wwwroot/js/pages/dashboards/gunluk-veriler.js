@@ -298,6 +298,24 @@ document.addEventListener('DOMContentLoaded', function () {
                     const num = Number(value) || 0;
                     return Math.max(0, Math.min(100, num));
                 };
+                const createRankGradientColors = (count) => {
+                    if (count <= 0) {
+                        return { background: [], border: [] };
+                    }
+
+                    const background = [];
+                    const border = [];
+                    const maxIndex = Math.max(1, count - 1);
+
+                    for (let i = 0; i < count; i++) {
+                        const ratio = i / maxIndex;
+                        const hue = 130 - (130 * ratio); // 130=green -> 0=red
+                        background.push(`hsla(${hue}, 74%, 46%, 0.78)`);
+                        border.push(`hsla(${hue}, 78%, 40%, 1)`);
+                    }
+
+                    return { background, border };
+                };
                 const horizontalValueLabelPlugin = {
                     id: 'horizontalValueLabels',
                     afterDatasetsDraw(chart) {
@@ -397,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 ],
                                 borderWidth: 1,
                                 borderRadius: 8,
-                                barThickness: 20
+                                barThickness: 28
                             }]
                         },
                         options: {
@@ -487,21 +505,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
                     const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
                     const hasMachineData = machineLabels.length > 0 && machineValues.some(v => v > 0);
-                    const machinePalette = [
-                        { bg: 'rgba(59, 130, 246, 0.78)', border: 'rgba(59, 130, 246, 1)' },
-                        { bg: 'rgba(16, 185, 129, 0.78)', border: 'rgba(16, 185, 129, 1)' },
-                        { bg: 'rgba(249, 115, 22, 0.78)', border: 'rgba(249, 115, 22, 1)' },
-                        { bg: 'rgba(168, 85, 247, 0.78)', border: 'rgba(168, 85, 247, 1)' },
-                        { bg: 'rgba(236, 72, 153, 0.78)', border: 'rgba(236, 72, 153, 1)' },
-                        { bg: 'rgba(234, 179, 8, 0.78)', border: 'rgba(234, 179, 8, 1)' },
-                        { bg: 'rgba(20, 184, 166, 0.78)', border: 'rgba(20, 184, 166, 1)' },
-                        { bg: 'rgba(239, 68, 68, 0.78)', border: 'rgba(239, 68, 68, 1)' }
-                    ];
+                    const machinePalette = createRankGradientColors(machineValues.length);
                     const machineBarColors = hasMachineData
-                        ? machineValues.map((_, index) => machinePalette[index % machinePalette.length].bg)
+                        ? machinePalette.background
                         : ['rgba(148, 163, 184, 0.35)'];
                     const machineBorderColors = hasMachineData
-                        ? machineValues.map((_, index) => machinePalette[index % machinePalette.length].border)
+                        ? machinePalette.border
                         : ['rgba(100, 116, 139, 0.7)'];
 
                     new Chart(makineOeeCanvas.getContext('2d'), {
@@ -515,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 borderColor: machineBorderColors,
                                 borderWidth: 1,
                                 borderRadius: 8,
-                                barThickness: 22
+                                barThickness: 28
                             }]
                         },
                         options: {
@@ -550,6 +559,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const deptLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
                     const deptValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
                     const hasDeptData = deptLabels.length > 0 && deptValues.some(v => v > 0);
+                    const deptPalette = createRankGradientColors(deptValues.length);
 
                     new Chart(bolumOeeCanvas.getContext('2d'), {
                         type: 'bar',
@@ -559,14 +569,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                 label: 'Ortalama OEE (%)',
                                 data: hasDeptData ? deptValues : [0],
                                 backgroundColor: hasDeptData
-                                    ? 'rgba(14, 165, 233, 0.76)'
+                                    ? deptPalette.background
                                     : 'rgba(148, 163, 184, 0.35)',
                                 borderColor: hasDeptData
-                                    ? 'rgba(14, 165, 233, 1)'
+                                    ? deptPalette.border
                                     : 'rgba(100, 116, 139, 0.7)',
                                 borderWidth: 1,
                                 borderRadius: 8,
-                                barThickness: 22
+                                barThickness: 28
                             }]
                         },
                         options: {
@@ -617,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     : 'rgba(100, 116, 139, 0.7)',
                                 borderWidth: 1,
                                 borderRadius: 8,
-                                barThickness: 22
+                                barThickness: 28
                             }]
                         },
                         options: {
@@ -640,6 +650,56 @@ document.addEventListener('DOMContentLoaded', function () {
                             },
                             plugins: {
                                 legend: { display: false }
+                            }
+                        },
+                        plugins: [horizontalValueLabelPlugin]
+                    });
+                }
+
+                const personelBolumCanvas = document.getElementById('personelBolumGrafigi');
+                if (personelBolumCanvas) {
+                    const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
+                    const personelValues = (Array.isArray(data.PersonelBolumData) ? data.PersonelBolumData : []).map(v => Math.max(0, Number(v) || 0));
+                    const hasPersonelData = personelLabels.length > 0 && personelValues.some(v => v > 0);
+
+                    new Chart(personelBolumCanvas.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: hasPersonelData ? personelLabels : ['Veri Yok'],
+                            datasets: [{
+                                label: 'Personel',
+                                data: hasPersonelData ? personelValues : [0],
+                                backgroundColor: hasPersonelData
+                                    ? 'rgba(6, 182, 212, 0.72)'
+                                    : 'rgba(148, 163, 184, 0.35)',
+                                borderColor: hasPersonelData
+                                    ? 'rgba(6, 182, 212, 1)'
+                                    : 'rgba(100, 116, 139, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                barThickness: 20
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: axisTickColor,
+                                        precision: 0
+                                    },
+                                    grid: { color: axisGridColor }
+                                },
+                                y: {
+                                    ticks: { color: axisTickColor },
+                                    grid: { color: axisGridColor }
+                                }
+                            },
+                            plugins: {
+                                legend: { labels: { color: axisTickColor } }
                             }
                         },
                         plugins: [horizontalValueLabelPlugin]

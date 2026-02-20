@@ -270,7 +270,10 @@ namespace ONERI.Controllers
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
-                ["HATALI PARÇA VERİ GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "HATALI PARÇA VERİ GİRİŞİ.xlsm"), "VERİ KAYIT")
+                ["HATALI PARÇA VERİ GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "HATALI PARÇA VERİ GİRİŞİ.xlsm"), "VERİ KAYIT"),
+                ["Günlük Personel Sayısı.xlsm"] = (Path.Combine(excelPath, "Günlük Personel Sayısı.xlsm"), "YOKLAMA TABLOSU"),
+                ["Günlük Personel Sayısı (1).xlsm"] = (Path.Combine(excelPath, "Günlük Personel Sayısı.xlsm"), "YOKLAMA TABLOSU"),
+                ["Günlük Personel Sayısı (1).xlsm"] = (Path.Combine(excelPath, "Günlük Personel Sayısı.xlsm"), "YOKLAMA TABLOSU")
             };
 
             foreach (var file in model.Dosyalar ?? new List<IFormFile>())

@@ -30,6 +30,8 @@ namespace ONERI.Models
         public List<double> BolumUretimData { get; set; } = new List<double>();
         public List<string> BolumHataLabels { get; set; } = new List<string>();
         public List<double> BolumHataData { get; set; } = new List<double>();
+        public List<string> PersonelBolumLabels { get; set; } = new List<string>();
+        public List<double> PersonelBolumData { get; set; } = new List<double>();
 
         public List<string> HataNedenLabels { get; set; } = new List<string>();
         public List<double> HataNedenData { get; set; } = new List<double>();

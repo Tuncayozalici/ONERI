@@ -10,6 +10,7 @@ using OfficeOpenXml;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using ONERI.Services.Dashboards;
+using System.Text;
 
 namespace ONERI.Controllers
 {
@@ -286,14 +287,28 @@ namespace ONERI.Controllers
                 var fileName = Path.GetFileName(file.FileName);
                 if (!fileMap.TryGetValue(fileName, out var info))
                 {
-                    results.Add(new VeriYukleResult
+                    var normalizedFileName = fileName.Normalize(NormalizationForm.FormKC);
+                    var matchedKey = fileMap.Keys.FirstOrDefault(key =>
+                        string.Equals(
+                            key.Normalize(NormalizationForm.FormKC),
+                            normalizedFileName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                    if (!string.IsNullOrWhiteSpace(matchedKey))
                     {
-                        DosyaAdi = fileName,
-                        SayfaAdi = "-",
-                        SatirSayisi = null,
-                        Mesaj = "Bu dosya adı tanımlı değil."
-                    });
-                    continue;
+                        info = fileMap[matchedKey];
+                    }
+                    else
+                    {
+                        results.Add(new VeriYukleResult
+                        {
+                            DosyaAdi = fileName,
+                            SayfaAdi = "-",
+                            SatirSayisi = null,
+                            Mesaj = "Bu dosya adı tanımlı değil."
+                        });
+                        continue;
+                    }
                 }
 
                 HandleUpload(file, info.TargetPath, info.SheetName, results);

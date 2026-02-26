@@ -121,7 +121,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(x => (
                 x.Tarih,
                 Makine: x.Makine,
-                Uretim: x.ToplamKesimAdet,
+                Uretim: x.Plaka8Mm + x.Plaka18Mm + x.Plaka30Mm,
                 Duraklama: x.Duraklama1 + x.Duraklama2,
                 Performans: x.Performans,
                 Kullanilabilirlik: x.Kullanilabilirlik,
@@ -688,20 +688,30 @@ public class DashboardQueryService : IDashboardQueryService
         model.BolumHataLabels = bolumHataList.Select(x => x.Key).ToList();
         model.BolumHataData = bolumHataList.Select(x => x.Total).ToList();
 
+        var shouldAveragePersonelByBolum = hasDateRange || ay.HasValue;
+        bag["PersonelBolumTitle"] = shouldAveragePersonelByBolum
+            ? "Bölüm Bazlı Personel (Ortalama)"
+            : "Bölüm Bazlı Personel (Toplam)";
+        bag["PersonelBolumDatasetLabel"] = shouldAveragePersonelByBolum
+            ? "Ortalama Personel"
+            : "Personel";
+
         var personelBolumList = personelRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd)
             .GroupBy(x => x.Bolum)
             .Select(g => new
             {
                 Key = g.Key,
-                Total = g.Sum(x => (double)x.Personel)
+                Value = shouldAveragePersonelByBolum
+                    ? g.Average(x => (double)x.Personel)
+                    : g.Sum(x => (double)x.Personel)
             })
-            .Where(x => x.Total > 0)
-            .OrderByDescending(x => x.Total)
+            .Where(x => x.Value > 0)
+            .OrderByDescending(x => x.Value)
             .ToList();
 
         model.PersonelBolumLabels = personelBolumList.Select(x => x.Key).ToList();
-        model.PersonelBolumData = personelBolumList.Select(x => x.Total).ToList();
+        model.PersonelBolumData = personelBolumList.Select(x => x.Value).ToList();
 
         var hataNedenList = filteredHatali
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
@@ -2024,6 +2034,7 @@ public class DashboardQueryService : IDashboardQueryService
         string? NormalizeMachine(string? name) => string.IsNullOrWhiteSpace(name) ? null : name.Trim();
         bool IsSameMachine(string? source, string target) =>
             string.Equals(NormalizeMachine(source), target, StringComparison.OrdinalIgnoreCase);
+        static double GetToplamKesimAdet(EbatlamaSatirModel row) => row.Plaka8Mm + row.Plaka18Mm + row.Plaka30Mm;
 
         var seciliMakine = NormalizeMachine(makine);
         var seciliMakineSatirlari = string.IsNullOrWhiteSpace(seciliMakine)
@@ -2111,7 +2122,7 @@ public class DashboardQueryService : IDashboardQueryService
         var macmazzaOtoDuraklamaEkle = macmazzaTekGunEksik && (string.IsNullOrWhiteSpace(seciliMakine) || seciliMakineMacmazza);
         var macmazzaEkDuraklama = macmazzaOtoDuraklamaEkle ? macmazzaOtoDuraklamaDakika : 0d;
 
-        viewModel.ToplamKesimAdet = filtreliVeri.Sum(x => x.ToplamKesimAdet);
+        viewModel.ToplamKesimAdet = filtreliVeri.Sum(GetToplamKesimAdet);
         viewModel.ToplamPlaka8Mm = filtreliVeri.Sum(x => x.Plaka8Mm);
         viewModel.ToplamPlaka18Mm = filtreliVeri.Sum(x => x.Plaka18Mm);
         viewModel.ToplamPlaka30Mm = filtreliVeri.Sum(x => x.Plaka30Mm);
@@ -2167,7 +2178,7 @@ public class DashboardQueryService : IDashboardQueryService
             : excelData.Where(x => IsSameMachine(x.Makine, seciliMakine!)).ToList();
 
         var kesimGunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
-            .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.ToplamKesimAdet));
+            .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(GetToplamKesimAdet));
         var plaka8Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Plaka8Mm));
         var plaka18Gunluk = trendKaynak.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
@@ -2195,7 +2206,7 @@ public class DashboardQueryService : IDashboardQueryService
 
         var makineList = filtreliVeri
             .GroupBy(x => x.Makine ?? "Bilinmeyen")
-            .Select(g => new { Makine = g.Key, Toplam = g.Sum(x => x.ToplamKesimAdet) })
+            .Select(g => new { Makine = g.Key, Toplam = g.Sum(GetToplamKesimAdet) })
             .OrderByDescending(x => x.Toplam)
             .ToList();
 
@@ -2220,7 +2231,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(g => new MakineKartOzetModel
             {
                 MakineAdi = g.Key,
-                Uretim = g.Sum(x => x.ToplamKesimAdet),
+                Uretim = g.Sum(GetToplamKesimAdet),
                 DuraklamaDakika = g.Sum(x => x.Duraklama1 + x.Duraklama2),
                 Oee = g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average()
             })

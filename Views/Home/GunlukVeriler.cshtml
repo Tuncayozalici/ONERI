@@ -4,6 +4,8 @@
     var toplamDuraklamaDakika = (int)Math.Round(Model.ToplamDuraklamaDakika, MidpointRounding.AwayFromZero);
     var toplamDuraklamaSaat = toplamDuraklamaDakika / 60;
     var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
+    var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Bölüm Bazlı Personel (Toplam)";
+    var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
 }
 
 @section Styles {
@@ -119,7 +121,7 @@
                             </div>
                         </div>
                         <div class="card shadow-sm h-100 personel-bolum-card">
-                            <div class="card-header">Bölüm Bazlı Personel (Toplam)</div>
+                            <div class="card-header">@personelBolumTitle</div>
                             <div class="card-body">
                                 <canvas id="personelBolumGrafigi"></canvas>
                             </div>
@@ -249,7 +251,7 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="gunluk-veriler-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.OzetResolvedYear }))
+        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.OzetResolvedYear, personelSeriesLabel }))
     </script>
     <script src="~/js/pages/dashboards/gunluk-veriler.js" asp-append-version="true"></script>
 }

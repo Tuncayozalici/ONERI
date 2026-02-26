@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const payload = JSON.parse(document.getElementById('gunluk-veriler-data').textContent);
     const data = normalizePayloadKeys(payload.model || {});
     const defaultYear = payload.defaultYear;
+    const personelSeriesLabel = typeof payload.personelSeriesLabel === 'string' && payload.personelSeriesLabel.trim()
+        ? payload.personelSeriesLabel.trim()
+        : 'Personel';
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
@@ -344,8 +347,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                     return;
                                 }
 
+                                const maximumFractionDigits = Math.abs(value - Math.round(value)) > 0.001 ? 1 : 0;
                                 const label = value.toLocaleString('tr-TR', {
-                                    maximumFractionDigits: 0
+                                    maximumFractionDigits
                                 });
                                 const barStartX = Math.min(bar.base, bar.x);
                                 const barEndX = Math.max(bar.base, bar.x);
@@ -660,6 +664,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (personelBolumCanvas) {
                     const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
                     const personelValues = (Array.isArray(data.PersonelBolumData) ? data.PersonelBolumData : []).map(v => Math.max(0, Number(v) || 0));
+                    const hasPersonelFraction = personelValues.some(v => Math.abs(v - Math.round(v)) > 0.001);
                     const hasPersonelData = personelLabels.length > 0 && personelValues.some(v => v > 0);
 
                     new Chart(personelBolumCanvas.getContext('2d'), {
@@ -667,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         data: {
                             labels: hasPersonelData ? personelLabels : ['Veri Yok'],
                             datasets: [{
-                                label: 'Personel',
+                                label: personelSeriesLabel,
                                 data: hasPersonelData ? personelValues : [0],
                                 backgroundColor: hasPersonelData
                                     ? 'rgba(6, 182, 212, 0.72)'
@@ -689,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     beginAtZero: true,
                                     ticks: {
                                         color: axisTickColor,
-                                        precision: 0
+                                        precision: hasPersonelFraction ? 1 : 0
                                     },
                                     grid: { color: axisGridColor }
                                 },

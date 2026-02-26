@@ -969,17 +969,21 @@ public class DashboardIngestionService : IDashboardIngestionService
                 var oee = oeeCol > 0
                     ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value)
                     : (colCount >= 20 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 20].Value) : 0);
+                var plaka8Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 3].Value);
+                var plaka18Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 5].Value);
+                var plaka30Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 6].Value);
+                var toplamKesimAdet = plaka8Mm + plaka18Mm + plaka30Mm;
 
                 result.Add(new EbatlamaSatirModel
                 {
                     Tarih = parsedDate,
                     Makine = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
-                    Plaka8Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 3].Value),
+                    Plaka8Mm = plaka8Mm,
                     Kesim8MmAdet = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 4].Value),
-                    Plaka18Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 5].Value),
-                    Plaka30Mm = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 6].Value),
+                    Plaka18Mm = plaka18Mm,
+                    Plaka30Mm = plaka30Mm,
                     Kesim30MmAdet = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 7].Value),
-                    ToplamKesimAdet = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 8].Value),
+                    ToplamKesimAdet = toplamKesimAdet,
                     Gonyelleme = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 9].Value),
                     MesaiDurumu = worksheet.Cells[row, 10].Value?.ToString()?.Trim(),
                     HazirlikMalzemeDakika = hazirlik,

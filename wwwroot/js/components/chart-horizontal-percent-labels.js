@@ -20,6 +20,7 @@
         var insideTextColor = opts.insideTextColor || "#ffffff";
         var font = opts.font || "600 12px Poppins, sans-serif";
         var offset = Number.isFinite(opts.offset) ? opts.offset : 8;
+        var outsideOffset = Number.isFinite(opts.outsideOffset) ? opts.outsideOffset : 8;
         var minValue = Number.isFinite(opts.minValue) ? opts.minValue : 0;
 
         return {
@@ -75,23 +76,62 @@
                         }
 
                         var y = bar.y;
-                        var x = barEndX - offset;
+                        var labelWidth = ctx.measureText(label).width;
+                        var fitsInside = labelWidth <= maxLabelWidth;
 
-                        // Always keep label inside bar area.
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.rect(
-                            barStartX + 1,
-                            y - (barHeight / 2) + 1,
-                            Math.max(0, barWidth - 2),
-                            Math.max(0, barHeight - 2)
-                        );
-                        ctx.clip();
+                        if (fitsInside) {
+                            var insideX = barEndX - offset;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.rect(
+                                barStartX + 1,
+                                y - (barHeight / 2) + 1,
+                                Math.max(0, barWidth - 2),
+                                Math.max(0, barHeight - 2)
+                            );
+                            ctx.clip();
+
+                            ctx.textAlign = "right";
+                            ctx.fillStyle = insideTextColor;
+                            ctx.fillText(label, insideX, y);
+                            ctx.restore();
+                            return;
+                        }
+
+                        // If text does not fit inside the bar, render it outside.
+                        var outsideLabel = labelCandidates[0];
+                        var outsideLabelWidth = ctx.measureText(outsideLabel).width;
+                        var rightAnchorX = barEndX + outsideOffset;
+                        var rightLimitX = chartArea.right - 2;
+                        var availableRightWidth = Math.max(0, rightLimitX - rightAnchorX);
+                        if (outsideLabelWidth > availableRightWidth) {
+                            for (var j = 1; j < labelCandidates.length; j++) {
+                                var candidateWidth = ctx.measureText(labelCandidates[j]).width;
+                                if (candidateWidth <= availableRightWidth) {
+                                    outsideLabel = labelCandidates[j];
+                                    outsideLabelWidth = candidateWidth;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (outsideLabelWidth <= availableRightWidth) {
+                            ctx.textAlign = "left";
+                            ctx.fillStyle = textColor;
+                            ctx.fillText(outsideLabel, rightAnchorX, y);
+                            return;
+                        }
+
+                        var leftAnchorX = barStartX - outsideOffset;
+                        var leftLimitX = chartArea.left + 2;
+                        if (leftAnchorX < leftLimitX) {
+                            leftAnchorX = leftLimitX;
+                        }
 
                         ctx.textAlign = "right";
-                        ctx.fillStyle = insideTextColor;
-                        ctx.fillText(label, x, y);
-                        ctx.restore();
+                        ctx.fillStyle = textColor;
+                        ctx.fillText(outsideLabel, leftAnchorX, y);
                     });
                 });
 

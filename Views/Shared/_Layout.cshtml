@@ -20,6 +20,8 @@
         var isAuthenticated = User.Identity?.IsAuthenticated == true;
         var canOneriAdmin = isAuthenticated &&
             (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Access)).Succeeded;
+        var canVeriYukle = isAuthenticated &&
+            (await AuthorizationService.AuthorizeAsync(User, null, Permissions.VeriYukle.Create)).Succeeded;
         var isSuperAdmin = isAuthenticated && User.IsInRole(Permissions.SuperAdminRole);
     }
     <header>
@@ -66,6 +68,22 @@
                                             </a>
                                         </li>
                                     }
+                                    @if (canVeriYukle)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="VeriYukle">
+                                                <i class="bi bi-upload me-2"></i> Veri Yükle
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <button type="button"
+                                                    class="dropdown-item js-gunluk-veri-modal-open"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#gunlukVeriIndirModal">
+                                                <i class="bi bi-file-earmark-arrow-down me-2"></i> Günlük Verileri İndir
+                                            </button>
+                                        </li>
+                                    }
                                     @if (isSuperAdmin)
                                     {
                                         <li>
@@ -74,7 +92,7 @@
                                             </a>
                                         </li>
                                     }
-                                    @if (canOneriAdmin || isSuperAdmin)
+                                    @if (canOneriAdmin || canVeriYukle || isSuperAdmin)
                                     {
                                         <li><hr class="dropdown-divider"></li>
                                     }
@@ -279,6 +297,72 @@
       </div>
     </div>
 
+    @if (canVeriYukle)
+    {
+        <div class="modal fade" id="gunlukVeriIndirModal" tabindex="-1" aria-labelledby="gunlukVeriIndirModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="gunlukVeriIndirForm" method="get" asp-area="" asp-controller="Admin" asp-action="GunlukVerileriIndir">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="gunlukVeriIndirModalLabel">Günlük Verileri İndir</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Filtre Tipi</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input js-gunluk-veri-filter-type" type="radio" name="gunlukVeriFiltreTipi" id="gunlukVeriFiltreGun" value="gun" checked>
+                                        <label class="form-check-label" for="gunlukVeriFiltreGun">Gün</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input js-gunluk-veri-filter-type" type="radio" name="gunlukVeriFiltreTipi" id="gunlukVeriFiltreAy" value="ay">
+                                        <label class="form-check-label" for="gunlukVeriFiltreAy">Ay</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input js-gunluk-veri-filter-type" type="radio" name="gunlukVeriFiltreTipi" id="gunlukVeriFiltreAralik" value="aralik">
+                                        <label class="form-check-label" for="gunlukVeriFiltreAralik">Tarih Aralığı</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="gunlukVeriGunPanel" class="js-gunluk-veri-panel">
+                                <label for="gunlukVeriGunInput" class="form-label">Gün Seç</label>
+                                <input type="date" class="form-control" id="gunlukVeriGunInput" name="raporTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                            </div>
+
+                            <div id="gunlukVeriAyPanel" class="js-gunluk-veri-panel d-none">
+                                <label for="gunlukVeriAyInput" class="form-label">Ay Seç</label>
+                                <input type="month" class="form-control" id="gunlukVeriAyInput" value="@DateTime.Today.ToString("yyyy-MM")">
+                                <input type="hidden" id="gunlukVeriAyHidden" name="ay">
+                                <input type="hidden" id="gunlukVeriYilHidden" name="yil">
+                            </div>
+
+                            <div id="gunlukVeriAralikPanel" class="js-gunluk-veri-panel d-none">
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-6">
+                                        <label for="gunlukVeriBaslangicInput" class="form-label">Başlangıç Tarihi</label>
+                                        <input type="date" class="form-control" id="gunlukVeriBaslangicInput" name="baslangicTarihi" value="@DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd")">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label for="gunlukVeriBitisInput" class="form-label">Bitiş Tarihi</label>
+                                        <input type="date" class="form-control" id="gunlukVeriBitisInput" name="bitisTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-download me-1"></i> PDF İndir
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
     <main role="main" class="pb-3">
         @RenderBody()
     </main>
@@ -294,6 +378,81 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/components/unified-date-filter.js" asp-append-version="true"></script>
     <script src="~/js/components/chart-horizontal-percent-labels.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const modalElement = document.getElementById('gunlukVeriIndirModal');
+            const form = document.getElementById('gunlukVeriIndirForm');
+            if (!modalElement || !form) {
+                return;
+            }
+
+            const filterTypeInputs = document.querySelectorAll('.js-gunluk-veri-filter-type');
+            const gunPanel = document.getElementById('gunlukVeriGunPanel');
+            const ayPanel = document.getElementById('gunlukVeriAyPanel');
+            const aralikPanel = document.getElementById('gunlukVeriAralikPanel');
+
+            const gunInput = document.getElementById('gunlukVeriGunInput');
+            const ayInput = document.getElementById('gunlukVeriAyInput');
+            const ayHidden = document.getElementById('gunlukVeriAyHidden');
+            const yilHidden = document.getElementById('gunlukVeriYilHidden');
+            const baslangicInput = document.getElementById('gunlukVeriBaslangicInput');
+            const bitisInput = document.getElementById('gunlukVeriBitisInput');
+
+            function setPanelState(activeType) {
+                const isGun = activeType === 'gun';
+                const isAy = activeType === 'ay';
+                const isAralik = activeType === 'aralik';
+
+                gunPanel.classList.toggle('d-none', !isGun);
+                ayPanel.classList.toggle('d-none', !isAy);
+                aralikPanel.classList.toggle('d-none', !isAralik);
+
+                gunInput.disabled = !isGun;
+                baslangicInput.disabled = !isAralik;
+                bitisInput.disabled = !isAralik;
+            }
+
+            function getSelectedType() {
+                const selected = Array.from(filterTypeInputs).find(x => x.checked);
+                return selected ? selected.value : 'gun';
+            }
+
+            filterTypeInputs.forEach(input => {
+                input.addEventListener('change', function () {
+                    setPanelState(getSelectedType());
+                });
+            });
+
+            form.addEventListener('submit', function () {
+                ayHidden.value = '';
+                yilHidden.value = '';
+
+                const selectedType = getSelectedType();
+                if (selectedType === 'ay' && ayInput.value) {
+                    const parts = ayInput.value.split('-');
+                    if (parts.length === 2) {
+                        yilHidden.value = parts[0];
+                        ayHidden.value = String(Number(parts[1]));
+                    }
+                }
+            });
+
+            document.querySelectorAll('.js-gunluk-veri-modal-open').forEach(button => {
+                button.addEventListener('click', function () {
+                    const openDropdown = button.closest('.dropdown-menu');
+                    if (openDropdown) {
+                        const parent = openDropdown.parentElement;
+                        const toggle = parent ? parent.querySelector('[data-bs-toggle="dropdown"]') : null;
+                        if (toggle) {
+                            bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+                        }
+                    }
+                });
+            });
+
+            setPanelState(getSelectedType());
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

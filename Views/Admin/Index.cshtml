@@ -11,7 +11,6 @@
     var bugunGelenSayisi = Model.Count(o => o.Tarih.Date == DateTime.Today);
     var toplamOneriSayisi = Model.Count();
 
-    var canVeriYukle = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.VeriYukle.Create)).Succeeded;
     var canBolumYoneticileri = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.BolumYoneticileri.View)).Succeeded;
     var canDetay = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Detail)).Succeeded;
     var canApprove = (await AuthorizationService.AuthorizeAsync(User, null, Permissions.OneriAdmin.Approve)).Succeeded;
@@ -35,12 +34,6 @@
             <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
         </div>
         <div class="d-flex gap-2">
-            @if (canVeriYukle)
-            {
-                <a asp-action="VeriYukle" class="btn btn-outline-dark">
-                    <i class="bi bi-upload me-1"></i> Veri Yükle
-                </a>
-            }
             @if (canBolumYoneticileri)
             {
                 <a asp-action="BolumYoneticileri" class="btn btn-dark">

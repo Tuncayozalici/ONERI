@@ -4,6 +4,8 @@
 // Write your JavaScript code.
 
 document.addEventListener("DOMContentLoaded", function () {
+    let themePickerId = 0;
+
     const openBtn = document.querySelector(".openbtn");
     const closeBtn = document.querySelector(".closebtn");
     const sidebar = document.getElementById("mySidebar");
@@ -60,4 +62,100 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+    enhanceNativeDatePickers(document);
+
+    document.addEventListener("click", function (event) {
+        const button = event.target.closest(".js-theme-picker-open");
+        if (!button) {
+            return;
+        }
+
+        const targetId = button.getAttribute("data-target");
+        if (!targetId) {
+            return;
+        }
+
+        const pickerInput = document.getElementById(targetId);
+        if (!pickerInput || pickerInput.disabled) {
+            return;
+        }
+
+        pickerInput.focus();
+
+        if (typeof pickerInput.showPicker === "function") {
+            pickerInput.showPicker();
+            return;
+        }
+
+        pickerInput.click();
+    });
+
+    function enhanceNativeDatePickers(root) {
+        const inputs = root.querySelectorAll('input[type="date"], input[type="month"]');
+        inputs.forEach(function (input) {
+            if (input.dataset.pickerEnhanced === "true") {
+                return;
+            }
+
+            if (input.closest(".theme-picker-field")) {
+                input.dataset.pickerEnhanced = "true";
+                return;
+            }
+
+            if (!input.id) {
+                themePickerId += 1;
+                input.id = "themePickerInput" + themePickerId;
+            }
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "theme-picker-field";
+
+            const parent = input.parentNode;
+            if (!parent) {
+                return;
+            }
+
+            moveSpacingClasses(input, wrapper);
+            parent.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "theme-picker-button js-theme-picker-open";
+            button.setAttribute("data-target", input.id);
+            button.setAttribute("aria-label", buildPickerAriaLabel(input));
+            button.innerHTML = '<i class="bi bi-calendar3" aria-hidden="true"></i>';
+
+            wrapper.appendChild(button);
+            input.dataset.pickerEnhanced = "true";
+        });
+    }
+
+    function buildPickerAriaLabel(input) {
+        if (!input.id) {
+            return "Tarih seçici aç";
+        }
+
+        const label = document.querySelector('label[for="' + input.id + '"]');
+        if (!label) {
+            return input.type === "month" ? "Ay seçici aç" : "Tarih seçici aç";
+        }
+
+        const labelText = (label.textContent || "").trim();
+        if (!labelText) {
+            return input.type === "month" ? "Ay seçici aç" : "Tarih seçici aç";
+        }
+
+        return labelText + " seçici aç";
+    }
+
+    function moveSpacingClasses(input, wrapper) {
+        Array.from(input.classList).forEach(function (className) {
+            if (/^m[trblxy]?-(auto|0|1|2|3|4|5)$/.test(className)) {
+                wrapper.classList.add(className);
+                input.classList.remove(className);
+            }
+        });
+    }
 });

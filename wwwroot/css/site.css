@@ -118,6 +118,46 @@ html[data-theme="dark"] .input-group-text {
     color: #e5e7eb;
 }
 
+.theme-picker-field {
+    position: relative;
+    display: block;
+}
+
+.theme-picker-field .form-control,
+.theme-picker-field input[type="date"],
+.theme-picker-field input[type="month"] {
+    padding-right: 3rem;
+}
+
+.theme-picker-button {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #111827;
+    padding: 0;
+    line-height: 1;
+    font-size: 1.35rem;
+    z-index: 2;
+}
+
+.theme-picker-button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.theme-picker-field input[type="date"]::-webkit-calendar-picker-indicator,
+.theme-picker-field input[type="month"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+}
+
+html[data-theme="dark"] .theme-picker-button {
+    color: #f9fafb;
+}
+
 html[data-theme="dark"] .dropdown-item {
     color: #e5e7eb;
 }

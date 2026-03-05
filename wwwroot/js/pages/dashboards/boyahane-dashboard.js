@@ -1,14 +1,33 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const payload = JSON.parse(document.getElementById('boyahane-dashboard-data').textContent);
+    const payloadElement = document.getElementById('boyahane-dashboard-data');
+    if (!payloadElement) {
+        return;
+    }
+
+    const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
-    const defaultYear = payload.defaultYear;
+    const labels = data.UretimTrendLabels || [];
+
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
+        textColor: isDarkTheme ? '#cbd5e1' : '#1f2937',
+        insideTextColor: '#ffffff',
+        font: '600 12px Poppins, sans-serif'
+    });
+
+    createUretimTrendChart(labels, data);
+    createOeeTrendChart(labels, data);
+    createMakineUretimChart(data);
+    createMakineOeeChart(data, horizontalPercentLabelPlugin);
+    createDuraklamaChart(data);
+    createParcaKarmaChart(data);
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
             return value.map(normalizePayloadKeys);
         }
 
-        if (value !== null && typeof value === "object") {
+        if (value !== null && typeof value === 'object') {
             const normalized = {};
             for (const [key, nested] of Object.entries(value)) {
                 const normalizedKey = key.length > 0 ? key[0].toUpperCase() + key.slice(1) : key;
@@ -19,324 +38,262 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-                        const filterInput = document.getElementById('tarihFiltre');
-    const dateInput = document.getElementById('raporTarihi');
-    const startDateInput = document.getElementById('baslangicTarihi');
-    const endDateInput = document.getElementById('bitisTarihi');
-    const monthInput = document.getElementById('ay');
-    const yearInput = document.getElementById('yil');
-    const clearButton = document.getElementById('clearFilter');
 
-    function pad2(value) {
-        return String(value).padStart(2, '0');
+    function hasNonZeroValues(values) {
+        return Array.isArray(values) && values.some(v => Number(v) > 0);
     }
 
-    function isValidIsoDate(isoDate) {
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-        if (!match) {
-            return false;
-        }
-
-        const year = Number(match[1]);
-        const month = Number(match[2]);
-        const day = Number(match[3]);
-        const candidate = new Date(Date.UTC(year, month - 1, day));
-        return candidate.getUTCFullYear() == year
-            && candidate.getUTCMonth() + 1 == month
-            && candidate.getUTCDate() == day;
-    }
-
-    function parseDateToIso(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        if (isValidIsoDate(raw)) {
-            return raw;
-        }
-
-        const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (!trMatch) {
-            return null;
-        }
-
-        const day = pad2(Number(trMatch[1]));
-        const month = pad2(Number(trMatch[2]));
-        const year = trMatch[3];
-        const iso = `${year}-${month}-${day}`;
-        return isValidIsoDate(iso) ? iso : null;
-    }
-
-    function parseMonthValue(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (match) {
-            const month = Number(match[1]);
-            const year = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
-        if (match) {
-            const year = Number(match[1]);
-            const month = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        return null;
-    }
-
-    function parseRangeValue(value) {
-        const raw = String(value || '').trim();
-        const match = /^(.+)\s-\s(.+)$/.exec(raw);
-        if (!match) {
-            return null;
-        }
-
-        const startIso = parseDateToIso(match[1]);
-        const endIso = parseDateToIso(match[2]);
-        if (!startIso || !endIso) {
-            return null;
-        }
-
-        return { baslangic: startIso, bitis: endIso };
-    }
-
-    function isoToDisplay(isoDate) {
-        if (!isValidIsoDate(isoDate)) {
-            return '';
-        }
-
-        const [year, month, day] = isoDate.split('-');
-        return `${day}.${month}.${year}`;
-    }
-
-    function getModelDateIso() {
-        const raw = data.RaporTarihi;
-        if (!raw) {
-            return '';
-        }
-
-        if (typeof raw === 'string') {
-            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (match) {
-                return `${match[1]}-${match[2]}-${match[3]}`;
-            }
-        }
-
-        const parsed = new Date(raw);
-        if (Number.isNaN(parsed.getTime())) {
-            return '';
-        }
-
-        const year = parsed.getFullYear();
-        const month = String(parsed.getMonth() + 1).padStart(2, '0');
-        const day = String(parsed.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    function clearHiddenFilters() {
-        dateInput.value = '';
-        startDateInput.value = '';
-        endDateInput.value = '';
-        monthInput.value = '';
-        yearInput.value = '';
-    }
-
-    function syncHiddenFiltersFromText() {
-        clearHiddenFilters();
-
-        const raw = String(filterInput.value || '').trim();
-        if (!raw) {
+    function showNoData(canvasId, message) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
             return;
         }
 
-        const parsedRange = parseRangeValue(raw);
-        if (parsedRange) {
-            startDateInput.value = parsedRange.baslangic;
-            endDateInput.value = parsedRange.bitis;
-            filterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
+        const parent = canvas.parentElement;
+        if (!parent) {
             return;
         }
 
-        const parsedMonth = parseMonthValue(raw);
-        if (parsedMonth) {
-            monthInput.value = String(parsedMonth.ay);
-            yearInput.value = String(parsedMonth.yil);
-            filterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
-            return;
-        }
-
-        const parsedDate = parseDateToIso(raw);
-        if (parsedDate) {
-            dateInput.value = parsedDate;
-            filterInput.value = isoToDisplay(parsedDate);
-        }
+        parent.innerHTML = `<div class="boya-no-data">${message}</div>`;
     }
 
-    if (filterInput) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const raporTarihi = urlParams.get('raporTarihi');
-        const baslangicTarihi = urlParams.get('baslangicTarihi');
-        const bitisTarihi = urlParams.get('bitisTarihi');
-        const ay = urlParams.get('ay');
-        const yil = urlParams.get('yil');
-        const clear = urlParams.get('clear');
-
-        if (clear === '1') {
-            filterInput.value = '';
-        } else if (raporTarihi) {
-            filterInput.value = isoToDisplay(raporTarihi);
-        } else if (baslangicTarihi && bitisTarihi) {
-            filterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
-        } else if (ay && yil) {
-            filterInput.value = `${pad2(Number(ay))}.${yil}`;
-        } else {
-            const modelDateIso = getModelDateIso();
-            filterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
+    function createUretimTrendChart(chartLabels, model) {
+        const chartElement = document.getElementById('boyaUretimHedefTrendGrafigi');
+        if (!chartElement) {
+            return;
         }
 
-        syncHiddenFiltersFromText();
-
-        filterInput.addEventListener('blur', syncHiddenFiltersFromText);
-
-        const filterForm = filterInput.closest('form');
-        if (filterForm) {
-            filterForm.addEventListener('submit', function () {
-                syncHiddenFiltersFromText();
-            });
-        }
-
-        clearButton.addEventListener('click', function () {
-            filterInput.value = '';
-            clearHiddenFilters();
-            window.location.href = `${window.location.pathname}?clear=1`;
+        new Chart(chartElement.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Toplam Boyanan',
+                    data: model.UretimTrendData || [],
+                    borderColor: 'rgba(14, 116, 144, 0.95)',
+                    backgroundColor: 'rgba(14, 116, 144, 0.15)',
+                    fill: true,
+                    tension: 0.25
+                }, {
+                    label: 'Performans İçin Parça',
+                    data: model.HedefTrendData || [],
+                    borderColor: 'rgba(217, 119, 6, 0.95)',
+                    backgroundColor: 'rgba(217, 119, 6, 0.12)',
+                    fill: true,
+                    tension: 0.25
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
         });
     }
-    
-                // Chart rendering code...
-                // Üretim Dağılımı (Stacked Bar)
-                const uretimDagilimCtx = document.getElementById('uretimDagilimGrafigi').getContext('2d');
-                new Chart(uretimDagilimCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.UretimDagilimi.Labels,
-                        datasets: [
-                            {
-                                label: 'Panel',
-                                data: data.UretimDagilimi.PanelData,
-                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                            },
-                            {
-                                label: 'Döşeme',
-                                data: data.UretimDagilimi.DosemeData,
-                                backgroundColor: 'rgba(255, 159, 64, 0.8)',
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: {
-                                stacked: true,
-                            },
-                            y: {
-                                stacked: true,
-                                beginAtZero: true
-                            }
-                        }
+
+    function createOeeTrendChart(chartLabels, model) {
+        const chartElement = document.getElementById('boyaOeeBilesenTrendGrafigi');
+        if (!chartElement) {
+            return;
+        }
+
+        new Chart(chartElement.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Performans (%)',
+                    data: model.PerformansTrendData || [],
+                    borderColor: 'rgba(79, 70, 229, 0.95)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                    fill: false,
+                    tension: 0.2
+                }, {
+                    label: 'Kalite (%)',
+                    data: model.KaliteTrendData || [],
+                    borderColor: 'rgba(16, 185, 129, 0.95)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                    fill: false,
+                    tension: 0.2
+                }, {
+                    label: 'Kullanılabilirlik (%)',
+                    data: model.KullanilabilirlikTrendData || [],
+                    borderColor: 'rgba(245, 158, 11, 0.95)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    fill: false,
+                    tension: 0.2
+                }, {
+                    label: 'OEE (%)',
+                    data: model.OeeTrendData || [],
+                    borderColor: 'rgba(220, 38, 38, 0.95)',
+                    backgroundColor: 'rgba(220, 38, 38, 0.08)',
+                    fill: false,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 100
                     }
-                });
-    
-                // Hata Nedenleri (Doughnut)
-                const hataCtx = document.getElementById('hataGrafigi').getContext('2d');
-                if ((data.HataNedenleriListesi || []).length > 0) {
-                    new Chart(hataCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.HataNedenleriListesi,
-                            datasets: [{
-                                label: 'Hatalı Adet',
-                                data: data.HataSayilariListesi,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                }
-                            }
-                        }
-                    });
                 }
-    
-                // Kalite Trendi (Line)
-                const kaliteTrendCtx = document.getElementById('kaliteTrendGrafigi').getContext('2d');
-                new Chart(kaliteTrendCtx, {
-                    type: 'line',
-                    data: {
-                        labels: data.KaliteTrendi.Labels,
-                        datasets: [{
-                            label: 'Günlük Hata Sayısı',
-                            data: data.KaliteTrendi.Data,
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
+            }
+        });
+    }
+
+    function createMakineUretimChart(model) {
+        const chartElement = document.getElementById('boyaMakineUretimGrafigi');
+        if (!chartElement) {
+            return;
+        }
+
+        if (!hasNonZeroValues(model.MakineUretimData)) {
+            showNoData('boyaMakineUretimGrafigi', 'Makine üretim verisi bulunamadı.');
+            return;
+        }
+
+        new Chart(chartElement.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: model.MakineLabels || [],
+                datasets: [{
+                    label: 'Toplam Boyanan',
+                    data: model.MakineUretimData || [],
+                    backgroundColor: 'rgba(14, 116, 144, 0.75)',
+                    borderColor: 'rgba(14, 116, 144, 0.95)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
-                });
-    
-                // Üretim Trendi (Line)
-                const uretimTrendCtx = document.getElementById('uretimTrendGrafigi').getContext('2d');
-                new Chart(uretimTrendCtx, {
-                    type: 'line',
-                    data: {
-                        labels: data.UretimTrendi.Labels,
-                        datasets: [{
-                            label: 'Günlük Üretim Sayısı',
-                            data: data.UretimTrendi.Data,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
+                }
+            }
+        });
+    }
+
+    function createMakineOeeChart(model, labelPlugin) {
+        const chartElement = document.getElementById('boyaMakineOeeGrafigi');
+        if (!chartElement) {
+            return;
+        }
+
+        if (!hasNonZeroValues(model.MakineOeeData)) {
+            showNoData('boyaMakineOeeGrafigi', 'Makine OEE verisi bulunamadı.');
+            return;
+        }
+
+        new Chart(chartElement.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: model.MakineLabels || [],
+                datasets: [{
+                    label: 'OEE (%)',
+                    data: model.MakineOeeData || [],
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: 'rgba(16, 185, 129, 0.95)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 100
                     }
-                });
+                }
+            },
+            plugins: labelPlugin ? [labelPlugin] : []
+        });
+    }
+
+    function createDuraklamaChart(model) {
+        const chartElement = document.getElementById('boyaDuraklamaGrafigi');
+        if (!chartElement) {
+            return;
+        }
+
+        if (!hasNonZeroValues(model.DuraklamaNedenData)) {
+            showNoData('boyaDuraklamaGrafigi', 'Duraklama verisi bulunamadı.');
+            return;
+        }
+
+        new Chart(chartElement.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: model.DuraklamaNedenLabels || [],
+                datasets: [{
+                    label: 'Duraklama (dk)',
+                    data: model.DuraklamaNedenData || [],
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.82)',
+                        'rgba(59, 130, 246, 0.82)',
+                        'rgba(245, 158, 11, 0.82)',
+                        'rgba(16, 185, 129, 0.82)',
+                        'rgba(14, 116, 144, 0.82)',
+                        'rgba(99, 102, 241, 0.82)',
+                        'rgba(236, 72, 153, 0.82)',
+                        'rgba(120, 113, 108, 0.82)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function createParcaKarmaChart(model) {
+        const chartElement = document.getElementById('boyaParcaKarmaGrafigi');
+        if (!chartElement) {
+            return;
+        }
+
+        if (!hasNonZeroValues(model.ParcaKarmaData)) {
+            showNoData('boyaParcaKarmaGrafigi', 'Parça dağılım verisi bulunamadı.');
+            return;
+        }
+
+        new Chart(chartElement.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: model.ParcaKarmaLabels || [],
+                datasets: [{
+                    label: 'Parça',
+                    data: model.ParcaKarmaData || [],
+                    backgroundColor: [
+                        'rgba(14, 116, 144, 0.82)',
+                        'rgba(249, 115, 22, 0.82)',
+                        'rgba(132, 204, 22, 0.82)',
+                        'rgba(99, 102, 241, 0.82)',
+                        'rgba(236, 72, 153, 0.82)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
 });

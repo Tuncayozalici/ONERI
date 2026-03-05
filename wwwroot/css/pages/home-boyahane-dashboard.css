@@ -1,0 +1,64 @@
+.boya-page {
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.15) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0) 58%);
+}
+
+.boya-hero {
+    border-top: 4px solid #0e7490;
+}
+
+.boya-kpi {
+    border: 1px solid rgba(14, 116, 144, 0.15);
+}
+
+.boya-kpi .card-title {
+    font-size: 1rem;
+}
+
+.boya-kpi .card-text {
+    font-size: 1.75rem;
+}
+
+.boya-kpi-primary {
+    background: linear-gradient(145deg, #e9f7fb, #ffffff);
+}
+
+.boya-kpi-positive {
+    background: linear-gradient(145deg, #edf8f2, #ffffff);
+    border-color: rgba(22, 163, 74, 0.2);
+}
+
+.boya-kpi-positive-soft {
+    background: linear-gradient(145deg, #f4f9ff, #ffffff);
+    border-color: rgba(59, 130, 246, 0.18);
+}
+
+.boya-kpi-warn {
+    background: linear-gradient(145deg, #fff2f2, #ffffff);
+    border-color: rgba(220, 38, 38, 0.2);
+}
+
+.boya-pie-wrap {
+    height: 380px;
+    max-height: 380px;
+}
+
+.boya-machine-tile h5 {
+    margin-bottom: 0.75rem;
+}
+
+.boya-machine-tile p {
+    color: #495057;
+}
+
+.boya-no-data {
+    height: 100%;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 0.95rem;
+    text-align: center;
+}

@@ -55,7 +55,37 @@ public class DashboardQueryService : IDashboardQueryService
 
         var boyaRows = snapshot.BoyaUretimRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: (double)(x.PanelAdet + x.DosemeAdet)))
+            .Select(x => (
+                x.Tarih,
+                Makine: DashboardParsingHelper.NormalizeLabel(x.Makine),
+                Uretim: (double)x.ToplamBoyananParca,
+                Duraklama: (double)x.DuraklamaDakikaToplam,
+                Performans: x.Performans,
+                Kullanilabilirlik: x.Kullanilabilirlik,
+                Kalite: x.Kalite,
+                Oee: x.Oee))
+            .ToList();
+
+        var boyaHataFromUretimRows = snapshot.BoyaUretimRows
+            .Where(x => x.Tarih != DateTime.MinValue && x.HataliParcaSayisi > 0)
+            .Select(x => (
+                x.Tarih,
+                Adet: (double)x.HataliParcaSayisi,
+                M2: 0d,
+                Neden: (string?)(string.IsNullOrWhiteSpace(x.Aciklama) ? "Boyahane Hatalı Parça" : x.Aciklama),
+                Bolum: (string?)"Boyahane",
+                Operator: (string?)null))
+            .ToList();
+
+        var boyaHataLegacyRows = snapshot.BoyaHataRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .Select(x => (
+                x.Tarih,
+                Adet: (double)x.HataliAdet,
+                M2: 0d,
+                Neden: x.HataNedeni,
+                Bolum: (string?)"Boyahane",
+                Operator: (string?)null))
             .ToList();
 
         var pvcRows = snapshot.PvcRows
@@ -147,9 +177,14 @@ public class DashboardQueryService : IDashboardQueryService
             .Where(x => x.Tarih != DateTime.MinValue)
             .Select(x => (x.Tarih, (double)x.Adet, 0d, x.HataNedeni, x.BolumAdi, (string?)null)));
 
-        hataliRows.AddRange(snapshot.BoyaHataRows
-            .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, (double)x.HataliAdet, 0d, x.HataNedeni, (string?)"Boyahane", (string?)null)));
+        if (boyaHataFromUretimRows.Any())
+        {
+            hataliRows.AddRange(boyaHataFromUretimRows);
+        }
+        else
+        {
+            hataliRows.AddRange(boyaHataLegacyRows);
+        }
 
         var allDates = profilRows.Select(x => x.Tarih.Date)
             .Concat(boyaRows.Select(x => x.Tarih.Date))
@@ -388,9 +423,11 @@ public class DashboardQueryService : IDashboardQueryService
         foreach (var row in boyaRows)
         {
             AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
             if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "Boyahane", row.Uretim);
             }
         }
@@ -483,11 +520,35 @@ public class DashboardQueryService : IDashboardQueryService
                 && x.Tarih.Date <= ozetEnd
                 && IsProfilLazerHataBolumu(x.BolumAdi))
             .Sum(x => (double)x.Adet);
-        var boyahaneDashboardHataAdedi = snapshot.BoyaHataRows
+        var boyahaneDashboardHataAdedi = snapshot.BoyaUretimRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
                 && x.Tarih.Date <= ozetEnd)
-            .Sum(x => (double)x.HataliAdet);
+            .Sum(x => (double)x.HataliParcaSayisi);
+        if (boyahaneDashboardHataAdedi <= 0)
+        {
+            boyahaneDashboardHataAdedi = snapshot.BoyaHataRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd)
+                .Sum(x => (double)x.HataliAdet);
+        }
+
+        var boyahaneHataKatkisi = snapshot.BoyaUretimRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd)
+            .Sum(x => (double)x.HataliParcaSayisi);
+        if (boyahaneHataKatkisi <= 0)
+        {
+            boyahaneHataKatkisi = snapshot.BoyaHataRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd
+                    && !IsMakineHatasi(x.HataNedeni))
+                .Sum(x => (double)x.HataliAdet);
+        }
+
         var hataliParcaDashboardHataAdedi = snapshot.HataliParcaRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
@@ -500,12 +561,7 @@ public class DashboardQueryService : IDashboardQueryService
                     && x.Tarih.Date <= ozetEnd
                     && !IsMakineHatasi(x.HataNedeni))
                 .Sum(x => (double)x.Adet)
-            + snapshot.BoyaHataRows
-                .Where(x => x.Tarih != DateTime.MinValue
-                    && x.Tarih.Date >= ozetStart
-                    && x.Tarih.Date <= ozetEnd
-                    && !IsMakineHatasi(x.HataNedeni))
-                .Sum(x => (double)x.HataliAdet);
+            + boyahaneHataKatkisi;
 
         model.ToplamUretim = uretimGunluk.Values.Sum();
         model.ToplamHataAdet = profilDashboardHataAdedi + boyahaneDashboardHataAdedi + hataliParcaDashboardHataAdedi;
@@ -559,6 +615,10 @@ public class DashboardQueryService : IDashboardQueryService
         model.OrtalamaOee = oeeValues.Any() ? oeeValues.Average() : 0;
 
         var machineOeeRows = new List<(string Machine, double Oee)>();
+        machineOeeRows.AddRange(boyaRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Makine) && !x.Makine.Equals("Bilinmeyen", StringComparison.OrdinalIgnoreCase))
+            .Select(x => ($"Boya - {x.Makine}", x.Oee)));
         machineOeeRows.AddRange(pvcRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
             .Select(x => (DashboardParsingHelper.NormalizeLabel(x.Makine), x.Oee)));
@@ -915,57 +975,262 @@ public class DashboardQueryService : IDashboardQueryService
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
 
-        var viewModel = new BoyaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
-        var uretimListesi = snapshot.BoyaUretimRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
-        var hataListesi = snapshot.BoyaHataRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        static string NormalizeBoyaDuraklamaNedeni(string? neden)
+        {
+            if (string.IsNullOrWhiteSpace(neden))
+            {
+                return string.Empty;
+            }
 
-        if (!uretimListesi.Any() && !hataListesi.Any())
+            var trimmed = neden.Trim();
+            var key = DashboardParsingHelper.NormalizeHeaderForMatch(trimmed);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return trimmed;
+            }
+
+            if (key.Contains("makineariza", StringComparison.OrdinalIgnoreCase) ||
+                key.Contains("makinearizasi", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Makine Arızası";
+            }
+
+            var remaining = key;
+            remaining = remaining.Replace("temizlik", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("hazirlik", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("ilkisinma", string.Empty, StringComparison.OrdinalIgnoreCase);
+            remaining = remaining.Replace("isinma", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(remaining))
+            {
+                return "Temizlik/Hazırlık/İlk Isınma";
+            }
+
+            return DashboardParsingHelper.NormalizeLabel(trimmed);
+        }
+
+        static string NormalizeBoyaMakineAdi(string? makine)
+        {
+            if (string.IsNullOrWhiteSpace(makine))
+            {
+                return "Bilinmeyen";
+            }
+
+            var trimmed = makine.Trim();
+            var key = DashboardParsingHelper.NormalizeHeaderForMatch(trimmed);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return DashboardParsingHelper.NormalizeLabel(trimmed);
+            }
+
+            if (key.Contains("konveyor", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Konveyör Hattı";
+            }
+
+            if (key.Contains("kucukfirin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Küçük Fırın";
+            }
+
+            return DashboardParsingHelper.NormalizeLabel(trimmed);
+        }
+
+        var viewModel = new BoyaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
+        var uretimListesi = snapshot.BoyaUretimRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .ToList();
+        var legacyHataListesi = snapshot.BoyaHataRows
+            .Where(x => x.Tarih != DateTime.MinValue)
+            .ToList();
+
+        if (!uretimListesi.Any() && !legacyHataListesi.Any())
         {
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
             return new DashboardPageResult<BoyaDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
-        var tarihKaynaklari = uretimListesi.Select(x => x.Tarih).Concat(hataListesi.Select(x => x.Tarih));
+        var tarihKaynaklari = uretimListesi
+            .Select(x => x.Tarih)
+            .Concat(legacyHataListesi.Select(x => x.Tarih))
+            .ToList();
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynaklari, DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
 
-        var gununUretimVerileri = uretimListesi.AsQueryable();
-        var gununHataVerileri = hataListesi.AsQueryable();
+        var filtreliUretim = uretimListesi.AsQueryable();
+        var filtreliLegacyHata = legacyHataListesi.AsQueryable();
+        int? yearToUse = null;
 
         if (hasDateRange)
         {
-            gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
-            gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            var selectedRangeStart = rangeStart!.Value;
+            var selectedRangeEnd = rangeEnd!.Value;
+
+            filtreliUretim = filtreliUretim.Where(x => x.Tarih.Date >= selectedRangeStart && x.Tarih.Date <= selectedRangeEnd);
+            filtreliLegacyHata = filtreliLegacyHata.Where(x => x.Tarih.Date >= selectedRangeStart && x.Tarih.Date <= selectedRangeEnd);
+
+            bag["BoyaRange"] = selectedRangeStart == selectedRangeEnd
+                ? $"{selectedRangeStart:dd.MM.yyyy}"
+                : $"{selectedRangeStart:dd.MM.yyyy} - {selectedRangeEnd:dd.MM.yyyy}";
+            bag["BoyaUretimTrendTitle"] = "Toplam Boyanan Parça Trendi (Tarih Aralığı)";
+            bag["BoyaOeeTrendTitle"] = "OEE Bileşen Trendi (Tarih Aralığı)";
+            bag["BoyaHataTrendTitle"] = "Hata Trendi (Tarih Aralığı)";
         }
-        else if (ay.HasValue && yil.HasValue)
+        else if (ay.HasValue)
         {
-            gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
-            gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            var resolvedYear = DashboardParsingHelper.ResolveYearForMonth(tarihKaynaklari, ay.Value, yil);
+            yearToUse = resolvedYear ?? yil ?? islenecekTarih.Year;
+            if (resolvedYear.HasValue && (!yil.HasValue || yil.Value != resolvedYear.Value))
+            {
+                bag["BoyaResolvedYear"] = resolvedYear.Value;
+            }
+
+            filtreliUretim = filtreliUretim.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yearToUse.Value);
+            filtreliLegacyHata = filtreliLegacyHata.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yearToUse.Value);
+
+            var ayBaslangic = new DateTime(yearToUse.Value, ay.Value, 1);
+            var ayBitis = ayBaslangic.AddMonths(1).AddDays(-1);
+            bag["BoyaRange"] = $"{ayBaslangic:dd.MM.yyyy} - {ayBitis:dd.MM.yyyy}";
+            bag["BoyaUretimTrendTitle"] = "Toplam Boyanan Parça Trendi (Aylık)";
+            bag["BoyaOeeTrendTitle"] = "OEE Bileşen Trendi (Aylık)";
+            bag["BoyaHataTrendTitle"] = "Hata Trendi (Aylık)";
         }
         else
         {
-            gununUretimVerileri = gununUretimVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
-            gununHataVerileri = gununHataVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            filtreliUretim = filtreliUretim.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            filtreliLegacyHata = filtreliLegacyHata.Where(x => x.Tarih.Date == islenecekTarih.Date);
+
+            bag["BoyaRange"] = $"{islenecekTarih:dd.MM.yyyy}";
+            bag["BoyaUretimTrendTitle"] = "Toplam Boyanan Parça Trendi (Son 7 Gün)";
+            bag["BoyaOeeTrendTitle"] = "OEE Bileşen Trendi (Son 7 Gün)";
+            bag["BoyaHataTrendTitle"] = "Hata Trendi (Son 7 Gün)";
         }
 
-        viewModel.PanelToplamBoyama = gununUretimVerileri.Sum(x => x.PanelAdet);
-        viewModel.DosemeToplamBoyama = gununUretimVerileri.Sum(x => x.DosemeAdet);
-        viewModel.GunlukToplamBoyama = viewModel.PanelToplamBoyama + viewModel.DosemeToplamBoyama;
-        viewModel.GunlukHataSayisi = gununHataVerileri.Sum(x => x.HataliAdet);
-        viewModel.FireOrani = viewModel.GunlukToplamBoyama > 0
-            ? (viewModel.GunlukHataSayisi / viewModel.GunlukToplamBoyama) * 100
+        var seciliUretim = filtreliUretim.ToList();
+        var seciliLegacyHata = filtreliLegacyHata.ToList();
+
+        viewModel.PanelBoyananParca = seciliUretim.Sum(x => x.PanelAdet);
+        viewModel.DosemeBoyananParca = seciliUretim.Sum(x => x.DosemeAdet);
+        viewModel.BuyukParcaAdedi = seciliUretim.Sum(x => x.BuyukParcaAdeti);
+        viewModel.KucukParcaAdedi = seciliUretim.Sum(x => x.KucukParcaAdeti);
+        viewModel.KirliProfilParca = seciliUretim.Sum(x => x.KirliProfilParcaSayisi);
+        viewModel.ToplamBoyananParca = seciliUretim.Sum(x => x.ToplamBoyananParca);
+        viewModel.ToplamPerformansIcinParcaSayisi = seciliUretim.Sum(x => x.PerformansIcinParcaSayisi);
+        viewModel.UretimHedefGerceklesmeOrani = viewModel.ToplamPerformansIcinParcaSayisi > 0
+            ? (viewModel.ToplamBoyananParca / viewModel.ToplamPerformansIcinParcaSayisi) * 100
             : 0;
 
-        var hataGruplari = gununHataVerileri
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
-            .Select(g => new { Neden = g.Key, Toplam = g.Sum(x => x.HataliAdet) })
-            .OrderByDescending(x => x.Toplam)
+        var uretimdenHataToplami = seciliUretim.Sum(x => (double)x.HataliParcaSayisi);
+        viewModel.ToplamHataliParca = uretimdenHataToplami > 0
+            ? uretimdenHataToplami
+            : seciliLegacyHata.Sum(x => (double)x.HataliAdet);
+        viewModel.HataOrani = viewModel.ToplamBoyananParca > 0
+            ? (viewModel.ToplamHataliParca / viewModel.ToplamBoyananParca) * 100
+            : 0;
+
+        viewModel.ToplamDuraklamaDakika = seciliUretim.Sum(x => x.DuraklamaDakikaToplam);
+        var hatHiziValues = seciliUretim.Where(x => x.HatHizi > 0).Select(x => x.HatHizi).ToList();
+        viewModel.OrtalamaHatHizi = hatHiziValues.Any() ? hatHiziValues.Average() : 0;
+
+        var performansValues = seciliUretim.Where(x => x.Performans > 0).Select(x => x.Performans).ToList();
+        var kaliteValues = seciliUretim.Where(x => x.Kalite > 0).Select(x => x.Kalite).ToList();
+        var kullanilabilirlikValues = seciliUretim.Where(x => x.Kullanilabilirlik > 0).Select(x => x.Kullanilabilirlik).ToList();
+        var oeeValues = seciliUretim.Where(x => x.Oee > 0).Select(x => x.Oee).ToList();
+
+        viewModel.OrtalamaPerformans = performansValues.Any() ? performansValues.Average() : 0;
+        viewModel.OrtalamaKalite = kaliteValues.Any() ? kaliteValues.Average() : 0;
+        viewModel.OrtalamaKullanilabilirlik = kullanilabilirlikValues.Any() ? kullanilabilirlikValues.Average() : 0;
+        viewModel.OrtalamaOee = oeeValues.Any() ? oeeValues.Average() : 0;
+
+        viewModel.ToplamKayitSayisi = seciliUretim.Count;
+        viewModel.OgleArasiCalisilanKayitSayisi = seciliUretim.Count(x => x.OgleArasiCalisildi);
+        viewModel.OgleArasiCalismaOrani = viewModel.ToplamKayitSayisi > 0
+            ? (viewModel.OgleArasiCalisilanKayitSayisi / viewModel.ToplamKayitSayisi) * 100
+            : 0;
+
+        var parcaKarmasi = new List<(string Label, double Value)>
+        {
+            ("Panel", viewModel.PanelBoyananParca),
+            ("Döşeme", viewModel.DosemeBoyananParca),
+            ("Büyük Parça", viewModel.BuyukParcaAdedi),
+            ("Küçük Parça", viewModel.KucukParcaAdedi),
+            ("Kirli Profil", viewModel.KirliProfilParca)
+        }.Where(x => x.Value > 0).ToList();
+
+        viewModel.ParcaKarmaLabels = parcaKarmasi.Select(x => x.Label).ToList();
+        viewModel.ParcaKarmaData = parcaKarmasi.Select(x => x.Value).ToList();
+
+        var makineOzetMap = seciliUretim
+            .GroupBy(x => NormalizeBoyaMakineAdi(x.Makine))
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var makineOeeValues = g.Where(v => v.Oee > 0).Select(v => v.Oee).ToList();
+                    return new MakineKartOzetModel
+                    {
+                        MakineAdi = g.Key,
+                        Uretim = g.Sum(v => (double)v.ToplamBoyananParca),
+                        HataliParca = g.Sum(v => (double)v.HataliParcaSayisi),
+                        DuraklamaDakika = g.Sum(v => (double)v.DuraklamaDakikaToplam),
+                        Oee = makineOeeValues.Any() ? makineOeeValues.Average() : 0
+                    };
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        // Boyahane tarafında makine kimliği iki ana hatta normalize edilir.
+        var zorunluMakineSirasi = new[] { "Konveyör Hattı", "Küçük Fırın" };
+        var ekMakineAdlari = makineOzetMap.Keys
+            .Where(x => !zorunluMakineSirasi.Contains(x, StringComparer.OrdinalIgnoreCase))
+            .Where(x => !x.Equals("Bilinmeyen", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x)
             .ToList();
 
-        viewModel.HataNedenleriListesi = hataGruplari.Select(x => x.Neden).ToList();
-        viewModel.HataSayilariListesi = hataGruplari.Select(x => (int)x.Toplam).ToList();
+        var makineSirasi = zorunluMakineSirasi
+            .Concat(ekMakineAdlari)
+            .ToList();
+
+        if (!makineSirasi.Any())
+        {
+            makineSirasi = zorunluMakineSirasi.ToList();
+        }
+
+        viewModel.MakineKartlari = makineSirasi
+            .Select(makineAdi => makineOzetMap.TryGetValue(makineAdi, out var kart)
+                ? kart
+                : new MakineKartOzetModel { MakineAdi = makineAdi })
+            .ToList();
+
+        viewModel.MakineLabels = viewModel.MakineKartlari.Select(x => x.MakineAdi).ToList();
+        viewModel.MakineUretimData = viewModel.MakineKartlari.Select(x => x.Uretim).ToList();
+        viewModel.MakineOeeData = viewModel.MakineKartlari.Select(x => x.Oee).ToList();
+
+        var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in seciliUretim)
+        {
+            DashboardParsingHelper.AddDuraklama(
+                duraklamaNedenleri,
+                NormalizeBoyaDuraklamaNedeni(row.DuraklamaNedeni1),
+                row.DuraklamaSuresi1);
+            DashboardParsingHelper.AddDuraklama(
+                duraklamaNedenleri,
+                NormalizeBoyaDuraklamaNedeni(row.DuraklamaNedeni2),
+                row.DuraklamaSuresi2);
+            DashboardParsingHelper.AddDuraklama(
+                duraklamaNedenleri,
+                NormalizeBoyaDuraklamaNedeni(row.DuraklamaNedeni3),
+                row.DuraklamaSuresi3);
+        }
+
+        var duraklamaList = duraklamaNedenleri
+            .OrderByDescending(x => x.Value)
+            .Take(10)
+            .ToList();
+        viewModel.DuraklamaNedenLabels = duraklamaList.Select(x => x.Key).ToList();
+        viewModel.DuraklamaNedenData = duraklamaList.Select(x => x.Value).ToList();
 
         DateTime trendBaslangic;
         DateTime trendBitis;
@@ -973,62 +1238,70 @@ public class DashboardQueryService : IDashboardQueryService
         {
             trendBaslangic = rangeStart!.Value;
             trendBitis = rangeEnd!.Value;
-            bag["UretimDagilimiTitle"] = "Tarih Aralığı Üretim Dağılımı (Panel vs Döşeme)";
-            bag["KaliteTrendTitle"] = "Kalite Trendi (Tarih Aralığı)";
-            bag["UretimTrendTitle"] = "Üretim Trendi (Tarih Aralığı)";
         }
-        else if (ay.HasValue && yil.HasValue)
+        else if (ay.HasValue)
         {
-            trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
+            var yearForTrend = yearToUse ?? yil ?? islenecekTarih.Year;
+            trendBaslangic = new DateTime(yearForTrend, ay.Value, 1);
             trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
-            bag["UretimDagilimiTitle"] = "Aylık Üretim Dağılımı (Panel vs Döşeme)";
-            bag["KaliteTrendTitle"] = "Kalite Trendi (Aylık)";
-            bag["UretimTrendTitle"] = "Üretim Trendi (Aylık)";
         }
         else
         {
-            var referansTarih = islenecekTarih;
-            trendBaslangic = referansTarih.AddDays(-6);
-            trendBitis = referansTarih;
-            bag["UretimDagilimiTitle"] = "Üretim Dağılımı (Panel vs Döşeme)";
-            bag["KaliteTrendTitle"] = "Kalite Trendi (Son 7 Gün)";
-            bag["UretimTrendTitle"] = "Üretim Trendi (Son 7 Gün)";
+            trendBitis = islenecekTarih;
+            trendBaslangic = islenecekTarih.AddDays(-6);
         }
 
         var tumTarihler = Enumerable.Range(0, (trendBitis.Date - trendBaslangic.Date).Days + 1)
             .Select(offset => trendBaslangic.Date.AddDays(offset))
             .ToList();
 
-        var uretimDagilimi = uretimListesi
+        var trendKaynak = uretimListesi
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+            .ToList();
+
+        var trendKaynakHataVar = trendKaynak.Any(x => x.HataliParcaSayisi > 0);
+
+        var uretimGunluk = trendKaynak
             .GroupBy(x => x.Tarih.Date)
-            .Select(g => new { Tarih = g.Key, Panel = g.Sum(x => x.PanelAdet), Doseme = g.Sum(x => x.DosemeAdet) })
-            .OrderBy(x => x.Tarih)
-            .ToDictionary(x => x.Tarih, x => x);
-
-        viewModel.UretimDagilimi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        viewModel.UretimDagilimi.PanelData = tumTarihler.Select(t => uretimDagilimi.TryGetValue(t, out var v) ? v.Panel : 0).ToList();
-        viewModel.UretimDagilimi.DosemeData = tumTarihler.Select(t => uretimDagilimi.TryGetValue(t, out var v) ? v.Doseme : 0).ToList();
-
-        var hataDagilimi = hataListesi
-            .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(x => (double)x.ToplamBoyananParca));
+        var hedefGunluk = trendKaynak
             .GroupBy(x => x.Tarih.Date)
-            .Select(g => new { Tarih = g.Key, ToplamHata = g.Sum(x => x.HataliAdet) })
-            .OrderBy(x => x.Tarih)
-            .ToDictionary(x => x.Tarih, x => x.ToplamHata);
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.PerformansIcinParcaSayisi));
 
-        viewModel.KaliteTrendi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        viewModel.KaliteTrendi.Data = tumTarihler.Select(t => hataDagilimi.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
+        var hataGunluk = trendKaynakHataVar
+            ? trendKaynak
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => (double)x.HataliParcaSayisi))
+            : legacyHataListesi
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => (double)x.HataliAdet));
 
-        var uretimTrend = uretimListesi
-            .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+        var performansGunluk = trendKaynak
+            .Where(x => x.Performans > 0)
             .GroupBy(x => x.Tarih.Date)
-            .Select(g => new { Tarih = g.Key, ToplamUretim = g.Sum(x => x.PanelAdet + x.DosemeAdet) })
-            .OrderBy(x => x.Tarih)
-            .ToDictionary(x => x.Tarih, x => x.ToplamUretim);
+            .ToDictionary(g => g.Key, g => g.Average(x => x.Performans));
+        var kaliteGunluk = trendKaynak
+            .Where(x => x.Kalite > 0)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Average(x => x.Kalite));
+        var kullanilabilirlikGunluk = trendKaynak
+            .Where(x => x.Kullanilabilirlik > 0)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Average(x => x.Kullanilabilirlik));
+        var oeeGunluk = trendKaynak
+            .Where(x => x.Oee > 0)
+            .GroupBy(x => x.Tarih.Date)
+            .ToDictionary(g => g.Key, g => g.Average(x => x.Oee));
 
-        viewModel.UretimTrendi.Labels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        viewModel.UretimTrendi.Data = tumTarihler.Select(t => uretimTrend.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
+        viewModel.UretimTrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
+        viewModel.UretimTrendData = tumTarihler.Select(t => uretimGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.HedefTrendData = tumTarihler.Select(t => hedefGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.HataTrendData = tumTarihler.Select(t => hataGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.PerformansTrendData = tumTarihler.Select(t => performansGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.KaliteTrendData = tumTarihler.Select(t => kaliteGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.KullanilabilirlikTrendData = tumTarihler.Select(t => kullanilabilirlikGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.OeeTrendData = tumTarihler.Select(t => oeeGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
 
         return new DashboardPageResult<BoyaDashboardViewModel>
         {
@@ -2307,16 +2580,35 @@ public class DashboardQueryService : IDashboardQueryService
                 HataNedeni = x.HataNedeni
             }));
 
-        excelData.AddRange(snapshot.BoyaHataRows
-            .Where(x => x.Tarih != DateTime.MinValue)
+        var boyaHataUretimRows = snapshot.BoyaUretimRows
+            .Where(x => x.Tarih != DateTime.MinValue && x.HataliParcaSayisi > 0)
             .Select(x => new HataliParcaSatirModel
             {
                 Tarih = x.Tarih,
                 BolumAdi = "Boyahane",
-                Adet = x.HataliAdet,
+                Adet = x.HataliParcaSayisi,
                 ToplamM2 = 0,
-                HataNedeni = x.HataNedeni
-            }));
+                HataNedeni = string.IsNullOrWhiteSpace(x.Aciklama) ? "Boyahane Hatalı Parça" : x.Aciklama
+            })
+            .ToList();
+
+        if (boyaHataUretimRows.Any())
+        {
+            excelData.AddRange(boyaHataUretimRows);
+        }
+        else
+        {
+            excelData.AddRange(snapshot.BoyaHataRows
+                .Where(x => x.Tarih != DateTime.MinValue)
+                .Select(x => new HataliParcaSatirModel
+                {
+                    Tarih = x.Tarih,
+                    BolumAdi = "Boyahane",
+                    Adet = x.HataliAdet,
+                    ToplamM2 = 0,
+                    HataNedeni = x.HataNedeni
+                }));
+        }
 
         if (!excelData.Any())
         {

@@ -5,112 +5,171 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/boyahane.css" />
+    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-boyahane-dashboard.css" asp-append-version="true" />
 }
 
-<div class="container">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="display-6">Boyahane Üretim Raporu</h2>
-        </div>
-        <div class="col-md-6">
-            <form asp-action="BoyahaneDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
-                @await Html.PartialAsync("_UnifiedDateFilter")
-                <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
-            </form>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-        </div>
-    </div>
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+}
 
-    <!-- KPI Kartları -->
-    <div class="row g-4 mb-5">
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Günlük Toplam Boyama</h5>
-                    <p class="card-text">@Model.GunlukToplamBoyama.ToString("N0") adet</p>
-                </div>
-            </div>
+<div class="daily-page boya-page">
+    <div class="container">
+        <div class="daily-hero boya-hero">
+            <div class="hero-kicker"><i class="bi bi-palette2"></i> Boyahane</div>
+            <h2>Boyahane Operasyon Panosu</h2>
+            <p class="text-muted mb-0">Yeni Excel yapısına göre üretim, kalite, duraklama ve OEE performansını tek ekranda izleyin.</p>
         </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Panel Toplam Boyama</h5>
-                    <p class="card-text">@Model.PanelToplamBoyama.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Döşeme Toplam Boyama</h5>
-                    <p class="card-text">@Model.DosemeToplamBoyama.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-x-circle me-2"></i>Günlük Hata Sayısı</h5>
-                    <p class="card-text">@Model.GunlukHataSayisi.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-12">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-trash me-2"></i>Fire/Hata Oranı</h5>
-                    <p class="card-text">@Model.FireOrani.ToString("F2") %</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Grafikler -->
-    <div class="row g-5">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.UretimDagilimiTitle ?? "Üretim Dağılımı (Panel vs Döşeme)")
-                </div>
-                <div class="card-body">
-                    <canvas id="uretimDagilimGrafigi"></canvas>
-                </div>
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-6">
+                <small class="text-muted">Seçili Aralık: @ViewBag.BoyaRange</small>
+            </div>
+            <div class="col-md-6">
+                <form asp-action="BoyahaneDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
+                    <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
+                </form>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Hata Nedenleri Analizi
+
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Boyanan</h5>
+                        <p class="card-text">@Model.ToplamBoyananParca.ToString("N0")</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="hataGrafigi" class="chart-pie"></canvas>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-bullseye me-2"></i>Performans İçin Parça</h5>
+                        <p class="card-text">@Model.ToplamPerformansIcinParcaSayisi.ToString("N0")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-warn">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-exclamation-octagon me-2"></i>Toplam Hatalı Parça</h5>
+                        <p class="card-text">@Model.ToplamHataliParca.ToString("N0")</p>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.KaliteTrendTitle ?? "Kalite Trendi (Son 7 Gün)")
+
+        <div class="row g-4 mb-5">
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Duraklama</h5>
+                        <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0") dk</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="kaliteTrendGrafigi"></canvas>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Hat Hızı</h5>
+                        <p class="card-text">@Model.OrtalamaHatHizi.ToString("N2")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
+                        <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
+                        <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-lightning-charge me-2"></i>Kullanılabilirlik</h5>
+                        <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card h-100 boya-kpi boya-kpi-positive">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-clipboard-data me-2"></i>OEE</h5>
+                        <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.UretimTrendTitle ?? "Üretim Trendi (Son 7 Gün)")
+
+        <div class="row g-5">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">@(ViewBag.BoyaUretimTrendTitle ?? "Toplam Boyanan Parça Trendi")</div>
+                    <div class="card-body">
+                        <canvas id="boyaUretimHedefTrendGrafigi"></canvas>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="uretimTrendGrafigi"></canvas>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">@(ViewBag.BoyaOeeTrendTitle ?? "OEE Bileşen Trendi")</div>
+                    <div class="card-body">
+                        <canvas id="boyaOeeBilesenTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Makine Bazlı Üretim</div>
+                    <div class="card-body">
+                        <canvas id="boyaMakineUretimGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Makine Bazlı OEE</div>
+                    <div class="card-body">
+                        <canvas id="boyaMakineOeeGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Duraklama Nedenleri</div>
+                    <div class="card-body">
+                        <div class="chart-pie-wrap boya-pie-wrap">
+                            <canvas id="boyaDuraklamaGrafigi" class="chart-pie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Parça Türü Dağılımı</div>
+                    <div class="card-body">
+                        <div class="chart-pie-wrap boya-pie-wrap">
+                            <canvas id="boyaParcaKarmaGrafigi" class="chart-pie"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -120,7 +179,7 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="boyahane-dashboard-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = (int?)null }))
+        @Html.Raw(Json.Serialize(new { model = Model }))
     </script>
     <script src="~/js/pages/dashboards/boyahane-dashboard.js" asp-append-version="true"></script>
 }

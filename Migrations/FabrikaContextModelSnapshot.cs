@@ -203,7 +203,7 @@ namespace ONERI.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .HasDatabaseName("EmailIndex"); 
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()

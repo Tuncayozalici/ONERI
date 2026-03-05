@@ -63,6 +63,44 @@ public class DashboardQueryServiceTests
         Assert.Equal(41d, result.Model.ToplamHataAdet);
     }
 
+    [Fact]
+    public async Task GetGunlukVerilerAsync_IntegratesBoyaDuraklamaAndMachineOee()
+    {
+        var selectedDate = new DateTime(2026, 3, 4);
+        var snapshot = new DashboardDataSnapshot
+        {
+            BoyaUretimRows = new List<BoyaUretimSatir>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    Makine = "KONVEYÖR HATTI",
+                    DuraklamaSuresi1 = 30,
+                    DuraklamaSuresi2 = 10,
+                    DuraklamaSuresi3 = 20,
+                    Toplam = 900,
+                    Oee = 42.5,
+                    Performans = 50,
+                    Kalite = 99,
+                    Kullanilabilirlik = 80
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetGunlukVerilerAsync(
+            raporTarihi: null,
+            baslangicTarihi: selectedDate,
+            bitisTarihi: selectedDate,
+            ay: null,
+            yil: null,
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(60d, result.Model.ToplamDuraklamaDakika);
+        Assert.Contains("Boya - Konveyör Hattı", result.Model.MakineOeeLabels);
+    }
+
     private sealed class StubDashboardIngestionService : IDashboardIngestionService
     {
         private readonly DashboardDataSnapshot _snapshot;

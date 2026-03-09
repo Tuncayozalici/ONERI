@@ -4,7 +4,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" />
+    <link rel="stylesheet" href="~/css/pages/home-tezgah-dashboard.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
@@ -12,103 +12,165 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="container">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="display-6">Tezgah Üretim Raporu</h2>
-        </div>
-        <div class="col-md-6">
-            <form asp-action="TezgahDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
-                @await Html.PartialAsync("_UnifiedDateFilter")
-                <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
-            </form>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Parça</h5>
-                    <p class="card-text">@Model.ToplamParcaAdeti.ToString("N0")</p>
+<div class="tezgah-page">
+    <div class="container py-4 py-lg-5">
+        <section class="tezgah-hero mb-4">
+            <div class="tezgah-hero__content">
+                <div class="tezgah-hero__eyebrow">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    GİRDİ RAPORU
                 </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Ortalama Kişi Sayısı</h5>
-                    <p class="card-text">@Model.OrtalamaKisiSayisi.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Toplam Kayıp Süre (dk)</h5>
-                    <p class="card-text">@Model.ToplamKayipSureDakika.ToString("N0")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Kullanılabilirlik</h5>
-                    <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("F2") %</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-5">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.TezgahTrendTitle ?? "Üretim Trendi (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="parcaTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.TezgahKisiTrendTitle ?? "Kişi Sayısı (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="kisiTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.TezgahKullanilabilirlikTitle ?? "Kullanılabilirlik (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="kullanilabilirlikGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Kayıp Süre Nedenleri
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="kayipNedenGrafigi" class="chart-pie"></canvas>
+                <h1>Tezgah Bölümü Performans Ekranı</h1>
+                <p>
+                    Ürün, kişi, süre, kayıp süre ve OEE kayıtlarını tek ekranda izleyin.
+                    KPI kartları ve grafikler seçilen döneme göre otomatik yeniden hesaplanır.
+                </p>
+                <div class="tezgah-hero__facts">
+                    <div class="tezgah-fact">
+                        <span>Kayıt</span>
+                        <strong>@Model.KayitSayisi</strong>
+                    </div>
+                    <div class="tezgah-fact">
+                        <span>Aktif ürün</span>
+                        <strong>@Model.AktifUrunSayisi</strong>
+                    </div>
+                    <div class="tezgah-fact tezgah-fact--wide">
+                        <span>Öne çıkan ürün</span>
+                        <strong>@Model.OneCikanUrun</strong>
+                    </div>
+                    <div class="tezgah-fact tezgah-fact--wide">
+                        <span>Baskın kayıp nedeni</span>
+                        <strong>@Model.BaskinKayipNedeni</strong>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <div class="tezgah-hero__panel">
+                <form asp-action="TezgahDashboard" method="get" class="tezgah-filter-form js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    <div class="tezgah-filter-form__actions">
+                        <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                        <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    </div>
+                </form>
+
+                <div class="tezgah-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                </div>
+
+                <div class="tezgah-hero__note">
+                    <p>
+                        <strong>Net süre</strong> toplam çalışma süresinden kayıtlı kayıp sürelerin düşülmüş halidir.
+                        <strong>Verimli çalışma oranı</strong> net süre / toplam süre hesabıyla üretilir.
+                    </p>
+                    <p class="mb-0">
+                        <strong>Ürün bazlı saatlik verim</strong> ise her ürün için toplam parça / toplam kişi-saat formülüyle hesaplanır.
+                        Kişi-saat değeri, ilgili üründeki satırlar için <strong>Kişi Sayısı x Süre(DK) / 60</strong> toplamıdır.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="tezgah-kpis mb-4">
+            <article class="tezgah-kpi tezgah-kpi--emerald">
+                <span class="tezgah-kpi__label">Toplam Parça</span>
+                <strong class="tezgah-kpi__value">@Model.ToplamParcaAdeti.ToString("N0")</strong>
+                <small class="tezgah-kpi__meta">Seçilen dönem üretim hacmi</small>
+            </article>
+            <article class="tezgah-kpi tezgah-kpi--cyan">
+                <span class="tezgah-kpi__label">Net Üretim Süresi</span>
+                <strong class="tezgah-kpi__value">@Model.ToplamNetSureDakika.ToString("N0") dk</strong>
+                <small class="tezgah-kpi__meta">Kayıp sonrası kalan süre</small>
+            </article>
+            <article class="tezgah-kpi tezgah-kpi--violet">
+                <span class="tezgah-kpi__label">Saatlik Üretim</span>
+                <strong class="tezgah-kpi__value">@Model.OrtalamaSaatlikUretim.ToString("N1")</strong>
+                <small class="tezgah-kpi__meta">Net süreye göre parça/saat</small>
+            </article>
+            <article class="tezgah-kpi tezgah-kpi--stone">
+                <span class="tezgah-kpi__label">Ortalama Kişi</span>
+                <strong class="tezgah-kpi__value">@Model.OrtalamaKisiSayisi.ToString("N1")</strong>
+                <small class="tezgah-kpi__meta">Pozitif kişi kayıtlarının ortalaması</small>
+            </article>
+        </section>
+
+        <section class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>@(ViewBag.TezgahTrendTitle ?? "Üretim ve Süre Trendi")</h2>
+                            <p>Günlük üretim miktarı ile harcanan süreyi birlikte izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body tezgah-panel__body--chart-lg">
+                        <canvas id="uretimSureGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>Dönem Özeti</h2>
+                            <p>Seçili tarih aralığı için hızlı okuma kartı.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body">
+                        <div class="tezgah-summary-list">
+                            <div class="tezgah-summary-item">
+                                <span>Toplam ürün çeşidi</span>
+                                <strong>@Model.AktifUrunSayisi</strong>
+                            </div>
+                            <div class="tezgah-summary-item">
+                                <span>En yüksek üretim</span>
+                                <strong>@Model.OneCikanUrun</strong>
+                            </div>
+                            <div class="tezgah-summary-item">
+                                <span>En yüksek kayıp</span>
+                                <strong>@Model.BaskinKayipNedeni</strong>
+                            </div>
+                            <div class="tezgah-summary-item">
+                                <span>Kayıp payı</span>
+                                <strong>
+                                    @((Model.ToplamSureDakika > 0 ? (Model.ToplamKayipSureDakika / Model.ToplamSureDakika) * 100d : 0).ToString("N1"))%
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>Ürün Bazlı Üretim</h2>
+                            <p>Seçilen dönemde en yüksek parçayı çıkaran ürünler.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body tezgah-panel__body--chart">
+                        <canvas id="urunGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>Ürün Bazlı Saatlik Verim</h2>
+                            <p>Ürün başına toplam parça / toplam kişi-saat karşılaştırması.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body tezgah-panel__body--chart">
+                        <canvas id="verimlilikGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </section>
     </div>
 </div>
 

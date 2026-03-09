@@ -1,11 +1,18 @@
 @model ONERI.Models.BoyaDashboardViewModel
+@using System.Linq
 @{
     ViewData["Title"] = "Boyahane Verileri";
+
+    var aktifHatSayisi = Model.MakineKartlari.Count(x => x.Uretim > 0 || x.Oee > 0 || x.DuraklamaDakika > 0 || x.HataliParca > 0);
+    var oneCikanHat = Model.MakineKartlari
+        .Where(x => x.Uretim > 0)
+        .OrderByDescending(x => x.Uretim)
+        .FirstOrDefault();
+    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault();
+    var baskinParcaTuru = Model.ParcaKarmaLabels.FirstOrDefault();
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" />
-    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/home-boyahane-dashboard.css" asp-append-version="true" />
 }
 
@@ -14,165 +21,270 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="daily-page boya-page">
-    <div class="container">
-        <div class="daily-hero boya-hero">
-            <div class="hero-kicker"><i class="bi bi-palette2"></i> Boyahane</div>
-            <h2>Boyahane Operasyon Panosu</h2>
-            <p class="text-muted mb-0">Yeni Excel yapısına göre üretim, kalite, duraklama ve OEE performansını tek ekranda izleyin.</p>
-        </div>
-
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-6">
-                <small class="text-muted">Seçili Aralık: @ViewBag.BoyaRange</small>
+<div class="boya-page">
+    <div class="container py-4 py-lg-5">
+        <section class="boya-hero mb-4">
+            <div class="boya-hero__content">
+                <div class="boya-hero__eyebrow">
+                    <i class="bi bi-palette2"></i>
+                    OPERASYON RAPORU
+                </div>
+                <h1>Boyahane Operasyon Panosu</h1>
+                <p>
+                    Üretim, performans hedefi, kalite ve OEE sinyallerini tek akışta izleyin.
+                    KPI kartları ve grafikler seçilen döneme göre otomatik olarak yeniden hesaplanır.
+                </p>
+                <div class="boya-hero__facts">
+                    <div class="boya-fact">
+                        <span>Kayıt</span>
+                        <strong>@Model.ToplamKayitSayisi.ToString("N0")</strong>
+                    </div>
+                    <div class="boya-fact">
+                        <span>Aktif hat</span>
+                        <strong>@aktifHatSayisi</strong>
+                    </div>
+                    <div class="boya-fact boya-fact--wide">
+                        <span>Öne çıkan hat</span>
+                        <strong>@(oneCikanHat?.MakineAdi ?? "Veri bulunamadı")</strong>
+                    </div>
+                    <div class="boya-fact boya-fact--wide">
+                        <span>Baskın duraklama</span>
+                        <strong>@(!string.IsNullOrWhiteSpace(baskinDuraklama) ? baskinDuraklama : "Duraklama kaydı yok")</strong>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6">
-                <form asp-action="BoyahaneDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+
+            <div class="boya-hero__panel">
+                <form asp-action="BoyahaneDashboard" method="get" class="boya-filter-form js-unified-date-filter-form">
                     @await Html.PartialAsync("_UnifiedDateFilter")
-                    <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                    <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    <div class="boya-filter-form__actions">
+                        <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                        <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    </div>
                 </form>
-            </div>
-        </div>
 
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-            </div>
-        </div>
+                <div class="boya-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                </div>
 
-        <div class="row g-4 mb-4">
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-primary">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Boyanan</h5>
-                        <p class="card-text">@Model.ToplamBoyananParca.ToString("N0")</p>
-                    </div>
+                <div class="boya-hero__note">
+                    <p>
+                        <strong>Hedef gerçekleşme</strong> toplam boyanan parça / performans için parça oranıdır.
+                        <strong>Kalite oranı</strong> hatalı parçaların toplam boyanan içindeki etkisini dolaylı olarak yansıtır.
+                    </p>
+                    <p class="mb-0">
+                        <strong>OEE</strong>, performans, kalite ve kullanılabilirlik sinyallerinin birleşik görünümüdür.
+                        Hat bazlı kartlar, üretim ve duraklama yükünü aynı panel içinde karşılaştırmak için hazırlanmıştır.
+                    </p>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-primary">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-bullseye me-2"></i>Performans İçin Parça</h5>
-                        <p class="card-text">@Model.ToplamPerformansIcinParcaSayisi.ToString("N0")</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-warn">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-exclamation-octagon me-2"></i>Toplam Hatalı Parça</h5>
-                        <p class="card-text">@Model.ToplamHataliParca.ToString("N0")</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
 
-        <div class="row g-4 mb-5">
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Duraklama</h5>
-                        <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0") dk</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Hat Hızı</h5>
-                        <p class="card-text">@Model.OrtalamaHatHizi.ToString("N2")</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
-                        <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
-                        <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-positive-soft">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-lightning-charge me-2"></i>Kullanılabilirlik</h5>
-                        <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <div class="kpi-card h-100 boya-kpi boya-kpi-positive">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-clipboard-data me-2"></i>OEE</h5>
-                        <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <section class="boya-kpis mb-4">
+            <article class="boya-kpi boya-kpi--cyan">
+                <span class="boya-kpi__label">Toplam Boyanan</span>
+                <strong class="boya-kpi__value">@Model.ToplamBoyananParca.ToString("N0")</strong>
+                <small class="boya-kpi__meta">Seçilen dönem üretim hacmi</small>
+            </article>
+            <article class="boya-kpi boya-kpi--amber">
+                <span class="boya-kpi__label">Performans İçin Parça</span>
+                <strong class="boya-kpi__value">@Model.ToplamPerformansIcinParcaSayisi.ToString("N0")</strong>
+                <small class="boya-kpi__meta">Hedefe esas alınan üretim</small>
+            </article>
+            <article class="boya-kpi boya-kpi--rose">
+                <span class="boya-kpi__label">Toplam Duraklama</span>
+                <strong class="boya-kpi__value">@Model.ToplamDuraklamaDakika.ToString("N0") dk</strong>
+                <small class="boya-kpi__meta">Kayıtlı duruş süresi</small>
+            </article>
+            <article class="boya-kpi boya-kpi--violet">
+                <span class="boya-kpi__label">Ortalama OEE</span>
+                <strong class="boya-kpi__value">@Model.OrtalamaOee.ToString("N2")%</strong>
+                <small class="boya-kpi__meta">Seçili dönemin bileşik verimi</small>
+            </article>
+            <article class="boya-kpi boya-kpi--emerald">
+                <span class="boya-kpi__label">Performans</span>
+                <strong class="boya-kpi__value">@Model.OrtalamaPerformans.ToString("N2")%</strong>
+                <small class="boya-kpi__meta">Hat hızının hedefe yakınlığı</small>
+            </article>
+            <article class="boya-kpi boya-kpi--stone">
+                <span class="boya-kpi__label">Kalite</span>
+                <strong class="boya-kpi__value">@Model.OrtalamaKalite.ToString("N2")%</strong>
+                <small class="boya-kpi__meta">Kalite kaybı sonrası net oran</small>
+            </article>
+            <article class="boya-kpi boya-kpi--indigo">
+                <span class="boya-kpi__label">Kullanılabilirlik</span>
+                <strong class="boya-kpi__value">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</strong>
+                <small class="boya-kpi__meta">Planlanan sürede çalışabilirlik</small>
+            </article>
+            <article class="boya-kpi boya-kpi--slate">
+                <span class="boya-kpi__label">Hata Oranı</span>
+                <strong class="boya-kpi__value">@Model.HataOrani.ToString("N2")%</strong>
+                <small class="boya-kpi__meta">Toplam boyanan içindeki hata payı</small>
+            </article>
+        </section>
 
-        <div class="row g-5">
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">@(ViewBag.BoyaUretimTrendTitle ?? "Toplam Boyanan Parça Trendi")</div>
-                    <div class="card-body">
+        <section class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>@(ViewBag.BoyaUretimTrendTitle ?? "Toplam Boyanan Parça Trendi")</h2>
+                            <p>Toplam boyanan ve hedefe esas alınan parça hareketini birlikte izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart-lg">
                         <canvas id="boyaUretimHedefTrendGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">@(ViewBag.BoyaOeeTrendTitle ?? "OEE Bileşen Trendi")</div>
-                    <div class="card-body">
+
+            <div class="col-12 col-xl-4">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Dönem Özeti</h2>
+                            <p>Seçili tarih aralığı için hızlı okuma kartı.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body">
+                        <div class="boya-summary-list">
+                            <div class="boya-summary-item">
+                                <span>Seçili aralık</span>
+                                <strong>@ViewBag.BoyaRange</strong>
+                            </div>
+                            <div class="boya-summary-item">
+                                <span>Hedef gerçekleşme</span>
+                                <strong>@Model.UretimHedefGerceklesmeOrani.ToString("N2")%</strong>
+                            </div>
+                            <div class="boya-summary-item">
+                                <span>Öğle arasında çalışma</span>
+                                <strong>@Model.OgleArasiCalismaOrani.ToString("N1")%</strong>
+                            </div>
+                            <div class="boya-summary-item">
+                                <span>Baskın parça türü</span>
+                                <strong>@(!string.IsNullOrWhiteSpace(baskinParcaTuru) ? baskinParcaTuru : "Parça kaydı yok")</strong>
+                            </div>
+                            <div class="boya-summary-item">
+                                <span>Ortalama hat hızı</span>
+                                <strong>@Model.OrtalamaHatHizi.ToString("N2")</strong>
+                            </div>
+                            <div class="boya-summary-item">
+                                <span>Toplam hatalı parça</span>
+                                <strong>@Model.ToplamHataliParca.ToString("N0")</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-8">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>@(ViewBag.BoyaOeeTrendTitle ?? "OEE Bileşen Trendi")</h2>
+                            <p>Performans, kalite, kullanılabilirlik ve OEE eğilimlerini aynı eksende kıyaslayın.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart-lg">
                         <canvas id="boyaOeeBilesenTrendGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">Makine Bazlı Üretim</div>
-                    <div class="card-body">
+
+            <div class="col-12 col-xl-4">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Hat Özeti</h2>
+                            <p>Makine kartlarında üretim, duraklama ve OEE aynı blokta.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body">
+                        <div class="boya-machine-list">
+                            @foreach (var makine in Model.MakineKartlari)
+                            {
+                                <article class="boya-machine-card">
+                                    <div class="boya-machine-card__top">
+                                        <h3>@makine.MakineAdi</h3>
+                                        <span>@makine.Oee.ToString("N1")% OEE</span>
+                                    </div>
+                                    <div class="boya-machine-card__stats">
+                                        <div>
+                                            <span>Üretim</span>
+                                            <strong>@makine.Uretim.ToString("N0")</strong>
+                                        </div>
+                                        <div>
+                                            <span>Duraklama</span>
+                                            <strong>@makine.DuraklamaDakika.ToString("N0") dk</strong>
+                                        </div>
+                                        <div>
+                                            <span>Hatalı</span>
+                                            <strong>@makine.HataliParca.ToString("N0")</strong>
+                                        </div>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Makine Bazlı Üretim</h2>
+                            <p>Hatların toplam boyanan adet dağılımı.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart">
                         <canvas id="boyaMakineUretimGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">Makine Bazlı OEE</div>
-                    <div class="card-body">
+
+            <div class="col-12 col-xl-6">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Makine Bazlı OEE</h2>
+                            <p>Hatların toplam verim skorlarını yatay karşılaştırın.</p>
+                        </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart">
                         <canvas id="boyaMakineOeeGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">Duraklama Nedenleri</div>
-                    <div class="card-body">
-                        <div class="chart-pie-wrap boya-pie-wrap">
-                            <canvas id="boyaDuraklamaGrafigi" class="chart-pie"></canvas>
+
+            <div class="col-12 col-xl-6">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Duraklama Nedenleri</h2>
+                            <p>Kayıtlı duruş nedenlerinin toplam dakika kırılımı.</p>
                         </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart-pie">
+                        <canvas id="boyaDuraklamaGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">Parça Türü Dağılımı</div>
-                    <div class="card-body">
-                        <div class="chart-pie-wrap boya-pie-wrap">
-                            <canvas id="boyaParcaKarmaGrafigi" class="chart-pie"></canvas>
+
+            <div class="col-12 col-xl-6">
+                <div class="boya-panel h-100">
+                    <div class="boya-panel__header">
+                        <div>
+                            <h2>Parça Türü Dağılımı</h2>
+                            <p>Boyanan parça karmasının hacim bazlı dağılımı.</p>
                         </div>
+                    </div>
+                    <div class="boya-panel__body boya-panel__body--chart-pie">
+                        <canvas id="boyaParcaKarmaGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 

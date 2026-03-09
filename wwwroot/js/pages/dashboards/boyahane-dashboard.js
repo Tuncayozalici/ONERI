@@ -6,21 +6,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
-    const labels = data.UretimTrendLabels || [];
+    const chartCanvasIds = [
+        'boyaUretimHedefTrendGrafigi',
+        'boyaOeeBilesenTrendGrafigi',
+        'boyaMakineUretimGrafigi',
+        'boyaMakineOeeGrafigi',
+        'boyaDuraklamaGrafigi',
+        'boyaParcaKarmaGrafigi'
+    ];
+    const chartParents = new Map();
+    const chartTemplates = new Map();
+    const chartInstances = [];
 
-    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
-    const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
-        textColor: isDarkTheme ? '#cbd5e1' : '#1f2937',
-        insideTextColor: '#ffffff',
-        font: '600 12px Poppins, sans-serif'
+    chartCanvasIds.forEach(function (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) {
+            return;
+        }
+
+        chartParents.set(canvasId, canvas.parentElement);
+        chartTemplates.set(canvasId, canvas.parentElement.innerHTML);
     });
-
-    createUretimTrendChart(labels, data);
-    createOeeTrendChart(labels, data);
-    createMakineUretimChart(data);
-    createMakineOeeChart(data, horizontalPercentLabelPlugin);
-    createDuraklamaChart(data);
-    createParcaKarmaChart(data);
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
@@ -39,261 +45,355 @@ document.addEventListener('DOMContentLoaded', function () {
         return value;
     }
 
-    function hasNonZeroValues(values) {
-        return Array.isArray(values) && values.some(v => Number(v) > 0);
+    function hasAnyData(values) {
+        return Array.isArray(values) && values.some(function (value) {
+            return Number(value || 0) !== 0;
+        });
     }
 
-    function showNoData(canvasId, message) {
+    function getThemeName() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    function getThemePalette() {
+        const isDarkTheme = getThemeName() === 'dark';
+        return {
+            textColor: isDarkTheme ? '#9aa8bd' : '#475569',
+            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.32)',
+            productionLine: isDarkTheme ? '#67e8f9' : '#0891b2',
+            productionFill: isDarkTheme ? 'rgba(103, 232, 249, 0.14)' : 'rgba(8, 145, 178, 0.12)',
+            targetLine: isDarkTheme ? '#fbbf24' : '#d97706',
+            targetFill: isDarkTheme ? 'rgba(251, 191, 36, 0.12)' : 'rgba(217, 119, 6, 0.12)',
+            performanceLine: isDarkTheme ? '#818cf8' : '#4f46e5',
+            performanceFill: isDarkTheme ? 'rgba(129, 140, 248, 0.12)' : 'rgba(79, 70, 229, 0.1)',
+            qualityLine: isDarkTheme ? '#34d399' : '#10b981',
+            qualityFill: isDarkTheme ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+            availabilityLine: isDarkTheme ? '#fbbf24' : '#f59e0b',
+            availabilityFill: isDarkTheme ? 'rgba(251, 191, 36, 0.12)' : 'rgba(245, 158, 11, 0.1)',
+            oeeLine: isDarkTheme ? '#f87171' : '#dc2626',
+            oeeFill: isDarkTheme ? 'rgba(248, 113, 113, 0.12)' : 'rgba(220, 38, 38, 0.1)',
+            machineBar: isDarkTheme ? 'rgba(45, 212, 191, 0.72)' : 'rgba(13, 148, 136, 0.68)',
+            machineOeeBar: isDarkTheme ? 'rgba(129, 140, 248, 0.78)' : 'rgba(79, 70, 229, 0.72)'
+        };
+    }
+
+    function configureChartDefaults(palette) {
+        Chart.defaults.color = palette.textColor;
+        Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    }
+
+    function destroyCharts() {
+        while (chartInstances.length > 0) {
+            const instance = chartInstances.pop();
+            instance.destroy();
+        }
+    }
+
+    function restoreChartContainers() {
+        destroyCharts();
+
+        chartCanvasIds.forEach(function (canvasId) {
+            const parent = chartParents.get(canvasId);
+            const template = chartTemplates.get(canvasId);
+            if (!parent || !template) {
+                return;
+            }
+
+            parent.innerHTML = template;
+        });
+    }
+
+    function renderEmptyStateById(canvasId, message) {
+        const parent = chartParents.get(canvasId);
+        if (!parent) {
+            return;
+        }
+
+        parent.innerHTML = `<div class="boya-empty-state">${message}</div>`;
+    }
+
+    function createChart(canvasId, config, hasData, emptyMessage) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             return;
         }
 
-        const parent = canvas.parentElement;
-        if (!parent) {
+        if (!hasData) {
+            renderEmptyStateById(canvasId, emptyMessage);
             return;
         }
 
-        parent.innerHTML = `<div class="boya-no-data">${message}</div>`;
+        const instance = new Chart(canvas.getContext('2d'), config);
+        chartInstances.push(instance);
     }
 
-    function createUretimTrendChart(chartLabels, model) {
-        const chartElement = document.getElementById('boyaUretimHedefTrendGrafigi');
-        if (!chartElement) {
-            return;
-        }
+    function renderCharts() {
+        const palette = getThemePalette();
+        configureChartDefaults(palette);
+        restoreChartContainers();
 
-        new Chart(chartElement.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Toplam Boyanan',
-                    data: model.UretimTrendData || [],
-                    borderColor: 'rgba(14, 116, 144, 0.95)',
-                    backgroundColor: 'rgba(14, 116, 144, 0.15)',
-                    fill: true,
-                    tension: 0.25
-                }, {
-                    label: 'Performans İçin Parça',
-                    data: model.HedefTrendData || [],
-                    borderColor: 'rgba(217, 119, 6, 0.95)',
-                    backgroundColor: 'rgba(217, 119, 6, 0.12)',
-                    fill: true,
-                    tension: 0.25
-                }]
-            },
-            options: {
-                responsive: true,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
+        const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
+            textColor: palette.textColor,
+            insideTextColor: '#ffffff',
+            font: '600 12px system-ui, sans-serif'
         });
-    }
 
-    function createOeeTrendChart(chartLabels, model) {
-        const chartElement = document.getElementById('boyaOeeBilesenTrendGrafigi');
-        if (!chartElement) {
-            return;
-        }
-
-        new Chart(chartElement.getContext('2d'), {
+        createChart('boyaUretimHedefTrendGrafigi', {
             type: 'line',
             data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Performans (%)',
-                    data: model.PerformansTrendData || [],
-                    borderColor: 'rgba(79, 70, 229, 0.95)',
-                    backgroundColor: 'rgba(79, 70, 229, 0.08)',
-                    fill: false,
-                    tension: 0.2
-                }, {
-                    label: 'Kalite (%)',
-                    data: model.KaliteTrendData || [],
-                    borderColor: 'rgba(16, 185, 129, 0.95)',
-                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                    fill: false,
-                    tension: 0.2
-                }, {
-                    label: 'Kullanılabilirlik (%)',
-                    data: model.KullanilabilirlikTrendData || [],
-                    borderColor: 'rgba(245, 158, 11, 0.95)',
-                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                    fill: false,
-                    tension: 0.2
-                }, {
-                    label: 'OEE (%)',
-                    data: model.OeeTrendData || [],
-                    borderColor: 'rgba(220, 38, 38, 0.95)',
-                    backgroundColor: 'rgba(220, 38, 38, 0.08)',
-                    fill: false,
-                    tension: 0.2
-                }]
+                labels: data.UretimTrendLabels || [],
+                datasets: [
+                    {
+                        label: 'Toplam Boyanan',
+                        data: data.UretimTrendData || [],
+                        borderColor: palette.productionLine,
+                        backgroundColor: palette.productionFill,
+                        fill: true,
+                        tension: 0.28
+                    },
+                    {
+                        label: 'Performans İçin Parça',
+                        data: data.HedefTrendData || [],
+                        borderColor: palette.targetLine,
+                        backgroundColor: palette.targetFill,
+                        fill: true,
+                        tension: 0.28
+                    }
+                ]
             },
             options: {
-                responsive: true,
+                maintainAspectRatio: false,
                 interaction: {
                     mode: 'index',
                     intersect: false
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
                     y: {
                         beginAtZero: true,
-                        suggestedMax: 100
+                        grid: {
+                            color: palette.gridColor
+                        },
+                        ticks: {
+                            precision: 0
+                        }
                     }
                 }
             }
-        });
-    }
+        }, hasAnyData(data.UretimTrendData) || hasAnyData(data.HedefTrendData), 'Seçilen dönem için üretim veya hedef verisi bulunamadı.');
 
-    function createMakineUretimChart(model) {
-        const chartElement = document.getElementById('boyaMakineUretimGrafigi');
-        if (!chartElement) {
-            return;
-        }
-
-        if (!hasNonZeroValues(model.MakineUretimData)) {
-            showNoData('boyaMakineUretimGrafigi', 'Makine üretim verisi bulunamadı.');
-            return;
-        }
-
-        new Chart(chartElement.getContext('2d'), {
-            type: 'bar',
+        createChart('boyaOeeBilesenTrendGrafigi', {
+            type: 'line',
             data: {
-                labels: model.MakineLabels || [],
-                datasets: [{
-                    label: 'Toplam Boyanan',
-                    data: model.MakineUretimData || [],
-                    backgroundColor: 'rgba(14, 116, 144, 0.75)',
-                    borderColor: 'rgba(14, 116, 144, 0.95)',
-                    borderWidth: 1
-                }]
+                labels: data.UretimTrendLabels || [],
+                datasets: [
+                    {
+                        label: 'Performans (%)',
+                        data: data.PerformansTrendData || [],
+                        borderColor: palette.performanceLine,
+                        backgroundColor: palette.performanceFill,
+                        fill: false,
+                        tension: 0.24
+                    },
+                    {
+                        label: 'Kalite (%)',
+                        data: data.KaliteTrendData || [],
+                        borderColor: palette.qualityLine,
+                        backgroundColor: palette.qualityFill,
+                        fill: false,
+                        tension: 0.24
+                    },
+                    {
+                        label: 'Kullanılabilirlik (%)',
+                        data: data.KullanilabilirlikTrendData || [],
+                        borderColor: palette.availabilityLine,
+                        backgroundColor: palette.availabilityFill,
+                        fill: false,
+                        tension: 0.24
+                    },
+                    {
+                        label: 'OEE (%)',
+                        data: data.OeeTrendData || [],
+                        borderColor: palette.oeeLine,
+                        backgroundColor: palette.oeeFill,
+                        fill: false,
+                        tension: 0.24
+                    }
+                ]
             },
             options: {
-                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        grid: {
+                            color: palette.gridColor
+                        }
                     }
                 }
             }
-        });
-    }
+        }, hasAnyData(data.PerformansTrendData)
+            || hasAnyData(data.KaliteTrendData)
+            || hasAnyData(data.KullanilabilirlikTrendData)
+            || hasAnyData(data.OeeTrendData), 'OEE bileşen trendi oluşturmak için yeterli veri bulunamadı.');
 
-    function createMakineOeeChart(model, labelPlugin) {
-        const chartElement = document.getElementById('boyaMakineOeeGrafigi');
-        if (!chartElement) {
-            return;
-        }
-
-        if (!hasNonZeroValues(model.MakineOeeData)) {
-            showNoData('boyaMakineOeeGrafigi', 'Makine OEE verisi bulunamadı.');
-            return;
-        }
-
-        new Chart(chartElement.getContext('2d'), {
+        createChart('boyaMakineUretimGrafigi', {
             type: 'bar',
             data: {
-                labels: model.MakineLabels || [],
-                datasets: [{
-                    label: 'OEE (%)',
-                    data: model.MakineOeeData || [],
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                    borderColor: 'rgba(16, 185, 129, 0.95)',
-                    borderWidth: 1
-                }]
+                labels: data.MakineLabels || [],
+                datasets: [
+                    {
+                        label: 'Toplam Boyanan',
+                        data: data.MakineUretimData || [],
+                        backgroundColor: palette.machineBar,
+                        borderRadius: 10
+                    }
+                ]
             },
             options: {
-                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.MakineUretimData), 'Makine üretim verisi bulunamadı.');
+
+        createChart('boyaMakineOeeGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.MakineLabels || [],
+                datasets: [
+                    {
+                        label: 'OEE (%)',
+                        data: data.MakineOeeData || [],
+                        backgroundColor: palette.machineOeeBar,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 scales: {
                     x: {
                         beginAtZero: true,
-                        suggestedMax: 100
+                        suggestedMax: 100,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
                     }
                 }
             },
-            plugins: labelPlugin ? [labelPlugin] : []
-        });
-    }
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, hasAnyData(data.MakineOeeData), 'Makine OEE verisi bulunamadı.');
 
-    function createDuraklamaChart(model) {
-        const chartElement = document.getElementById('boyaDuraklamaGrafigi');
-        if (!chartElement) {
-            return;
-        }
-
-        if (!hasNonZeroValues(model.DuraklamaNedenData)) {
-            showNoData('boyaDuraklamaGrafigi', 'Duraklama verisi bulunamadı.');
-            return;
-        }
-
-        new Chart(chartElement.getContext('2d'), {
+        createChart('boyaDuraklamaGrafigi', {
             type: 'doughnut',
             data: {
-                labels: model.DuraklamaNedenLabels || [],
-                datasets: [{
-                    label: 'Duraklama (dk)',
-                    data: model.DuraklamaNedenData || [],
-                    backgroundColor: [
-                        'rgba(239, 68, 68, 0.82)',
-                        'rgba(59, 130, 246, 0.82)',
-                        'rgba(245, 158, 11, 0.82)',
-                        'rgba(16, 185, 129, 0.82)',
-                        'rgba(14, 116, 144, 0.82)',
-                        'rgba(99, 102, 241, 0.82)',
-                        'rgba(236, 72, 153, 0.82)',
-                        'rgba(120, 113, 108, 0.82)'
-                    ]
-                }]
+                labels: data.DuraklamaNedenLabels || [],
+                datasets: [
+                    {
+                        label: 'Duraklama (dk)',
+                        data: data.DuraklamaNedenData || [],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.82)',
+                            'rgba(249, 115, 22, 0.82)',
+                            'rgba(234, 179, 8, 0.82)',
+                            'rgba(16, 185, 129, 0.82)',
+                            'rgba(8, 145, 178, 0.82)',
+                            'rgba(79, 70, 229, 0.82)',
+                            'rgba(236, 72, 153, 0.82)',
+                            'rgba(100, 116, 139, 0.82)'
+                        ],
+                        borderWidth: 0
+                    }
+                ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                cutout: '58%'
             }
-        });
-    }
+        }, hasAnyData(data.DuraklamaNedenData), 'Duraklama verisi bulunamadı.');
 
-    function createParcaKarmaChart(model) {
-        const chartElement = document.getElementById('boyaParcaKarmaGrafigi');
-        if (!chartElement) {
-            return;
-        }
-
-        if (!hasNonZeroValues(model.ParcaKarmaData)) {
-            showNoData('boyaParcaKarmaGrafigi', 'Parça dağılım verisi bulunamadı.');
-            return;
-        }
-
-        new Chart(chartElement.getContext('2d'), {
+        createChart('boyaParcaKarmaGrafigi', {
             type: 'doughnut',
             data: {
-                labels: model.ParcaKarmaLabels || [],
-                datasets: [{
-                    label: 'Parça',
-                    data: model.ParcaKarmaData || [],
-                    backgroundColor: [
-                        'rgba(14, 116, 144, 0.82)',
-                        'rgba(249, 115, 22, 0.82)',
-                        'rgba(132, 204, 22, 0.82)',
-                        'rgba(99, 102, 241, 0.82)',
-                        'rgba(236, 72, 153, 0.82)'
-                    ]
-                }]
+                labels: data.ParcaKarmaLabels || [],
+                datasets: [
+                    {
+                        label: 'Parça',
+                        data: data.ParcaKarmaData || [],
+                        backgroundColor: [
+                            'rgba(8, 145, 178, 0.82)',
+                            'rgba(249, 115, 22, 0.82)',
+                            'rgba(132, 204, 22, 0.82)',
+                            'rgba(79, 70, 229, 0.82)',
+                            'rgba(236, 72, 153, 0.82)'
+                        ],
+                        borderWidth: 0
+                    }
+                ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                cutout: '58%'
             }
-        });
+        }, hasAnyData(data.ParcaKarmaData), 'Parça dağılım verisi bulunamadı.');
     }
 
+    renderCharts();
+
+    let activeTheme = getThemeName();
+    const themeObserver = new MutationObserver(function () {
+        const nextTheme = getThemeName();
+        if (nextTheme === activeTheme) {
+            return;
+        }
+
+        activeTheme = nextTheme;
+        renderCharts();
+    });
+
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });

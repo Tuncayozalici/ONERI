@@ -93,6 +93,7 @@
     border: 1px solid rgba(0, 0, 0, 0.04);
     box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
     overflow: hidden;
+    padding: 0;
 }
 
 .info-panel-min-height {
@@ -100,13 +101,16 @@
 }
 
 .info-panel .card-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    background: rgba(13, 110, 253, 0.06);
+    border-bottom: 1px solid rgba(13, 110, 253, 0.08);
     font-weight: 600;
+    padding: 1rem 1.35rem;
+    margin: 0;
 }
 
 .info-panel .list-group-item {
     border: 0;
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.5rem;
+    padding: 1rem 1.35rem;
+    margin: 0;
+    background: transparent;
 }

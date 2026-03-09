@@ -314,7 +314,10 @@ namespace ONERI.Controllers
             var fileMap = new Dictionary<string, (string TargetPath, string SheetName)>(StringComparer.OrdinalIgnoreCase)
             {
                 ["MARWOOD Profil Lazer Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Profil Lazer Veri Ekranı.xlsm"), "LAZER KAYIT"),
+                ["YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm"), "VERİ KAYIT"),
+                ["YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm"), "VERİ KAYIT"),
                 ["YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm"), "VERİ KAYIT"),
+                ["YENI BOYA GUNLUK VERI TAKIP 2026 YILI revize.xlsm"] = (Path.Combine(excelPath, "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm"), "VERİ KAYIT"),
                 ["BOYA HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "BOYA HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT"),
                 ["PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "PVC BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["METAL HATALI  PARÇA GİRİŞİ.xlsm"] = (Path.Combine(excelPath, "METAL HATALI  PARÇA GİRİŞİ.xlsm"), "VERİ KAYIT"),
@@ -324,7 +327,8 @@ namespace ONERI.Controllers
                 ["MARWOOD Skipper Veri Ekranı düzeltilmiş.xlsm"] = (Path.Combine(excelPath, "MARWOOD Skipper Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["MARWOOD Rover-B Veri Ekranı 2026.xlsm"] = (Path.Combine(excelPath, "MARWOOD Rover-B Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["MARWOOD Rover-B Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Rover-B Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
-                ["MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"), "ANA RAPOR"),
+                ["MARWOOD Tezgah Bölümü Veri Ekranı 2026.xlsm"] = (Path.Combine(excelPath, "MARWOOD Tezgah Bölümü Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
+                ["MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"] = (Path.Combine(excelPath, "MARWOOD Tezgah Bölümü Veri Ekranı 2026.xlsm"), "GİRDİ RAPORU"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),
                 ["EBATLAMA BÖLÜMÜ VERİ EKRANI.xlsm"] = (Path.Combine(excelPath, "EBATLAMA BÖLÜMÜ VERİ EKRANI 2026.xlsm"), "KAYIT"),

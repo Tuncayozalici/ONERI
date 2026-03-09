@@ -66,8 +66,8 @@ namespace ONERI.Migrations
 
                 DELETE FROM BolumYoneticileri
                 WHERE length(BolumAdi) = 0
-                   OR length(YoneticiAdi) = 0
-                   OR length(YoneticiEmail) = 0;
+                    OR length(YoneticiAdi) = 0
+                    OR length(YoneticiEmail) = 0;
 
                 DELETE FROM BolumYoneticileri
                 WHERE Id NOT IN (

@@ -1,64 +1,452 @@
 .boya-page {
+    --boya-bg: #f4f0e8;
+    --boya-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 247, 241, 0.96));
+    --boya-surface-soft: rgba(255, 255, 255, 0.9);
+    --boya-border: rgba(148, 163, 184, 0.24);
+    --boya-border-soft: rgba(148, 163, 184, 0.2);
+    --boya-text: #2b3443;
+    --boya-text-strong: #1f2937;
+    --boya-muted: #66758b;
+    --boya-accent: #0f766e;
+    --boya-shadow: 0 22px 44px rgba(148, 163, 184, 0.18);
     background:
-        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.15) 0%, rgba(12, 74, 110, 0) 60%),
-        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0) 58%);
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.09) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 58%);
+    color: var(--boya-text);
+    min-height: 100%;
+}
+
+html[data-theme="dark"] .boya-page {
+    --boya-bg: #071221;
+    --boya-surface: linear-gradient(180deg, rgba(13, 24, 41, 0.96), rgba(10, 19, 33, 0.94));
+    --boya-surface-soft: rgba(16, 29, 48, 0.92);
+    --boya-border: rgba(43, 92, 168, 0.28);
+    --boya-border-soft: rgba(56, 189, 248, 0.14);
+    --boya-text: #d7e2f1;
+    --boya-text-strong: #f8fbff;
+    --boya-muted: #9aa8bd;
+    --boya-accent: #67e8f9;
+    --boya-shadow: 0 22px 44px rgba(3, 8, 18, 0.34);
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.16) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.14) 0%, rgba(245, 158, 11, 0) 58%),
+        linear-gradient(180deg, #06111e 0%, var(--boya-bg) 100%);
+}
+
+.boya-page .container {
+    max-width: 1400px;
+}
+
+.boya-hero,
+.boya-panel,
+.boya-kpi {
+    border: 1px solid var(--boya-border);
+    box-shadow: var(--boya-shadow);
 }
 
 .boya-hero {
-    border-top: 4px solid #0e7490;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 28px;
+    background: var(--boya-surface);
+}
+
+.boya-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(13, 148, 136, 0.1);
+    color: #0f766e;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+html[data-theme="dark"] .boya-hero__eyebrow {
+    background: rgba(45, 212, 191, 0.15);
+    color: #99f6e4;
+}
+
+.boya-hero h1 {
+    margin: 1rem 0 0.75rem;
+    font-size: clamp(2rem, 3vw, 3.2rem);
+    line-height: 1.05;
+    color: var(--boya-text-strong);
+}
+
+.boya-hero p,
+.boya-panel__header p,
+.boya-kpi__meta,
+.boya-fact span,
+.boya-summary-item span,
+.boya-machine-card span,
+.boya-hero__note,
+.boya-empty-state {
+    color: var(--boya-muted);
+}
+
+.boya-hero__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1.5rem;
+}
+
+.boya-fact {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--boya-border-soft);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.42);
+}
+
+html[data-theme="dark"] .boya-fact {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.boya-fact strong {
+    display: block;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: var(--boya-text-strong);
+}
+
+.boya-fact--wide {
+    grid-column: span 2;
+}
+
+.boya-hero__panel,
+.boya-panel {
+    border-radius: 24px;
+    background: var(--boya-surface-soft);
+}
+
+.boya-hero__panel {
+    padding: 1.25rem;
+}
+
+.boya-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.boya-filter-form .unified-date-filter__trigger {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.boya-filter-form__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.boya-period {
+    margin-top: 1rem;
+}
+
+.boya-period h4 {
+    margin: 0;
+    color: var(--boya-text-strong) !important;
+}
+
+.boya-hero__note {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+html[data-theme="dark"] .boya-hero__note {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.boya-hero__note strong,
+.boya-summary-item strong,
+.boya-machine-card strong,
+.boya-machine-card h3,
+.boya-panel__header h2,
+.boya-kpi__label {
+    color: var(--boya-text-strong);
+}
+
+.boya-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
 }
 
 .boya-kpi {
-    border: 1px solid rgba(14, 116, 144, 0.15);
+    padding: 1.1rem 1.15rem;
+    border-radius: 22px;
+    min-height: 154px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 239, 0.94));
 }
 
-.boya-kpi .card-title {
+html[data-theme="dark"] .boya-kpi {
+    background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+.boya-kpi__label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.boya-kpi__value {
+    font-size: clamp(1.6rem, 2vw, 2.25rem);
+    line-height: 1.05;
+}
+
+.boya-kpi--emerald,
+.boya-kpi--slate,
+.boya-kpi--cyan,
+.boya-kpi--rose,
+.boya-kpi--amber,
+.boya-kpi--indigo,
+.boya-kpi--violet,
+.boya-kpi--stone {
+    border-color: var(--boya-border-soft);
+}
+
+.boya-kpi--emerald .boya-kpi__value {
+    color: #0f766e;
+}
+
+.boya-kpi--slate .boya-kpi__value {
+    color: #475569;
+}
+
+.boya-kpi--cyan .boya-kpi__value {
+    color: #0891b2;
+}
+
+.boya-kpi--rose .boya-kpi__value {
+    color: #e11d48;
+}
+
+.boya-kpi--amber .boya-kpi__value {
+    color: #d97706;
+}
+
+.boya-kpi--indigo .boya-kpi__value {
+    color: #2563eb;
+}
+
+.boya-kpi--violet .boya-kpi__value {
+    color: #7c3aed;
+}
+
+.boya-kpi--stone .boya-kpi__value {
+    color: #1e3a8a;
+}
+
+html[data-theme="dark"] .boya-kpi--emerald .boya-kpi__value {
+    color: #5eead4;
+}
+
+html[data-theme="dark"] .boya-kpi--slate .boya-kpi__value {
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .boya-kpi--cyan .boya-kpi__value {
+    color: #67e8f9;
+}
+
+html[data-theme="dark"] .boya-kpi--rose .boya-kpi__value {
+    color: #fda4af;
+}
+
+html[data-theme="dark"] .boya-kpi--amber .boya-kpi__value {
+    color: #fbbf24;
+}
+
+html[data-theme="dark"] .boya-kpi--indigo .boya-kpi__value {
+    color: #93c5fd;
+}
+
+html[data-theme="dark"] .boya-kpi--violet .boya-kpi__value {
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .boya-kpi--stone .boya-kpi__value {
+    color: #dbeafe;
+}
+
+.boya-panel {
+    padding: 1.2rem;
+}
+
+.boya-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.boya-panel__header h2 {
+    font-size: 1.08rem;
+    margin: 0;
+}
+
+.boya-panel__body {
+    position: relative;
+}
+
+.boya-panel__body--chart {
+    min-height: 340px;
+}
+
+.boya-panel__body--chart-lg {
+    min-height: 390px;
+}
+
+.boya-panel__body--chart-pie {
+    min-height: 420px;
+}
+
+.boya-summary-list,
+.boya-machine-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.boya-summary-item,
+.boya-machine-card {
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+html[data-theme="dark"] .boya-summary-item,
+html[data-theme="dark"] .boya-machine-card {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.boya-summary-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.boya-summary-item strong {
+    text-align: right;
+    max-width: 58%;
+}
+
+.boya-machine-card {
+    border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.boya-machine-card__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.boya-machine-card__top h3 {
+    margin: 0;
     font-size: 1rem;
 }
 
-.boya-kpi .card-text {
-    font-size: 1.75rem;
+.boya-machine-card__top span {
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
-.boya-kpi-primary {
-    background: linear-gradient(145deg, #e9f7fb, #ffffff);
+.boya-machine-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
 }
 
-.boya-kpi-positive {
-    background: linear-gradient(145deg, #edf8f2, #ffffff);
-    border-color: rgba(22, 163, 74, 0.2);
+.boya-machine-card__stats span {
+    display: block;
+    font-size: 0.78rem;
+    margin-bottom: 0.25rem;
 }
 
-.boya-kpi-positive-soft {
-    background: linear-gradient(145deg, #f4f9ff, #ffffff);
-    border-color: rgba(59, 130, 246, 0.18);
+.boya-machine-card__stats strong {
+    font-size: 0.98rem;
 }
 
-.boya-kpi-warn {
-    background: linear-gradient(145deg, #fff2f2, #ffffff);
-    border-color: rgba(220, 38, 38, 0.2);
-}
-
-.boya-pie-wrap {
-    height: 380px;
-    max-height: 380px;
-}
-
-.boya-machine-tile h5 {
-    margin-bottom: 0.75rem;
-}
-
-.boya-machine-tile p {
-    color: #495057;
-}
-
-.boya-no-data {
-    height: 100%;
+.boya-empty-state {
     min-height: 260px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6c757d;
-    font-size: 0.95rem;
+    border: 1px dashed var(--boya-border-soft);
+    border-radius: 18px;
     text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .boya-empty-state {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+@media (max-width: 1199.98px) {
+    .boya-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .boya-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .boya-hero,
+    .boya-panel,
+    .boya-kpi {
+        border-radius: 22px;
+    }
+
+    .boya-hero {
+        padding: 1.1rem;
+    }
+
+    .boya-hero__facts,
+    .boya-kpis,
+    .boya-machine-card__stats {
+        grid-template-columns: 1fr;
+    }
+
+    .boya-fact--wide {
+        grid-column: auto;
+    }
+
+    .boya-filter-form__actions,
+    .boya-summary-item,
+    .boya-machine-card__top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .boya-summary-item strong {
+        max-width: 100%;
+        text-align: left;
+    }
+
+    .boya-panel__body--chart,
+    .boya-panel__body--chart-lg,
+    .boya-panel__body--chart-pie {
+        min-height: 300px;
+    }
 }

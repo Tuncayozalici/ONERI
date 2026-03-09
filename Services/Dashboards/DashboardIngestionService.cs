@@ -338,6 +338,7 @@ public class DashboardIngestionService : IDashboardIngestionService
         var result = new List<BoyaUretimSatir>();
         var filePath = ResolveExcelFilePath(
             excelRoot,
+            "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm",
             "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI revize.xlsm",
             "YENİ BOYA GÜNLÜK VERİ TAKİP 2026 YILI.xlsm",
             "YENI BOYA GUNLUK VERI TAKIP 2026 YILI revize.xlsm",
@@ -1006,45 +1007,93 @@ public class DashboardIngestionService : IDashboardIngestionService
     private List<TezgahSatirModel> ParseTezgahRows(string excelRoot)
     {
         var result = new List<TezgahSatirModel>();
-        var filePath = Path.Combine(excelRoot, "MARWOOD Tezgah Bölümü Veri Ekranı.xlsm");
-        if (!File.Exists(filePath))
+        var fileCandidates = new[]
+        {
+            "MARWOOD Tezgah Bölümü Veri Ekranı 2026.xlsm",
+            "MARWOOD Tezgah Bölümü Veri Ekranı.xlsm"
+        };
+        var filePath = fileCandidates
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
+
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
         {
             return result;
         }
 
         using var package = new ExcelPackage(new FileInfo(filePath));
-        var worksheet = package.Workbook.Worksheets["ANA RAPOR"];
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault(ws =>
+            ws.Name.Equals("GİRDİ RAPORU", StringComparison.OrdinalIgnoreCase)
+            || ws.Name.Equals("GIRDI RAPORU", StringComparison.OrdinalIgnoreCase)
+            || ws.Name.Equals("ANA RAPOR", StringComparison.OrdinalIgnoreCase));
         if (worksheet?.Dimension == null)
         {
             return result;
         }
 
-        int colCount = worksheet.Dimension.Columns;
-        int kullanilabilirlikCol = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int tarihCol = DashboardParsingHelper.FindColumn(worksheet, "TARİH", "TARIH");
+        int urunCol = DashboardParsingHelper.FindColumn(worksheet, "TEZGAH ÜRÜNLERİ", "TEZGAH URUNLERI", "ÜRÜN", "URUN");
+        int kisiCol = DashboardParsingHelper.FindColumn(worksheet, "KİŞİ SAYISI", "KISI SAYISI");
+        int parcaCol = DashboardParsingHelper.FindColumn(worksheet, "PARÇA ADETİ", "PARCA ADETI");
+        int sureCol = DashboardParsingHelper.FindColumn(worksheet, "SÜRE(DK)", "SURE(DK)", "SÜRE", "SURE");
+        int kosulCol = DashboardParsingHelper.FindColumn(worksheet, "ÇALIŞMA KOŞULU", "CALISMA KOSULU");
+        int kayipNeden1Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE NEDENİ 1", "KAYIP SURE NEDENI 1");
+        int kayipSure1Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE 1(DK)", "KAYIP SURE 1(DK)", "KAYIP SÜRE 1", "KAYIP SURE 1");
+        int kayipNeden2Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE NEDENİ 2", "KAYIP SURE NEDENI 2");
+        int kayipSure2Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE 2(DK)", "KAYIP SURE 2(DK)", "KAYIP SÜRE 2", "KAYIP SURE 2");
+        int kayipNeden3Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE NEDENİ 3", "KAYIP SURE NEDENI 3");
+        int kayipSure3Col = DashboardParsingHelper.FindColumn(worksheet, "KAYIP SÜRE 3(DK)", "KAYIP SURE 3(DK)", "KAYIP SÜRE 3", "KAYIP SURE 3");
+        int aciklamaCol = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int oeeCol = DashboardParsingHelper.FindColumn(worksheet, "OEE");
+
+        if (tarihCol <= 0)
+        {
+            return result;
+        }
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
             try
             {
-                var dateCell = worksheet.Cells[row, 1];
+                var dateCell = worksheet.Cells[row, tarihCol];
                 var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
-
-                var kullanilabilirlik = kullanilabilirlikCol > 0
-                    ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, kullanilabilirlikCol].Value)
-                    : (colCount >= 10 ? DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, 10].Value) : 0);
+                var sureDakika = sureCol > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, sureCol].Value)
+                    : 0;
+                var kayipSure1 = kayipSure1Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, kayipSure1Col].Value)
+                    : 0;
+                var kayipSure2 = kayipSure2Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, kayipSure2Col].Value)
+                    : 0;
+                var kayipSure3 = kayipSure3Col > 0
+                    ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, kayipSure3Col].Value)
+                    : 0;
+                var toplamKayipSure = Math.Max(0, kayipSure1) + Math.Max(0, kayipSure2) + Math.Max(0, kayipSure3);
+                var verimliCalismaOrani = sureDakika > 0
+                    ? DashboardParsingHelper.NormalizePercentValue(((sureDakika - toplamKayipSure) / sureDakika) * 100d)
+                    : 0;
+                var oee = oeeCol > 0
+                    ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, oeeCol].Value))
+                    : 0;
 
                 result.Add(new TezgahSatirModel
                 {
                     Tarih = parsedDate,
-                    TezgahUrunleri = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
-                    KisiSayisi = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 3].Value),
-                    ParcaAdeti = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 4].Value),
-                    SureDakika = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 5].Value),
-                    CalismaKosulu = worksheet.Cells[row, 6].Value?.ToString()?.Trim(),
-                    KayipSureNedeni = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
-                    KayipSureDakika = DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, 8].Value),
-                    Aciklama = worksheet.Cells[row, 9].Value?.ToString()?.Trim(),
-                    Kullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(kullanilabilirlik)
+                    TezgahUrunleri = urunCol > 0 ? worksheet.Cells[row, urunCol].Value?.ToString()?.Trim() : null,
+                    KisiSayisi = kisiCol > 0 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, kisiCol].Value) : 0,
+                    ParcaAdeti = parcaCol > 0 ? DashboardParsingHelper.ParseDoubleCell(worksheet.Cells[row, parcaCol].Value) : 0,
+                    SureDakika = sureDakika,
+                    CalismaKosulu = kosulCol > 0 ? worksheet.Cells[row, kosulCol].Value?.ToString()?.Trim() : null,
+                    KayipSureNedeni1 = kayipNeden1Col > 0 ? worksheet.Cells[row, kayipNeden1Col].Value?.ToString()?.Trim() : null,
+                    KayipSureDakika1 = kayipSure1,
+                    KayipSureNedeni2 = kayipNeden2Col > 0 ? worksheet.Cells[row, kayipNeden2Col].Value?.ToString()?.Trim() : null,
+                    KayipSureDakika2 = kayipSure2,
+                    KayipSureNedeni3 = kayipNeden3Col > 0 ? worksheet.Cells[row, kayipNeden3Col].Value?.ToString()?.Trim() : null,
+                    KayipSureDakika3 = kayipSure3,
+                    Aciklama = aciklamaCol > 0 ? worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim() : null,
+                    Kullanilabilirlik = verimliCalismaOrani,
+                    Oee = oee
                 });
             }
             catch (Exception ex)

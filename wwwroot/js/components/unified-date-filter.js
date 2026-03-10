@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", function () {
             hiddenStart.value = "";
             hiddenEnd.value = "";
             render();
-            window.location.href = window.location.pathname;
+            const clearUrl = form.getAttribute("data-clear-url") || window.location.pathname;
+            window.location.href = clearUrl;
         });
 
         form.addEventListener("submit", function (event) {

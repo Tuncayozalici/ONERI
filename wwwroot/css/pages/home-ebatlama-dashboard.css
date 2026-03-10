@@ -1,0 +1,552 @@
+.ebatlama-page {
+    --ebatlama-bg: #f4f0e8;
+    --ebatlama-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 247, 241, 0.96));
+    --ebatlama-surface-soft: rgba(255, 255, 255, 0.9);
+    --ebatlama-border: rgba(148, 163, 184, 0.24);
+    --ebatlama-border-soft: rgba(148, 163, 184, 0.2);
+    --ebatlama-text: #2b3443;
+    --ebatlama-text-strong: #1f2937;
+    --ebatlama-muted: #66758b;
+    --ebatlama-shadow: 0 22px 44px rgba(148, 163, 184, 0.18);
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.09) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 58%);
+    color: var(--ebatlama-text);
+    min-height: 100%;
+}
+
+html[data-theme="dark"] .ebatlama-page {
+    --ebatlama-bg: #071221;
+    --ebatlama-surface: linear-gradient(180deg, rgba(13, 24, 41, 0.96), rgba(10, 19, 33, 0.94));
+    --ebatlama-surface-soft: rgba(16, 29, 48, 0.92);
+    --ebatlama-border: rgba(43, 92, 168, 0.28);
+    --ebatlama-border-soft: rgba(56, 189, 248, 0.14);
+    --ebatlama-text: #d7e2f1;
+    --ebatlama-text-strong: #f8fbff;
+    --ebatlama-muted: #9aa8bd;
+    --ebatlama-shadow: 0 22px 44px rgba(3, 8, 18, 0.34);
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.16) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.14) 0%, rgba(245, 158, 11, 0) 58%),
+        linear-gradient(180deg, #06111e 0%, var(--ebatlama-bg) 100%);
+}
+
+.ebatlama-page .container {
+    max-width: 1400px;
+}
+
+.ebatlama-hero,
+.ebatlama-panel,
+.ebatlama-kpi,
+.ebatlama-machine-link-card {
+    border: 1px solid var(--ebatlama-border);
+    box-shadow: var(--ebatlama-shadow);
+}
+
+.ebatlama-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 28px;
+    background: var(--ebatlama-surface);
+}
+
+.ebatlama-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.09);
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+html[data-theme="dark"] .ebatlama-hero__eyebrow {
+    background: rgba(59, 130, 246, 0.16);
+    color: #93c5fd;
+}
+
+.ebatlama-hero h1 {
+    margin: 1rem 0 0.75rem;
+    font-size: clamp(2rem, 3vw, 3.2rem);
+    line-height: 1.05;
+    color: var(--ebatlama-text-strong);
+}
+
+.ebatlama-hero__tag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+html[data-theme="dark"] .ebatlama-hero__tag {
+    background: rgba(96, 165, 250, 0.16);
+    color: #bfdbfe;
+}
+
+.ebatlama-hero p,
+.ebatlama-panel__header p,
+.ebatlama-kpi__meta,
+.ebatlama-fact span,
+.ebatlama-summary-item span,
+.ebatlama-machine-card span,
+.ebatlama-machine-link-card p,
+.ebatlama-hero__note,
+.ebatlama-empty-state {
+    color: var(--ebatlama-muted);
+}
+
+.ebatlama-hero__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1.5rem;
+}
+
+.ebatlama-fact {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--ebatlama-border-soft);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.42);
+}
+
+html[data-theme="dark"] .ebatlama-fact {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ebatlama-fact strong {
+    display: block;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: var(--ebatlama-text-strong);
+}
+
+.ebatlama-fact--wide {
+    grid-column: span 2;
+}
+
+.ebatlama-hero__panel,
+.ebatlama-panel {
+    border-radius: 24px;
+    background: var(--ebatlama-surface-soft);
+}
+
+.ebatlama-hero__panel {
+    padding: 1.25rem;
+}
+
+.ebatlama-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--ebatlama-text-strong);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.ebatlama-back-link:hover {
+    color: #2563eb;
+}
+
+.ebatlama-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.ebatlama-filter-form .unified-date-filter__trigger {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.ebatlama-filter-form__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.ebatlama-period {
+    margin-top: 1rem;
+}
+
+.ebatlama-period h4 {
+    margin: 0;
+    color: var(--ebatlama-text-strong) !important;
+}
+
+.ebatlama-hero__note {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+html[data-theme="dark"] .ebatlama-hero__note {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.ebatlama-hero__note strong,
+.ebatlama-summary-item strong,
+.ebatlama-machine-card strong,
+.ebatlama-machine-card h3,
+.ebatlama-machine-link-card h3,
+.ebatlama-panel__header h2,
+.ebatlama-kpi__label {
+    color: var(--ebatlama-text-strong);
+}
+
+.ebatlama-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.ebatlama-kpi {
+    padding: 1.1rem 1.15rem;
+    border-radius: 22px;
+    min-height: 154px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 239, 0.94));
+}
+
+html[data-theme="dark"] .ebatlama-kpi {
+    background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+.ebatlama-kpi__label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.ebatlama-kpi__value {
+    font-size: clamp(1.6rem, 2vw, 2.25rem);
+    line-height: 1.05;
+}
+
+.ebatlama-kpi--emerald .ebatlama-kpi__value {
+    color: #0f766e;
+}
+
+.ebatlama-kpi--slate .ebatlama-kpi__value {
+    color: #475569;
+}
+
+.ebatlama-kpi--cyan .ebatlama-kpi__value {
+    color: #0891b2;
+}
+
+.ebatlama-kpi--rose .ebatlama-kpi__value {
+    color: #e11d48;
+}
+
+.ebatlama-kpi--amber .ebatlama-kpi__value {
+    color: #d97706;
+}
+
+.ebatlama-kpi--indigo .ebatlama-kpi__value {
+    color: #2563eb;
+}
+
+.ebatlama-kpi--violet .ebatlama-kpi__value {
+    color: #7c3aed;
+}
+
+.ebatlama-kpi--stone .ebatlama-kpi__value {
+    color: #1e3a8a;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--emerald .ebatlama-kpi__value {
+    color: #5eead4;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--slate .ebatlama-kpi__value {
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--cyan .ebatlama-kpi__value {
+    color: #67e8f9;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--rose .ebatlama-kpi__value {
+    color: #fda4af;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--amber .ebatlama-kpi__value {
+    color: #fbbf24;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--indigo .ebatlama-kpi__value {
+    color: #93c5fd;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--violet .ebatlama-kpi__value {
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .ebatlama-kpi--stone .ebatlama-kpi__value {
+    color: #dbeafe;
+}
+
+.ebatlama-panel {
+    padding: 1.2rem;
+}
+
+.ebatlama-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.ebatlama-panel__header h2 {
+    font-size: 1.08rem;
+    margin: 0;
+}
+
+.ebatlama-panel__body {
+    position: relative;
+}
+
+.ebatlama-panel__body--chart {
+    min-height: 340px;
+}
+
+.ebatlama-panel__body--chart-lg {
+    min-height: 390px;
+}
+
+.ebatlama-panel__body--chart-pie {
+    min-height: 420px;
+}
+
+.ebatlama-summary-list,
+.ebatlama-machine-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.ebatlama-summary-item,
+.ebatlama-machine-card {
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+html[data-theme="dark"] .ebatlama-summary-item,
+html[data-theme="dark"] .ebatlama-machine-card,
+html[data-theme="dark"] .ebatlama-machine-link-card {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ebatlama-summary-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ebatlama-summary-item strong {
+    text-align: right;
+    max-width: 58%;
+}
+
+.ebatlama-machine-card {
+    border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.ebatlama-machine-card.is-active {
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16);
+}
+
+.ebatlama-machine-card__top,
+.ebatlama-machine-link-card__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.ebatlama-machine-card__top h3,
+.ebatlama-machine-link-card__top h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.ebatlama-machine-card__top span,
+.ebatlama-machine-link-card__top span {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.ebatlama-machine-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.ebatlama-machine-card__stats span {
+    display: block;
+    font-size: 0.78rem;
+    margin-bottom: 0.25rem;
+}
+
+.ebatlama-machine-card__stats strong {
+    font-size: 0.98rem;
+}
+
+.ebatlama-machine-links .ebatlama-panel {
+    padding-bottom: 1.25rem;
+}
+
+.ebatlama-machine-link-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.ebatlama-machine-link-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.15rem;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 239, 0.94));
+    text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+html[data-theme="dark"] .ebatlama-machine-link-card {
+    background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+.ebatlama-machine-link-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.ebatlama-machine-link-card.is-selected {
+    border-color: rgba(37, 99, 235, 0.32);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16), var(--ebatlama-shadow);
+}
+
+.ebatlama-machine-link-card__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+html[data-theme="dark"] .ebatlama-machine-link-card__icon {
+    background: rgba(96, 165, 250, 0.14);
+    color: #93c5fd;
+}
+
+.ebatlama-machine-link-card__content {
+    min-width: 0;
+    flex: 1;
+}
+
+.ebatlama-machine-link-card p {
+    margin: 0;
+}
+
+.ebatlama-empty-state {
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--ebatlama-border-soft);
+    border-radius: 18px;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .ebatlama-empty-state {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+@media (max-width: 1199.98px) {
+    .ebatlama-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .ebatlama-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ebatlama-hero,
+    .ebatlama-panel,
+    .ebatlama-kpi,
+    .ebatlama-machine-link-card {
+        border-radius: 22px;
+    }
+
+    .ebatlama-hero {
+        padding: 1.1rem;
+    }
+
+    .ebatlama-hero__facts,
+    .ebatlama-kpis,
+    .ebatlama-machine-card__stats,
+    .ebatlama-machine-link-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ebatlama-fact--wide {
+        grid-column: auto;
+    }
+
+    .ebatlama-filter-form__actions,
+    .ebatlama-summary-item,
+    .ebatlama-machine-card__top,
+    .ebatlama-machine-link-card,
+    .ebatlama-machine-link-card__top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ebatlama-summary-item strong {
+        max-width: 100%;
+        text-align: left;
+    }
+
+    .ebatlama-hero__tag {
+        margin-left: 0;
+        margin-top: 0.75rem;
+    }
+
+    .ebatlama-panel__body--chart,
+    .ebatlama-panel__body--chart-lg,
+    .ebatlama-panel__body--chart-pie {
+        min-height: 300px;
+    }
+}

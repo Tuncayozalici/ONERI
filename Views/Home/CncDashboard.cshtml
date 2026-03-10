@@ -1,4 +1,5 @@
 @model ONERI.Models.CncDashboardViewModel
+@using System.Linq
 @{
     ViewData["Title"] = "CNC Bölümü";
 
@@ -21,14 +22,23 @@
         endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate
     };
 
-    var masterwoodUrl = Url.Action("MasterwoodDashboard", "Home", routeValues);
-    var skipperUrl = Url.Action("SkipperDashboard", "Home", routeValues);
-    var roverBUrl = Url.Action("RoverBDashboard", "Home", routeValues);
+    var machineCards = new[]
+    {
+        new { Name = "Masterwood", Icon = "bi-tree", Url = Url.Action("MasterwoodDashboard", "Home", routeValues), Summary = Model.Masterwood },
+        new { Name = "Skipper", Icon = "bi-cpu", Url = Url.Action("SkipperDashboard", "Home", routeValues), Summary = Model.Skipper },
+        new { Name = "Rover-B", Icon = "bi-hdd-rack", Url = Url.Action("RoverBDashboard", "Home", routeValues), Summary = Model.RoverB }
+    };
+
+    var activeMachineCount = machineCards.Count(x => x.Summary.Uretim > 0 || x.Summary.Oee > 0 || x.Summary.DuraklamaDakika > 0 || x.Summary.HataliParca > 0);
+    var oneCikanMachine = machineCards
+        .Where(x => x.Summary.Uretim > 0)
+        .OrderByDescending(x => x.Summary.Uretim)
+        .FirstOrDefault();
+    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault();
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-cnc-dashboard.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
@@ -36,165 +46,264 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="daily-page">
-    <div class="container">
-        <div class="daily-hero">
-            <div class="hero-kicker"><i class="bi bi-cpu"></i> CNC Bölümü</div>
-            <h2>CNC Makine Panosu</h2>
-            <p class="text-muted mb-0">Masterwood, Skipper ve Rover-B makinelerinin özetini tek ekranda izleyin.</p>
-        </div>
-
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-6">
-                <small class="text-muted">Seçili Aralık: @ViewBag.CncRange</small>
+<div class="cnc-page">
+    <div class="container py-4 py-lg-5">
+        <section class="cnc-hero mb-4">
+            <div class="cnc-hero__content">
+                <div class="cnc-hero__eyebrow">
+                    <i class="bi bi-cpu"></i>
+                    OPERASYON RAPORU
+                </div>
+                <h1>CNC Makine Performans Ekranı</h1>
+                <p>
+                    Masterwood, Skipper ve Rover-B makinelerinin üretim, hata, duraklama ve OEE sinyallerini
+                    tek panel düzeni içinde izleyin. Alt makine ekranları aynı tasarım sistemi ile bağlı çalışır.
+                </p>
+                <div class="cnc-hero__facts">
+                    <div class="cnc-fact">
+                        <span>Aktif makine</span>
+                        <strong>@activeMachineCount</strong>
+                    </div>
+                    <div class="cnc-fact">
+                        <span>Makine sayısı</span>
+                        <strong>@machineCards.Length</strong>
+                    </div>
+                    <div class="cnc-fact cnc-fact--wide">
+                        <span>Öne çıkan makine</span>
+                        <strong>@(oneCikanMachine?.Name ?? "Veri bulunamadı")</strong>
+                    </div>
+                    <div class="cnc-fact cnc-fact--wide">
+                        <span>Baskın duraklama</span>
+                        <strong>@(!string.IsNullOrWhiteSpace(baskinDuraklama) ? baskinDuraklama : "Duraklama kaydı yok")</strong>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6">
-                <form asp-action="CncDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
+
+            <div class="cnc-hero__panel">
+                <form asp-action="CncDashboard" method="get" class="cnc-filter-form js-unified-date-filter-form">
                     @await Html.PartialAsync("_UnifiedDateFilter")
-                    <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                    <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    <div class="cnc-filter-form__actions">
+                        <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                        <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    </div>
                 </form>
-            </div>
-        </div>
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-            </div>
-        </div>
 
-        <div class="row g-4 mb-5">
-            <div class="col-lg col-md-6">
-                <div class="kpi-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-collection me-2"></i>CNC Toplam Üretim</h5>
-                        <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
-                    </div>
+                <div class="cnc-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
                 </div>
-            </div>
-            <div class="col-lg col-md-6">
-                <div class="kpi-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-exclamation-octagon me-2"></i>CNC Hatalı Parça</h5>
-                        <p class="card-text">@Model.ToplamHataliParca.ToString("N0")</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg col-md-6">
-                <div class="kpi-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>CNC Duraklama (dk)</h5>
-                        <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg col-md-6">
-                <div class="kpi-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-activity me-2"></i>CNC Performans</h5>
-                        <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg col-md-6">
-                <div class="kpi-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>CNC OEE</h5>
-                        <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="row g-5 mb-5">
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        @(ViewBag.CncUretimTrendTitle ?? "CNC Üretim Trendi")
+                <div class="cnc-hero__note">
+                    <p>
+                        <strong>Toplam üretim</strong> üç CNC hattının birleşik hacmidir.
+                        <strong>OEE</strong> makine bazlı verim, kalite ve erişilebilirlik bileşenlerinin ortak sonucudur.
+                    </p>
+                    <p class="mb-0">
+                        Alt makine kartları Masterwood, Skipper ve Rover-B ekranlarına doğrudan geçiş sağlar.
+                        Tarih filtresi bu geçişlerde korunur.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="cnc-kpis mb-4">
+            <article class="cnc-kpi cnc-kpi--cyan">
+                <span class="cnc-kpi__label">Toplam Üretim</span>
+                <strong class="cnc-kpi__value">@Model.ToplamUretim.ToString("N0")</strong>
+                <small class="cnc-kpi__meta">Tüm CNC hatlarının toplam üretimi</small>
+            </article>
+            <article class="cnc-kpi cnc-kpi--rose">
+                <span class="cnc-kpi__label">Hatalı Parça</span>
+                <strong class="cnc-kpi__value">@Model.ToplamHataliParca.ToString("N0")</strong>
+                <small class="cnc-kpi__meta">Seçili dönemde tespit edilen toplam hata</small>
+            </article>
+            <article class="cnc-kpi cnc-kpi--amber">
+                <span class="cnc-kpi__label">Toplam Duraklama</span>
+                <strong class="cnc-kpi__value">@Model.ToplamDuraklamaDakika.ToString("N0") dk</strong>
+                <small class="cnc-kpi__meta">Kayıtlı toplam kayıp süre</small>
+            </article>
+            <article class="cnc-kpi cnc-kpi--violet">
+                <span class="cnc-kpi__label">Ortalama OEE</span>
+                <strong class="cnc-kpi__value">@Model.OrtalamaOee.ToString("N2")%</strong>
+                <small class="cnc-kpi__meta">Birleşik verim skoru</small>
+            </article>
+            <article class="cnc-kpi cnc-kpi--emerald">
+                <span class="cnc-kpi__label">Performans</span>
+                <strong class="cnc-kpi__value">@Model.OrtalamaPerformans.ToString("N2")%</strong>
+                <small class="cnc-kpi__meta">Hatların hedefe göre üretim verimi</small>
+            </article>
+        </section>
+
+        <section class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>@(ViewBag.CncUretimTrendTitle ?? "CNC Üretim Trendi")</h2>
+                            <p>Toplam üretim hareketini günlük akışta izleyin.</p>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="cnc-panel__body cnc-panel__body--chart-lg">
                         <canvas id="cncUretimTrendGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        @(ViewBag.CncOeeTrendTitle ?? "CNC OEE Trendi")
+
+            <div class="col-12 col-xl-4">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>Dönem Özeti</h2>
+                            <p>Seçili aralık için hızlı okuma kartı.</p>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="cnc-panel__body">
+                        <div class="cnc-summary-list">
+                            <div class="cnc-summary-item">
+                                <span>Seçili aralık</span>
+                                <strong>@ViewBag.CncRange</strong>
+                            </div>
+                            <div class="cnc-summary-item">
+                                <span>En yüksek üretim</span>
+                                <strong>@(oneCikanMachine?.Name ?? "Veri bulunamadı")</strong>
+                            </div>
+                            <div class="cnc-summary-item">
+                                <span>Baskın duraklama</span>
+                                <strong>@(!string.IsNullOrWhiteSpace(baskinDuraklama) ? baskinDuraklama : "Duraklama kaydı yok")</strong>
+                            </div>
+                            <div class="cnc-summary-item">
+                                <span>Masterwood OEE</span>
+                                <strong>@Model.Masterwood.Oee.ToString("N2")%</strong>
+                            </div>
+                            <div class="cnc-summary-item">
+                                <span>Skipper OEE</span>
+                                <strong>@Model.Skipper.Oee.ToString("N2")%</strong>
+                            </div>
+                            <div class="cnc-summary-item">
+                                <span>Rover-B OEE</span>
+                                <strong>@Model.RoverB.Oee.ToString("N2")%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>@(ViewBag.CncOeeTrendTitle ?? "CNC OEE Trendi")</h2>
+                            <p>Ortalama OEE hareketini zaman ekseninde izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="cnc-panel__body cnc-panel__body--chart">
                         <canvas id="cncOeeTrendGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        @(ViewBag.CncHataliTrendTitle ?? "CNC Hatalı Parça Trendi")
+
+            <div class="col-12 col-xl-6">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>@(ViewBag.CncHataliTrendTitle ?? "CNC Hatalı Parça Trendi")</h2>
+                            <p>Hatalı parça hareketini gün bazında takip edin.</p>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="cnc-panel__body cnc-panel__body--chart">
                         <canvas id="cncHataliTrendGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        Duraklama Nedenleri
+
+            <div class="col-12 col-xl-6">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>Duraklama Nedenleri</h2>
+                            <p>Kayıp sürenin ana nedenlerini hacim bazlı dağılımda görün.</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="chart-pie-wrap">
-                            <canvas id="cncDuraklamaNedenGrafigi" class="chart-pie"></canvas>
+                    <div class="cnc-panel__body cnc-panel__body--chart-pie">
+                        <canvas id="cncDuraklamaNedenGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="cnc-panel h-100">
+                    <div class="cnc-panel__header">
+                        <div>
+                            <h2>Makine Özeti</h2>
+                            <p>Üretim, hata ve OEE değerlerini tek blokta karşılaştırın.</p>
+                        </div>
+                    </div>
+                    <div class="cnc-panel__body">
+                        <div class="cnc-machine-list">
+                            @foreach (var machine in machineCards)
+                            {
+                                <article class="cnc-machine-card">
+                                    <div class="cnc-machine-card__top">
+                                        <h3>@machine.Name</h3>
+                                        <span>@machine.Summary.Oee.ToString("N1")% OEE</span>
+                                    </div>
+                                    <div class="cnc-machine-card__stats">
+                                        <div>
+                                            <span>Üretim</span>
+                                            <strong>@machine.Summary.Uretim.ToString("N0")</strong>
+                                        </div>
+                                        <div>
+                                            <span>Hatalı</span>
+                                            <strong>@machine.Summary.HataliParca.ToString("N0")</strong>
+                                        </div>
+                                        <div>
+                                            <span>Duraklama</span>
+                                            <strong>@machine.Summary.DuraklamaDakika.ToString("N0") dk</strong>
+                                        </div>
+                                    </div>
+                                </article>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-            <div class="col">
-                <a href="@masterwoodUrl" class="nav-tile">
-                    <div class="status-dot active"></div>
-                    <div class="text-center">
-                        <div class="icon">
-                            <i class="bi bi-tree"></i>
-                        </div>
-                        <h5>Masterwood Makinesi</h5>
-                        <p>Üretim: @Model.Masterwood.Uretim.ToString("N0") | Hatalı: @Model.Masterwood.HataliParca.ToString("N0") | OEE: @Model.Masterwood.Oee.ToString("N2")%</p>
+        <section class="cnc-machine-links mt-4">
+            <div class="cnc-panel">
+                <div class="cnc-panel__header">
+                    <div>
+                        <h2>Makine Ekranları</h2>
+                        <p>Masterwood, Skipper ve Rover-B detay ekranlarına tek tıkla geçin.</p>
                     </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="@skipperUrl" class="nav-tile">
-                    <div class="status-dot active"></div>
-                    <div class="text-center">
-                        <div class="icon">
-                            <i class="bi bi-cpu"></i>
-                        </div>
-                        <h5>Skipper Makinesi</h5>
-                        <p>Üretim: @Model.Skipper.Uretim.ToString("N0") | Hatalı: @Model.Skipper.HataliParca.ToString("N0") | OEE: @Model.Skipper.Oee.ToString("N2")%</p>
+                </div>
+                <div class="cnc-panel__body">
+                    <div class="cnc-machine-link-grid">
+                        @foreach (var machine in machineCards)
+                        {
+                            <a href="@machine.Url" class="cnc-machine-link-card">
+                                <div class="cnc-machine-link-card__icon">
+                                    <i class="bi @machine.Icon"></i>
+                                </div>
+                                <div class="cnc-machine-link-card__content">
+                                    <div class="cnc-machine-link-card__top">
+                                        <h3>@machine.Name Makinesi</h3>
+                                        <span>Detaya Git</span>
+                                    </div>
+                                    <p>Üretim: @machine.Summary.Uretim.ToString("N0") | Hatalı: @machine.Summary.HataliParca.ToString("N0") | OEE: @machine.Summary.Oee.ToString("N2")%</p>
+                                </div>
+                            </a>
+                        }
                     </div>
-                </a>
+                </div>
             </div>
-            <div class="col">
-                <a href="@roverBUrl" class="nav-tile">
-                    <div class="status-dot active"></div>
-                    <div class="text-center">
-                        <div class="icon">
-                            <i class="bi bi-hdd-rack"></i>
-                        </div>
-                        <h5>Rover-B Makinesi</h5>
-                        <p>Üretim: @Model.RoverB.Uretim.ToString("N0") | Hatalı: @Model.RoverB.HataliParca.ToString("N0") | OEE: @Model.RoverB.Oee.ToString("N2")%</p>
-                    </div>
-                </a>
-            </div>
-        </div>
+        </section>
     </div>
 </div>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="cnc-dashboard-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.CncResolvedYear }))
+        @Html.Raw(Json.Serialize(new { model = Model }))
     </script>
     <script src="~/js/pages/dashboards/cnc-dashboard.js" asp-append-version="true"></script>
 }

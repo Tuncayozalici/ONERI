@@ -25,26 +25,26 @@
         var isSuperAdmin = isAuthenticated && User.IsInRole(Permissions.SuperAdminRole);
     }
     <header>
-        <nav class="navbar navbar-light bg-white shadow-sm">
+        <nav class="navbar app-shell-navbar shadow-sm">
             <div class="container">
                 <div class="d-flex align-items-center gap-2">
-                    <button class="navbar-toggler btn btn-light border-0 shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#yanMenu" aria-controls="yanMenu">
-                        <i class="bi bi-list fs-4 text-dark"></i>
+                    <button class="navbar-toggler btn border-0 shadow-sm app-shell-navbar__toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#yanMenu" aria-controls="yanMenu">
+                        <i class="bi bi-list fs-4 app-shell-navbar__toggler-icon"></i>
                     </button>
-                    <a class="navbar-brand d-flex align-items-center gap-1" asp-area="" asp-controller="Home" asp-action="Index">
-                        <span class="fw-bold text-dark">Marwood</span><span class="fw-light text-secondary">Portal</span>
+                    <a class="navbar-brand d-flex align-items-center gap-1 app-shell-navbar__brand" asp-area="" asp-controller="Home" asp-action="Index">
+                        <span class="fw-bold app-shell-navbar__brand-main">Marwood</span><span class="fw-light app-shell-navbar__brand-sub">Portal</span>
                     </a>
                 </div>
                 
                 <div class="d-flex align-items-center">
                     <ul class="navbar-nav flex-row align-items-center gap-3">
                         <li class="nav-item d-none d-sm-block">
-                            <a class="nav-link text-dark fw-semibold" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
+                            <a class="nav-link fw-semibold app-shell-navbar__link" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
                         </li>
                         <li class="nav-item d-none d-md-flex align-items-center">
                             <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
                                 <input class="form-check-input" type="checkbox" id="themeToggle" role="switch" aria-label="Karanlık Mod">
-                                <label class="form-check-label text-muted small" for="themeToggle">
+                                <label class="form-check-label small app-shell-navbar__theme-label" for="themeToggle">
                                     <i class="bi bi-moon-stars me-1"></i>Karanlık
                                 </label>
                             </div>

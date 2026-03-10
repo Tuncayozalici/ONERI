@@ -1,0 +1,516 @@
+.cnc-page {
+    --cnc-bg: #f4f0e8;
+    --cnc-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 247, 241, 0.96));
+    --cnc-surface-soft: rgba(255, 255, 255, 0.9);
+    --cnc-border: rgba(148, 163, 184, 0.24);
+    --cnc-border-soft: rgba(148, 163, 184, 0.2);
+    --cnc-text: #2b3443;
+    --cnc-text-strong: #1f2937;
+    --cnc-muted: #66758b;
+    --cnc-shadow: 0 22px 44px rgba(148, 163, 184, 0.18);
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.09) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 58%);
+    color: var(--cnc-text);
+    min-height: 100%;
+}
+
+html[data-theme="dark"] .cnc-page {
+    --cnc-bg: #071221;
+    --cnc-surface: linear-gradient(180deg, rgba(13, 24, 41, 0.96), rgba(10, 19, 33, 0.94));
+    --cnc-surface-soft: rgba(16, 29, 48, 0.92);
+    --cnc-border: rgba(43, 92, 168, 0.28);
+    --cnc-border-soft: rgba(56, 189, 248, 0.14);
+    --cnc-text: #d7e2f1;
+    --cnc-text-strong: #f8fbff;
+    --cnc-muted: #9aa8bd;
+    --cnc-shadow: 0 22px 44px rgba(3, 8, 18, 0.34);
+    background:
+        radial-gradient(1200px 340px at 12% -12%, rgba(12, 74, 110, 0.16) 0%, rgba(12, 74, 110, 0) 60%),
+        radial-gradient(900px 320px at 92% 0%, rgba(245, 158, 11, 0.14) 0%, rgba(245, 158, 11, 0) 58%),
+        linear-gradient(180deg, #06111e 0%, var(--cnc-bg) 100%);
+}
+
+.cnc-page .container {
+    max-width: 1400px;
+}
+
+.cnc-hero,
+.cnc-panel,
+.cnc-kpi,
+.cnc-machine-link-card {
+    border: 1px solid var(--cnc-border);
+    box-shadow: var(--cnc-shadow);
+}
+
+.cnc-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 28px;
+    background: var(--cnc-surface);
+}
+
+.cnc-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.09);
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+html[data-theme="dark"] .cnc-hero__eyebrow {
+    background: rgba(59, 130, 246, 0.16);
+    color: #93c5fd;
+}
+
+.cnc-hero h1 {
+    margin: 1rem 0 0.75rem;
+    font-size: clamp(2rem, 3vw, 3.2rem);
+    line-height: 1.05;
+    color: var(--cnc-text-strong);
+}
+
+.cnc-hero p,
+.cnc-panel__header p,
+.cnc-kpi__meta,
+.cnc-fact span,
+.cnc-summary-item span,
+.cnc-machine-card span,
+.cnc-machine-link-card p,
+.cnc-hero__note,
+.cnc-empty-state {
+    color: var(--cnc-muted);
+}
+
+.cnc-hero__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1.5rem;
+}
+
+.cnc-fact {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--cnc-border-soft);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.42);
+}
+
+html[data-theme="dark"] .cnc-fact {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.cnc-fact strong {
+    display: block;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: var(--cnc-text-strong);
+}
+
+.cnc-fact--wide {
+    grid-column: span 2;
+}
+
+.cnc-hero__panel,
+.cnc-panel {
+    border-radius: 24px;
+    background: var(--cnc-surface-soft);
+}
+
+.cnc-hero__panel {
+    padding: 1.25rem;
+}
+
+.cnc-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cnc-filter-form .unified-date-filter__trigger {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.cnc-filter-form__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.cnc-period {
+    margin-top: 1rem;
+}
+
+.cnc-period h4 {
+    margin: 0;
+    color: var(--cnc-text-strong) !important;
+}
+
+.cnc-hero__note {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+html[data-theme="dark"] .cnc-hero__note {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.cnc-hero__note strong,
+.cnc-summary-item strong,
+.cnc-machine-card strong,
+.cnc-machine-card h3,
+.cnc-machine-link-card h3,
+.cnc-panel__header h2,
+.cnc-kpi__label {
+    color: var(--cnc-text-strong);
+}
+
+.cnc-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cnc-machine-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cnc-kpi {
+    padding: 1.1rem 1.15rem;
+    border-radius: 22px;
+    min-height: 154px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 239, 0.94));
+}
+
+html[data-theme="dark"] .cnc-kpi {
+    background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+.cnc-kpi__label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cnc-kpi__value {
+    font-size: clamp(1.6rem, 2vw, 2.25rem);
+    line-height: 1.05;
+}
+
+.cnc-kpi__value--text {
+    font-size: clamp(1.1rem, 1.35vw, 1.45rem);
+    line-height: 1.3;
+}
+
+.cnc-kpi--emerald .cnc-kpi__value {
+    color: #0f766e;
+}
+
+.cnc-kpi--cyan .cnc-kpi__value {
+    color: #0891b2;
+}
+
+.cnc-kpi--rose .cnc-kpi__value {
+    color: #e11d48;
+}
+
+.cnc-kpi--amber .cnc-kpi__value {
+    color: #d97706;
+}
+
+.cnc-kpi--violet .cnc-kpi__value {
+    color: #7c3aed;
+}
+
+html[data-theme="dark"] .cnc-kpi--emerald .cnc-kpi__value {
+    color: #5eead4;
+}
+
+html[data-theme="dark"] .cnc-kpi--cyan .cnc-kpi__value {
+    color: #67e8f9;
+}
+
+html[data-theme="dark"] .cnc-kpi--rose .cnc-kpi__value {
+    color: #fda4af;
+}
+
+html[data-theme="dark"] .cnc-kpi--amber .cnc-kpi__value {
+    color: #fbbf24;
+}
+
+html[data-theme="dark"] .cnc-kpi--violet .cnc-kpi__value {
+    color: #c4b5fd;
+}
+
+.cnc-panel {
+    padding: 1.2rem;
+}
+
+.cnc-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.cnc-panel__header h2 {
+    font-size: 1.08rem;
+    margin: 0;
+}
+
+.cnc-panel__body {
+    position: relative;
+}
+
+.cnc-panel__body--chart {
+    min-height: 340px;
+}
+
+.cnc-panel__body--chart-lg {
+    min-height: 390px;
+}
+
+.cnc-panel__body--chart-pie {
+    min-height: 420px;
+}
+
+.cnc-summary-list,
+.cnc-machine-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.cnc-summary-item,
+.cnc-machine-card {
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+html[data-theme="dark"] .cnc-summary-item,
+html[data-theme="dark"] .cnc-machine-card,
+html[data-theme="dark"] .cnc-machine-link-card {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cnc-summary-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.cnc-summary-item strong {
+    text-align: right;
+    max-width: 58%;
+}
+
+.cnc-machine-card__top,
+.cnc-machine-link-card__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.cnc-machine-card__top h3,
+.cnc-machine-link-card__top h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.cnc-machine-card__top span,
+.cnc-machine-link-card__top span {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.cnc-machine-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.cnc-machine-card__stats span {
+    display: block;
+    font-size: 0.78rem;
+    margin-bottom: 0.25rem;
+}
+
+.cnc-machine-card__stats strong {
+    font-size: 0.98rem;
+}
+
+.cnc-machine-link-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cnc-machine-link-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.15rem;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 239, 0.94));
+    text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+html[data-theme="dark"] .cnc-machine-link-card {
+    background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+.cnc-machine-link-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.cnc-machine-link-card--active {
+    border-color: rgba(37, 99, 235, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.24), var(--cnc-shadow);
+}
+
+html[data-theme="dark"] .cnc-machine-link-card--active {
+    border-color: rgba(96, 165, 250, 0.32);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.24), var(--cnc-shadow);
+}
+
+.cnc-machine-link-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+html[data-theme="dark"] .cnc-machine-link-card__badge {
+    background: rgba(96, 165, 250, 0.14);
+    color: #93c5fd;
+}
+
+.cnc-machine-link-card__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+html[data-theme="dark"] .cnc-machine-link-card__icon {
+    background: rgba(96, 165, 250, 0.14);
+    color: #93c5fd;
+}
+
+.cnc-machine-link-card__content {
+    min-width: 0;
+    flex: 1;
+}
+
+.cnc-machine-link-card p {
+    margin: 0;
+}
+
+.cnc-empty-state {
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--cnc-border-soft);
+    border-radius: 18px;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .cnc-empty-state {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+@media (max-width: 1199.98px) {
+    .cnc-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .cnc-kpis,
+    .cnc-machine-kpis,
+    .cnc-machine-link-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .cnc-hero,
+    .cnc-panel,
+    .cnc-kpi,
+    .cnc-machine-link-card {
+        border-radius: 22px;
+    }
+
+    .cnc-hero {
+        padding: 1.1rem;
+    }
+
+    .cnc-hero__facts,
+    .cnc-kpis,
+    .cnc-machine-kpis,
+    .cnc-machine-card__stats,
+    .cnc-machine-link-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cnc-fact--wide {
+        grid-column: auto;
+    }
+
+    .cnc-filter-form__actions,
+    .cnc-summary-item,
+    .cnc-machine-card__top,
+    .cnc-machine-link-card,
+    .cnc-machine-link-card__top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cnc-summary-item strong {
+        max-width: 100%;
+        text-align: left;
+    }
+
+    .cnc-panel__body--chart,
+    .cnc-panel__body--chart-lg,
+    .cnc-panel__body--chart-pie {
+        min-height: 300px;
+    }
+}

@@ -1,4 +1,5 @@
 @model ONERI.Models.EbatlamaDashboardViewModel
+@using System.Linq
 @{
     ViewData["Title"] = "Ebatlama Verileri";
 
@@ -25,11 +26,28 @@
     var selectedMachine = (Model.SeciliMakine ?? string.Empty).Trim();
     var hideMakineKesimGrafigi = selectedMachine.Equals("SELCO", StringComparison.OrdinalIgnoreCase)
                                  || selectedMachine.Equals("MACMAZZA", StringComparison.OrdinalIgnoreCase);
+    var activeMachineCount = Model.MakineKartlari.Count(x => x.Uretim > 0 || x.Oee > 0 || x.DuraklamaDakika > 0);
+    var oneCikanMakine = Model.MakineKartlari
+        .Where(x => x.Uretim > 0)
+        .OrderByDescending(x => x.Uretim)
+        .FirstOrDefault();
+    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault();
+    var toplamPlaka = Model.ToplamPlaka8Mm + Model.ToplamPlaka18Mm + Model.ToplamPlaka30Mm;
+    var baskinPlaka = Model.ToplamPlaka18Mm >= Model.ToplamPlaka8Mm && Model.ToplamPlaka18Mm >= Model.ToplamPlaka30Mm
+        ? "18mm Plaka"
+        : (Model.ToplamPlaka8Mm >= Model.ToplamPlaka30Mm ? "8mm Plaka" : "30mm Plaka");
+    var clearUrl = string.IsNullOrWhiteSpace(selectedMachine)
+        ? tumMakinelerUrl
+        : Url.Action("EbatlamaDashboard", "Home", new
+        {
+            startDate = (string?)null,
+            endDate = (string?)null,
+            makine = selectedMachine
+        });
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" />
-    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-ebatlama-dashboard.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
@@ -37,235 +55,339 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="daily-page">
-<div class="container">
-    <div class="daily-hero">
-        <div class="hero-kicker"><i class="bi bi-tools"></i> Ebatlama Bölümü</div>
-        <h2>
-            Ebatlama Üretim Panosu
-            @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
-            {
-                <span class="fs-4 text-primary">- @Model.SeciliMakine</span>
-            }
-        </h2>
-        <p class="text-muted mb-0">Ebatlama makinelerinin kesim, plaka, duraklama ve OEE performansını tek ekranda izleyin.</p>
-        @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
-        {
-            <a class="btn btn-sm btn-outline-primary mt-2" href="@tumMakinelerUrl">
-                <i class="bi bi-arrow-left"></i> Tüm Makineleri Göster
-            </a>
-        }
-    </div>
+<div class="ebatlama-page">
+    <div class="container py-4 py-lg-5">
+        <section class="ebatlama-hero mb-4">
+            <div class="ebatlama-hero__content">
+                <div class="ebatlama-hero__eyebrow">
+                    <i class="bi bi-tools"></i>
+                    OPERASYON RAPORU
+                </div>
+                <h1>
+                    Ebatlama Üretim Performans Ekranı
+                    @if (!string.IsNullOrWhiteSpace(selectedMachine))
+                    {
+                        <span class="ebatlama-hero__tag">@selectedMachine</span>
+                    }
+                </h1>
+                <p>
+                    Kesim, plaka kullanımı, gönyelleme, duraklama ve OEE verilerini tek tasarım sistemi içinde izleyin.
+                    Ana dashboard ve makine ekranları aynı bilgi mimarisiyle çalışır.
+                </p>
+                <div class="ebatlama-hero__facts">
+                    <div class="ebatlama-fact">
+                        <span>Aktif makine</span>
+                        <strong>@activeMachineCount</strong>
+                    </div>
+                    <div class="ebatlama-fact">
+                        <span>Seçim modu</span>
+                        <strong>@(!string.IsNullOrWhiteSpace(selectedMachine) ? "Makine görünümü" : "Tüm makineler")</strong>
+                    </div>
+                    <div class="ebatlama-fact ebatlama-fact--wide">
+                        <span>Öne çıkan makine</span>
+                        <strong>@(oneCikanMakine?.MakineAdi ?? "Veri bulunamadı")</strong>
+                    </div>
+                    <div class="ebatlama-fact ebatlama-fact--wide">
+                        <span>Baskın duraklama</span>
+                        <strong>@(!string.IsNullOrWhiteSpace(baskinDuraklama) ? baskinDuraklama : "Duraklama kaydı yok")</strong>
+                    </div>
+                </div>
+            </div>
 
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <small class="text-muted">Seçili Aralık: @ViewBag.EbatlamaRange</small>
-        </div>
-        <div class="col-md-6">
-            <form asp-action="EbatlamaDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
-                @await Html.PartialAsync("_UnifiedDateFilter")
-                @if (!string.IsNullOrWhiteSpace(Model.SeciliMakine))
+            <div class="ebatlama-hero__panel">
+                @if (!string.IsNullOrWhiteSpace(selectedMachine))
                 {
-                    <input type="hidden" name="makine" value="@Model.SeciliMakine" />
-                }
-                <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
-            </form>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-scissors me-2"></i>Toplam Kesim Adeti</h5>
-                    <p class="card-text">@Model.ToplamKesimAdet.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-stack me-2"></i>8mm Plaka</h5>
-                    <p class="card-text">@Model.ToplamPlaka8Mm.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-stack me-2"></i>18mm Plaka</h5>
-                    <p class="card-text">@Model.ToplamPlaka18Mm.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-stack me-2"></i>30mm Plaka</h5>
-                    <p class="card-text">@Model.ToplamPlaka30Mm.ToString("N1")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-bounding-box-circles me-2"></i>Toplam Gönyelleme</h5>
-                    <p class="card-text">@Model.ToplamGonyelleme.ToString("N0")</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-stopwatch me-2"></i>Toplam Duraklama (dk)</h5>
-                    <p class="card-text">@Model.ToplamDuraklamaDakika.ToString("N0")</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-activity me-2"></i>Performans</h5>
-                    <p class="card-text">@Model.OrtalamaPerformans.ToString("N2")%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Kullanılabilirlik</h5>
-                    <p class="card-text">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Kalite</h5>
-                    <p class="card-text">@Model.OrtalamaKalite.ToString("N2")%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>OEE</h5>
-                    <p class="card-text">@Model.OrtalamaOee.ToString("N2")%</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-5">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.EbatlamaOeeTitle ?? "OEE Skoru Trendi (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="oeeTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.EbatlamaTrendTitle ?? "Üretim Trendi (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="kesimTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.EbatlamaPlakaTrendTitle ?? "Plaka Trendleri (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="plakaTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Kesim Adeti Trendi (8mm / 30mm)
-                </div>
-                <div class="card-body">
-                    <canvas id="kesimAdetTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        @if (!hideMakineKesimGrafigi)
-        {
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        Makine Bazlı Kesim Adeti
-                    </div>
-                    <div class="card-body">
-                        <canvas id="makineKesimGrafigi"></canvas>
-                    </div>
-                </div>
-            </div>
-        }
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Duraklama Nedenleri
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="duraklamaNedenGrafigi" class="chart-pie"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @if (Model.MakineKartlari.Count > 1)
-    {
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mt-2">
-            @foreach (var kart in Model.MakineKartlari)
-            {
-                var makineUrl = Url.Action("EbatlamaDashboard", "Home", new
-                {
-                    startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
-                    endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate,
-                    makine = kart.MakineAdi
-                });
-                <div class="col">
-                    <a href="@makineUrl" class="nav-tile">
-                        <div class="status-dot active"></div>
-                        <div class="text-center">
-                            <div class="icon">
-                                <i class="bi bi-cpu"></i>
-                            </div>
-                            <h5>@kart.MakineAdi Makinesi</h5>
-                            <p>Kesim: @kart.Uretim.ToString("N0") | Duraklama: @kart.DuraklamaDakika.ToString("N0") dk | OEE: @kart.Oee.ToString("N2")%</p>
-                        </div>
+                    <a class="ebatlama-back-link" href="@tumMakinelerUrl">
+                        <i class="bi bi-arrow-left"></i>
+                        Tüm makineleri göster
                     </a>
+                }
+
+                <form asp-action="EbatlamaDashboard" method="get" class="ebatlama-filter-form js-unified-date-filter-form" data-clear-url="@clearUrl">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    @if (!string.IsNullOrWhiteSpace(selectedMachine))
+                    {
+                        <input type="hidden" name="makine" value="@selectedMachine" />
+                    }
+                    <div class="ebatlama-filter-form__actions">
+                        <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                        <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    </div>
+                </form>
+
+                <div class="ebatlama-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                </div>
+
+                <div class="ebatlama-hero__note">
+                    <p>
+                        <strong>Toplam kesim</strong> plaka kırılımının toplam üretim yükünü gösterir.
+                        <strong>OEE</strong>, performans, kullanılabilirlik ve kalite bileşenlerinin ortak sonucudur.
+                    </p>
+                    <p class="mb-0">
+                        Makine kartları drilldown ekranına hızlı geçiş içindir.
+                        Tarih filtresi temizlense bile seçili makine bağlamı korunur.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="ebatlama-kpis mb-4">
+            <article class="ebatlama-kpi ebatlama-kpi--cyan">
+                <span class="ebatlama-kpi__label">Toplam Kesim</span>
+                <strong class="ebatlama-kpi__value">@Model.ToplamKesimAdet.ToString("N1")</strong>
+                <small class="ebatlama-kpi__meta">Seçilen dönemde toplam kesim adedi</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--amber">
+                <span class="ebatlama-kpi__label">Toplam Plaka</span>
+                <strong class="ebatlama-kpi__value">@toplamPlaka.ToString("N1")</strong>
+                <small class="ebatlama-kpi__meta">8/18/30 mm toplam plaka kullanımı</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--rose">
+                <span class="ebatlama-kpi__label">Toplam Duraklama</span>
+                <strong class="ebatlama-kpi__value">@Model.ToplamDuraklamaDakika.ToString("N0") dk</strong>
+                <small class="ebatlama-kpi__meta">Kayıtlı toplam kayıp süre</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--violet">
+                <span class="ebatlama-kpi__label">Ortalama OEE</span>
+                <strong class="ebatlama-kpi__value">@Model.OrtalamaOee.ToString("N2")%</strong>
+                <small class="ebatlama-kpi__meta">Birleşik verim skoru</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--emerald">
+                <span class="ebatlama-kpi__label">Performans</span>
+                <strong class="ebatlama-kpi__value">@Model.OrtalamaPerformans.ToString("N2")%</strong>
+                <small class="ebatlama-kpi__meta">Hedefe göre kesim verimi</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--indigo">
+                <span class="ebatlama-kpi__label">Kullanılabilirlik</span>
+                <strong class="ebatlama-kpi__value">@Model.OrtalamaKullanilabilirlik.ToString("N2")%</strong>
+                <small class="ebatlama-kpi__meta">Planlanan sürede makine erişimi</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--stone">
+                <span class="ebatlama-kpi__label">Kalite</span>
+                <strong class="ebatlama-kpi__value">@Model.OrtalamaKalite.ToString("N2")%</strong>
+                <small class="ebatlama-kpi__meta">Kalite kaybı sonrası net oran</small>
+            </article>
+            <article class="ebatlama-kpi ebatlama-kpi--slate">
+                <span class="ebatlama-kpi__label">Gönyelleme</span>
+                <strong class="ebatlama-kpi__value">@Model.ToplamGonyelleme.ToString("N0")</strong>
+                <small class="ebatlama-kpi__meta">Seçili dönemde toplam gönyelleme</small>
+            </article>
+        </section>
+
+        <section class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>@(ViewBag.EbatlamaOeeTitle ?? "OEE Skoru Trendi")</h2>
+                            <p>Seçili dönemde OEE hareketini zamansal akışta izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body ebatlama-panel__body--chart-lg">
+                        <canvas id="oeeTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>Dönem Özeti</h2>
+                            <p>Seçili aralık ve makine bağlamı için hızlı okuma kartı.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body">
+                        <div class="ebatlama-summary-list">
+                            <div class="ebatlama-summary-item">
+                                <span>Seçili aralık</span>
+                                <strong>@ViewBag.EbatlamaRange</strong>
+                            </div>
+                            <div class="ebatlama-summary-item">
+                                <span>Makine filtresi</span>
+                                <strong>@(!string.IsNullOrWhiteSpace(selectedMachine) ? selectedMachine : "Tüm makineler")</strong>
+                            </div>
+                            <div class="ebatlama-summary-item">
+                                <span>Baskın plaka türü</span>
+                                <strong>@baskinPlaka</strong>
+                            </div>
+                            <div class="ebatlama-summary-item">
+                                <span>Toplam 8mm plaka</span>
+                                <strong>@Model.ToplamPlaka8Mm.ToString("N1")</strong>
+                            </div>
+                            <div class="ebatlama-summary-item">
+                                <span>Toplam 18mm plaka</span>
+                                <strong>@Model.ToplamPlaka18Mm.ToString("N1")</strong>
+                            </div>
+                            <div class="ebatlama-summary-item">
+                                <span>Toplam 30mm plaka</span>
+                                <strong>@Model.ToplamPlaka30Mm.ToString("N1")</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-8">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>@(ViewBag.EbatlamaTrendTitle ?? "Üretim Trendi")</h2>
+                            <p>Toplam kesim ritmini günlük akışta takip edin.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body ebatlama-panel__body--chart-lg">
+                        <canvas id="kesimTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>Makine Özeti</h2>
+                            <p>Kesim, duraklama ve OEE sinyallerini tek blokta görün.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body">
+                        <div class="ebatlama-machine-list">
+                            @foreach (var kart in Model.MakineKartlari)
+                            {
+                                <article class="ebatlama-machine-card @(selectedMachine.Equals(kart.MakineAdi, StringComparison.OrdinalIgnoreCase) ? "is-active" : string.Empty)">
+                                    <div class="ebatlama-machine-card__top">
+                                        <h3>@kart.MakineAdi</h3>
+                                        <span>@kart.Oee.ToString("N1")% OEE</span>
+                                    </div>
+                                    <div class="ebatlama-machine-card__stats">
+                                        <div>
+                                            <span>Kesim</span>
+                                            <strong>@kart.Uretim.ToString("N0")</strong>
+                                        </div>
+                                        <div>
+                                            <span>Duraklama</span>
+                                            <strong>@kart.DuraklamaDakika.ToString("N0") dk</strong>
+                                        </div>
+                                        <div>
+                                            <span>Hata</span>
+                                            <strong>@kart.HataliParca.ToString("N0")</strong>
+                                        </div>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>@(ViewBag.EbatlamaPlakaTrendTitle ?? "Plaka Trendleri")</h2>
+                            <p>8mm, 18mm ve 30mm plaka tüketimini birlikte kıyaslayın.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body ebatlama-panel__body--chart">
+                        <canvas id="plakaTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>Kesim Adeti Trendi</h2>
+                            <p>8mm ve 30mm kesim adetlerini aynı eksende izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body ebatlama-panel__body--chart">
+                        <canvas id="kesimAdetTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            @if (!hideMakineKesimGrafigi)
+            {
+                <div class="col-12 col-xl-6">
+                    <div class="ebatlama-panel h-100">
+                        <div class="ebatlama-panel__header">
+                            <div>
+                                <h2>Makine Bazlı Kesim Adeti</h2>
+                                <p>Makinelerin toplam kesim üretimini yatay değil dikey karşılaştırın.</p>
+                            </div>
+                        </div>
+                        <div class="ebatlama-panel__body ebatlama-panel__body--chart">
+                            <canvas id="makineKesimGrafigi"></canvas>
+                        </div>
+                    </div>
                 </div>
             }
-        </div>
-    }
-</div>
+
+            <div class="col-12 col-xl-@(hideMakineKesimGrafigi ? "6" : "6")">
+                <div class="ebatlama-panel h-100">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>Duraklama Nedenleri</h2>
+                            <p>Kayıp sürenin ana nedenlerini hacim bazlı dağılımda görün.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body ebatlama-panel__body--chart-pie">
+                        <canvas id="duraklamaNedenGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (Model.MakineKartlari.Count > 1)
+        {
+            <section class="ebatlama-machine-links mt-4">
+                <div class="ebatlama-panel">
+                    <div class="ebatlama-panel__header">
+                        <div>
+                            <h2>Makine Ekranları</h2>
+                            <p>Makine drilldown ekranına geçin veya tüm makineler görünümüne dönün.</p>
+                        </div>
+                    </div>
+                    <div class="ebatlama-panel__body">
+                        <div class="ebatlama-machine-link-grid">
+                            @foreach (var kart in Model.MakineKartlari)
+                            {
+                                var makineUrl = Url.Action("EbatlamaDashboard", "Home", new
+                                {
+                                    startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
+                                    endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate,
+                                    makine = kart.MakineAdi
+                                });
+                                var isSelectedCard = selectedMachine.Equals(kart.MakineAdi, StringComparison.OrdinalIgnoreCase);
+
+                                <a href="@makineUrl" class="ebatlama-machine-link-card @(isSelectedCard ? "is-selected" : string.Empty)">
+                                    <div class="ebatlama-machine-link-card__icon">
+                                        <i class="bi bi-cpu"></i>
+                                    </div>
+                                    <div class="ebatlama-machine-link-card__content">
+                                        <div class="ebatlama-machine-link-card__top">
+                                            <h3>@kart.MakineAdi Makinesi</h3>
+                                            <span>@(isSelectedCard ? "Açık" : "Detaya Git")</span>
+                                        </div>
+                                        <p>Kesim: @kart.Uretim.ToString("N0") | Duraklama: @kart.DuraklamaDakika.ToString("N0") dk | OEE: @kart.Oee.ToString("N2")%</p>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+        }
+    </div>
 </div>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="ebatlama-dashboard-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.EbatlamaResolvedYear }))
+        @Html.Raw(Json.Serialize(new { model = Model }))
     </script>
     <script src="~/js/pages/dashboards/ebatlama-dashboard.js" asp-append-version="true"></script>
 }

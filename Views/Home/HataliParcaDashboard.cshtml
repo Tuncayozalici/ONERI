@@ -1,10 +1,15 @@
 @model ONERI.Models.HataliParcaDashboardViewModel
 @{
     ViewData["Title"] = "Hatalı Parça Analizi";
+
+    var hataNedeniSayisi = Model.HataNedenLabels.Count;
+    var bolumSayisi = Model.BolumLabels.Count;
+    var operatorSayisi = Model.OperatorLabels.Count;
+    var anaRenk = Model.RenkLabels.FirstOrDefault() ?? "Veri bulunamadı";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" />
+    <link rel="stylesheet" href="~/css/pages/home-hatali-parca-dashboard.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
@@ -12,104 +17,245 @@
     <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
 }
 
-<div class="container">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="display-6">Hatalı Parça Analizi</h2>
-        </div>
-        <div class="col-md-6">
-            <form asp-action="HataliParcaDashboard" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
-                @await Html.PartialAsync("_UnifiedDateFilter")
-                <button type="submit" class="btn btn-success js-unified-filter-apply" disabled>Filtrele</button>
-                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
-            </form>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-x-circle me-2"></i>Toplam Hatalı Adet (Makine Hatası Hariç)</h5>
-                    <p class="card-text">@Model.ToplamHataAdet.ToString("N0")</p>
+<div class="hatali-page">
+    <div class="container py-4 py-lg-5">
+        <section class="hatali-hero mb-4">
+            <div class="hatali-hero__content">
+                <div class="hatali-hero__eyebrow">
+                    <i class="bi bi-shield-exclamation"></i>
+                    ANALIZ RAPORU
                 </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>En Çok Hata Nedeni</h5>
-                    <p class="card-text">@Model.EnCokHataNedeni</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-diagram-3 me-2"></i>En Çok Hata Bölümü</h5>
-                    <p class="card-text">@Model.EnCokHataBolum</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg col-md-6">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-person-badge me-2"></i>En Çok Hata Operatörü</h5>
-                    <p class="card-text">@Model.EnCokOperator</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-5">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.HataliTrendTitle ?? "Hatalı Parça Trendi (Son 7 Gün)")
-                </div>
-                <div class="card-body">
-                    <canvas id="hataAdetTrend"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Hata Nedenleri</div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="hataNedenGrafigi" class="chart-pie"></canvas>
+                <h1>Hatalı Parça Analiz Ekranı</h1>
+                <p>
+                    Hatalı adet, neden, bölüm, operatör ve süreç kırılımlarını tek analiz akışında izleyin.
+                    Seçilen döneme göre trendler ve dağılımlar otomatik olarak yeniden hesaplanır.
+                </p>
+                <div class="hatali-hero__facts">
+                    <div class="hatali-fact">
+                        <span>Hata nedeni</span>
+                        <strong>@hataNedeniSayisi</strong>
+                    </div>
+                    <div class="hatali-fact">
+                        <span>Etkilenen bölüm</span>
+                        <strong>@bolumSayisi</strong>
+                    </div>
+                    <div class="hatali-fact hatali-fact--wide">
+                        <span>Öne çıkan neden</span>
+                        <strong>@Model.EnCokHataNedeni</strong>
+                    </div>
+                    <div class="hatali-fact hatali-fact--wide">
+                        <span>En çok hata operatörü</span>
+                        <strong>@Model.EnCokOperator</strong>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Bölüme Göre Hata</div>
-                <div class="card-body">
-                    <canvas id="bolumGrafigi"></canvas>
+
+            <div class="hatali-hero__panel">
+                <form asp-action="HataliParcaDashboard" method="get" class="hatali-filter-form js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    <div class="hatali-filter-form__actions">
+                        <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                        <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                    </div>
+                </form>
+
+                <div class="hatali-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                </div>
+
+                <div class="hatali-hero__note">
+                    <p>
+                        <strong>Toplam hatalı adet</strong>, makine hatası dışındaki kayıtların toplamıdır.
+                    </p>
+                    <p class="mb-0">
+                        Bölüme göre hata grafiğindeki bir sütuna tıklayın; hata nedenleri paneli seçilen bölümün nedenlerine göre filtrelensin.
+                    </p>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Operatöre Göre Hata (Top 10)</div>
-                <div class="card-body">
-                    <canvas id="operatorGrafigi"></canvas>
+        </section>
+
+        <section class="hatali-kpis mb-4">
+            <article class="hatali-kpi hatali-kpi--rose">
+                <span class="hatali-kpi__label">Toplam Hatalı Adet</span>
+                <strong class="hatali-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
+                <small class="hatali-kpi__meta">Makine hatası hariç toplam kayıt</small>
+            </article>
+            <article class="hatali-kpi hatali-kpi--cyan">
+                <span class="hatali-kpi__label">En Çok Hata Bölümü</span>
+                <strong class="hatali-kpi__value hatali-kpi__value--text">@Model.EnCokHataBolum</strong>
+                <small class="hatali-kpi__meta">En yüksek hata yoğunluğu</small>
+            </article>
+            <article class="hatali-kpi hatali-kpi--violet">
+                <span class="hatali-kpi__label">Aktif Operatör</span>
+                <strong class="hatali-kpi__value">@operatorSayisi</strong>
+                <small class="hatali-kpi__meta">Top 10 listesine giren operatör sayısı</small>
+            </article>
+            <article class="hatali-kpi hatali-kpi--stone">
+                <span class="hatali-kpi__label">Öne Çıkan Renk</span>
+                <strong class="hatali-kpi__value hatali-kpi__value--text">@anaRenk</strong>
+                <small class="hatali-kpi__meta">Hata yükünün yoğunlaştığı renk</small>
+            </article>
+        </section>
+
+        <section class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>@(ViewBag.HataliTrendTitle ?? "Hatalı Parça Trendi")</h2>
+                            <p>Hatalı adet değişimini seçilen dönem akışında izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart-lg">
+                        <canvas id="hataAdetTrend"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Dönem Özeti</h2>
+                            <p>Seçili tarih aralığı için hızlı okuma kartı.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body">
+                        <div class="hatali-summary-list">
+                            <div class="hatali-summary-item">
+                                <span>En çok hata nedeni</span>
+                                <strong>@Model.EnCokHataNedeni</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>En çok hata bölümü</span>
+                                <strong>@Model.EnCokHataBolum</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>En çok hata operatörü</span>
+                                <strong>@Model.EnCokOperator</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>Toplam hata nedeni</span>
+                                <strong>@hataNedeniSayisi</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>Toplam bölüm</span>
+                                <strong>@bolumSayisi</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>Toplam operatör</span>
+                                <strong>@operatorSayisi</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2 id="hataNedenPanelTitle">Hata Nedenleri</h2>
+                            <p>Bölüm filtresi ile güncellenebilen neden dağılımı.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart-pie">
+                        <canvas id="hataNedenGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Bölüme Göre Hata</h2>
+                            <p>Bir sütuna tıklayarak hata nedenleri panelini filtreleyin.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="bolumGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Operatöre Göre Hata</h2>
+                            <p>En yüksek hata yüküne sahip operatörler.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="operatorGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Kalınlık Dağılımı</h2>
+                            <p>Hataların kalınlık tipine göre yoğunluğu.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="kalinlikGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Renk Dağılımı</h2>
+                            <p>Hata yükünün renk bazlı kırılımı.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="renkGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Kesim Durumu</h2>
+                            <p>Hatalı kayıtların kesim durumuna göre dağılımı.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="kesimDurumGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>PVC Durumu</h2>
+                            <p>Hataların PVC süreci açısından dağılımı.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body hatali-panel__body--chart">
+                        <canvas id="pvcDurumGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="hatali-parca-dashboard-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.HataliResolvedYear }))
+        @Html.Raw(Json.Serialize(new { model = Model }))
     </script>
     <script src="~/js/pages/dashboards/hatali-parca-dashboard.js" asp-append-version="true"></script>
 }

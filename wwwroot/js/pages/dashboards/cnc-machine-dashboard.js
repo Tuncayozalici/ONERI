@@ -1,17 +1,22 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const payloadElement = document.getElementById('ebatlama-dashboard-data');
+    const payloadElement = document.getElementById('cnc-machine-dashboard-data');
     if (!payloadElement) {
         return;
     }
 
     const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
+    const pageType = String(payload.pageType || '').toLowerCase();
+    const pageConfig = getPageConfig(pageType);
+    if (!pageConfig) {
+        return;
+    }
+
     const chartCanvasIds = [
         'oeeTrendGrafigi',
-        'kesimTrendGrafigi',
-        'plakaTrendGrafigi',
-        'kesimAdetTrendGrafigi',
-        'makineKesimGrafigi',
+        'uretimTrendGrafigi',
+        'hataliTrendGrafigi',
+        'oranTrendGrafigi',
         'duraklamaNedenGrafigi'
     ];
     const chartParents = new Map();
@@ -45,6 +50,55 @@ document.addEventListener('DOMContentLoaded', function () {
         return value;
     }
 
+    function getPageConfig(type) {
+        const configs = {
+            masterwood: {
+                productionDatasets: [
+                    {
+                        label: 'Delik',
+                        key: 'DelikTrendData',
+                        lineColor: '#60a5fa',
+                        fillColor: 'rgba(96, 165, 250, 0.14)'
+                    },
+                    {
+                        label: 'Delik + Freeze',
+                        key: 'DelikFreezeTrendData',
+                        lineColor: '#fb7185',
+                        fillColor: 'rgba(251, 113, 133, 0.12)'
+                    }
+                ]
+            },
+            skipper: {
+                productionDatasets: [
+                    {
+                        label: 'Delik',
+                        key: 'DelikTrendData',
+                        lineColor: '#60a5fa',
+                        fillColor: 'rgba(96, 165, 250, 0.14)'
+                    }
+                ]
+            },
+            roverb: {
+                productionDatasets: [
+                    {
+                        label: 'Delik + Freeze',
+                        key: 'DelikFreezeTrendData',
+                        lineColor: '#60a5fa',
+                        fillColor: 'rgba(96, 165, 250, 0.14)'
+                    },
+                    {
+                        label: 'Delik + Freeze + PVC',
+                        key: 'DelikFreezePvcTrendData',
+                        lineColor: '#f472b6',
+                        fillColor: 'rgba(244, 114, 182, 0.12)'
+                    }
+                ]
+            }
+        };
+
+        return configs[type] || null;
+    }
+
     function hasAnyData(values) {
         return Array.isArray(values) && values.some(function (value) {
             return Number(value || 0) !== 0;
@@ -62,14 +116,20 @@ document.addEventListener('DOMContentLoaded', function () {
             gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.32)',
             oeeLine: isDarkTheme ? '#34d399' : '#10b981',
             oeeFill: isDarkTheme ? 'rgba(52, 211, 153, 0.14)' : 'rgba(16, 185, 129, 0.12)',
-            kesimLine: isDarkTheme ? '#60a5fa' : '#2563eb',
-            kesimFill: isDarkTheme ? 'rgba(96, 165, 250, 0.14)' : 'rgba(37, 99, 235, 0.12)',
-            plaka8Line: isDarkTheme ? '#fb7185' : '#e11d48',
-            plaka18Line: isDarkTheme ? '#67e8f9' : '#0891b2',
-            plaka30Line: isDarkTheme ? '#fbbf24' : '#d97706',
-            kesim8Line: isDarkTheme ? '#a78bfa' : '#7c3aed',
-            kesim30Line: isDarkTheme ? '#60a5fa' : '#2563eb',
-            makineBar: isDarkTheme ? 'rgba(96, 165, 250, 0.78)' : 'rgba(37, 99, 235, 0.72)'
+            defectLine: isDarkTheme ? '#f87171' : '#ef4444',
+            defectFill: isDarkTheme ? 'rgba(248, 113, 113, 0.14)' : 'rgba(239, 68, 68, 0.12)',
+            ratioLine: isDarkTheme ? '#60a5fa' : '#2563eb',
+            ratioFill: isDarkTheme ? 'rgba(96, 165, 250, 0.14)' : 'rgba(37, 99, 235, 0.12)',
+            lossLine: isDarkTheme ? '#fb7185' : '#e11d48',
+            lossFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            donutColors: [
+                'rgba(244, 114, 182, 0.82)',
+                'rgba(96, 165, 250, 0.82)',
+                'rgba(251, 191, 36, 0.82)',
+                'rgba(45, 212, 191, 0.82)',
+                'rgba(167, 139, 250, 0.82)',
+                'rgba(248, 113, 113, 0.82)'
+            ]
         };
     }
 
@@ -106,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        parent.innerHTML = `<div class="ebatlama-empty-state">${message}</div>`;
+        parent.innerHTML = '<div class="cnc-empty-state">' + message + '</div>';
     }
 
     function createChart(canvasId, config, hasData, emptyMessage) {
@@ -126,17 +186,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderCharts() {
         const palette = getThemePalette();
+        const trendLabels = Array.isArray(data.TrendLabels) ? data.TrendLabels : [];
+
         configureChartDefaults(palette);
         restoreChartContainers();
+
+        const productionDatasets = pageConfig.productionDatasets.map(function (dataset) {
+            return {
+                label: dataset.label,
+                data: Array.isArray(data[dataset.key]) ? data[dataset.key] : [],
+                borderColor: dataset.lineColor,
+                backgroundColor: dataset.fillColor,
+                tension: 0.28,
+                fill: true
+            };
+        });
+
+        createChart('uretimTrendGrafigi', {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: productionDatasets
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                }
+            }
+        }, productionDatasets.some(function (dataset) { return hasAnyData(dataset.data); }), 'Üretim trendi için veri bulunamadı.');
 
         createChart('oeeTrendGrafigi', {
             type: 'line',
             data: {
-                labels: data.TrendLabels || [],
+                labels: trendLabels,
                 datasets: [
                     {
                         label: 'OEE (%)',
-                        data: data.OeeTrendData || [],
+                        data: Array.isArray(data.OeeTrendData) ? data.OeeTrendData : [],
                         borderColor: palette.oeeLine,
                         backgroundColor: palette.oeeFill,
                         tension: 0.28,
@@ -165,18 +266,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.OeeTrendData), 'Seçilen dönem için OEE trend verisi bulunamadı.');
+        }, hasAnyData(data.OeeTrendData), 'OEE trendi için veri bulunamadı.');
 
-        createChart('kesimTrendGrafigi', {
+        createChart('hataliTrendGrafigi', {
             type: 'line',
             data: {
-                labels: data.TrendLabels || [],
+                labels: trendLabels,
                 datasets: [
                     {
-                        label: 'Toplam Kesim',
-                        data: data.KesimTrendData || [],
-                        borderColor: palette.kesimLine,
-                        backgroundColor: palette.kesimFill,
+                        label: 'Hatalı Parça',
+                        data: Array.isArray(data.HataliParcaTrendData) ? data.HataliParcaTrendData : [],
+                        borderColor: palette.defectLine,
+                        backgroundColor: palette.defectFill,
                         tension: 0.28,
                         fill: true
                     }
@@ -202,35 +303,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.KesimTrendData), 'Kesim trendi için veri bulunamadı.');
+        }, hasAnyData(data.HataliParcaTrendData), 'Hatalı parça trendi için veri bulunamadı.');
 
-        createChart('plakaTrendGrafigi', {
+        createChart('oranTrendGrafigi', {
             type: 'line',
             data: {
-                labels: data.TrendLabels || [],
+                labels: trendLabels,
                 datasets: [
                     {
-                        label: '8mm Plaka',
-                        data: data.Plaka8TrendData || [],
-                        borderColor: palette.plaka8Line,
-                        backgroundColor: 'rgba(244, 63, 94, 0.08)',
-                        tension: 0.24,
+                        label: 'Performans',
+                        data: Array.isArray(data.UretimOraniTrendData) ? data.UretimOraniTrendData : [],
+                        borderColor: palette.ratioLine,
+                        backgroundColor: palette.ratioFill,
+                        tension: 0.28,
                         fill: true
                     },
                     {
-                        label: '18mm Plaka',
-                        data: data.Plaka18TrendData || [],
-                        borderColor: palette.plaka18Line,
-                        backgroundColor: 'rgba(34, 211, 238, 0.08)',
-                        tension: 0.24,
-                        fill: true
-                    },
-                    {
-                        label: '30mm Plaka',
-                        data: data.Plaka30TrendData || [],
-                        borderColor: palette.plaka30Line,
-                        backgroundColor: 'rgba(251, 191, 36, 0.08)',
-                        tension: 0.24,
+                        label: 'Kayıp Süre',
+                        data: Array.isArray(data.KayipSureTrendData) ? data.KayipSureTrendData : [],
+                        borderColor: palette.lossLine,
+                        backgroundColor: palette.lossFill,
+                        tension: 0.28,
                         fill: true
                     }
                 ]
@@ -249,112 +342,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
+                        suggestedMax: 100,
                         grid: {
                             color: palette.gridColor
                         }
                     }
                 }
             }
-        }, hasAnyData(data.Plaka8TrendData) || hasAnyData(data.Plaka18TrendData) || hasAnyData(data.Plaka30TrendData), 'Plaka trendleri için yeterli veri bulunamadı.');
-
-        createChart('kesimAdetTrendGrafigi', {
-            type: 'line',
-            data: {
-                labels: data.TrendLabels || [],
-                datasets: [
-                    {
-                        label: '8mm Kesim Adeti',
-                        data: data.Kesim8TrendData || [],
-                        borderColor: palette.kesim8Line,
-                        backgroundColor: 'rgba(167, 139, 250, 0.1)',
-                        tension: 0.24,
-                        fill: true
-                    },
-                    {
-                        label: '30mm Kesim Adeti',
-                        data: data.Kesim30TrendData || [],
-                        borderColor: palette.kesim30Line,
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                        tension: 0.24,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                }
-            }
-        }, hasAnyData(data.Kesim8TrendData) || hasAnyData(data.Kesim30TrendData), 'Kesim adet trendleri için veri bulunamadı.');
-
-        createChart('makineKesimGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.MakineLabels || [],
-                datasets: [
-                    {
-                        label: 'Toplam Kesim',
-                        data: data.MakineKesimData || [],
-                        backgroundColor: palette.makineBar,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.MakineKesimData), 'Makine bazlı kesim verisi bulunamadı.');
+        }, hasAnyData(data.UretimOraniTrendData) || hasAnyData(data.KayipSureTrendData), 'Performans ve kayıp süre trendi için veri bulunamadı.');
 
         createChart('duraklamaNedenGrafigi', {
             type: 'doughnut',
             data: {
-                labels: data.DuraklamaNedenLabels || [],
+                labels: Array.isArray(data.DuraklamaNedenLabels) ? data.DuraklamaNedenLabels : [],
                 datasets: [
                     {
-                        data: data.DuraklamaNedenData || [],
-                        backgroundColor: [
-                            'rgba(244, 114, 182, 0.82)',
-                            'rgba(96, 165, 250, 0.82)',
-                            'rgba(251, 191, 36, 0.82)',
-                            'rgba(45, 212, 191, 0.82)',
-                            'rgba(167, 139, 250, 0.82)',
-                            'rgba(248, 113, 113, 0.82)',
-                            'rgba(148, 163, 184, 0.82)',
-                            'rgba(34, 197, 94, 0.82)'
-                        ],
+                        data: Array.isArray(data.DuraklamaNedenData) ? data.DuraklamaNedenData : [],
+                        backgroundColor: palette.donutColors,
                         borderWidth: 0
                     }
                 ]

@@ -1,104 +1,90 @@
 @model IEnumerable<ONERI.Models.Oneri>
 @{
     ViewData["Title"] = "Fikir Atölyesi";
-
-    // Helper functions are no longer needed for this view as the table is removed.
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/fikir-atolyesi-index.css" asp-append-version="true" />
 }
 
-<div class="container mt-4">
-
-    <!-- 1. Blok: Karşılama Alanı (Header) -->
-    <div class="marwood-header mb-5">
-        <h1>Marwood <span>Fikir Atölyesi</span></h1>
-        <p class="text-muted">Let's design for a better office mood, together.</p>
-    </div>
-
-    <!-- 2. Blok: İstatistik Kartları -->
-    <div class="row mb-5">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="stat-card-icon">
-                        <i class="bi bi-lightbulb"></i>
-                    </div>
-                    <div>
-                        <div class="stat-badge"><i class="bi bi-graph-up"></i> Son 30 gün</div>
-                        <h5 class="card-title text-muted mb-0">Toplam</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.ToplamSayi</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-pending p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                         <i class="bi bi-hourglass-split"></i>
-                    </div>
-                    <div>
-                        <div class="stat-badge warn"><i class="bi bi-hourglass"></i> Bekleyen</div>
-                        <h5 class="card-title text-muted mb-0">Beklemede</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Bekleyen</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-approved p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                        <i class="bi bi-check-lg"></i>
-                    </div>
-                    <div>
-                        <div class="stat-badge ok"><i class="bi bi-check2-circle"></i> Tamamlanan</div>
-                        <h5 class="card-title text-muted mb-0">Onaylanan</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Onaylanan</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card stat-card-rejected p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                     <div class="stat-card-icon">
-                         <i class="bi bi-x-lg"></i>
-                    </div>
-                    <div>
-                        <div class="stat-badge bad"><i class="bi bi-x-circle"></i> Kapanan</div>
-                        <h5 class="card-title text-muted mb-0">Reddedilen</h5>
-                        <p class="fs-2 fw-bold mb-0">@ViewBag.Red</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Blok: Yeni Aksiyon Butonları -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <a href="@Url.Action("Yeni", "Oneri")" class="action-card action-card-light">
-                <div class="icon-wrapper bg-light text-dark">
+<div class="atelier-page">
+    <div class="container py-4 py-lg-5">
+        <section class="atelier-hero mb-4">
+            <div class="atelier-hero__content">
+                <div class="atelier-hero__eyebrow">
                     <i class="bi bi-lightbulb"></i>
+                    FİKİR ATÖLYESİ
                 </div>
-                <h3>Yeni Fikir Paylaş</h3>
-                <p>Aklındaki projeyi yönetime ilet.</p>
-                <span class="cta">Hemen Başla</span>
-            </a>
-        </div>
-        <div class="col-md-6 mb-4">
-            <a href="@Url.Action("Sorgula", "Oneri")" class="action-card action-card-light">
-                <div class="icon-wrapper bg-light text-dark">
-                    <i class="bi bi-search"></i>
-                </div>
-                <h3>Durum Sorgula</h3>
-                <p>Takip numaranla sürecini izle.</p>
-                <span class="cta">Takip Et</span>
-            </a>
-        </div>
-    </div>
+                <h1>Marwood Fikir Atölyesi</h1>
+                <p>
+                    Fikir toplama, değerlendirme ve takip akışını tek panel üzerinde yönetin.
+                    Aşağıdaki kartlar son 30 günün özetini ve ana giriş noktalarını gösterir.
+                </p>
+            </div>
+            <div class="atelier-hero__note">
+                <strong>Akış</strong>
+                <p class="mb-0">Önce yeni fikir gönderin, ardından takip numarası ile durumunu izleyin.</p>
+            </div>
+        </section>
 
+        <section class="atelier-stats mb-4">
+            <article class="atelier-stat-card atelier-stat-card--idea">
+                <div class="atelier-stat-card__top">
+                    <i class="bi bi-lightbulb"></i>
+                    <span class="atelier-stat-badge"><i class="bi bi-graph-up"></i> Son 30 gün</span>
+                </div>
+                <span class="atelier-stat-card__label">Toplam</span>
+                <strong class="atelier-stat-card__value">@ViewBag.ToplamSayi</strong>
+            </article>
+
+            <article class="atelier-stat-card atelier-stat-card--pending">
+                <div class="atelier-stat-card__top">
+                    <i class="bi bi-hourglass-split"></i>
+                    <span class="atelier-stat-badge atelier-stat-badge--warn"><i class="bi bi-hourglass"></i> Bekleyen</span>
+                </div>
+                <span class="atelier-stat-card__label">Beklemede</span>
+                <strong class="atelier-stat-card__value">@ViewBag.Bekleyen</strong>
+            </article>
+
+            <article class="atelier-stat-card atelier-stat-card--approved">
+                <div class="atelier-stat-card__top">
+                    <i class="bi bi-check-lg"></i>
+                    <span class="atelier-stat-badge atelier-stat-badge--ok"><i class="bi bi-check2-circle"></i> Tamamlanan</span>
+                </div>
+                <span class="atelier-stat-card__label">Onaylanan</span>
+                <strong class="atelier-stat-card__value">@ViewBag.Onaylanan</strong>
+            </article>
+
+            <article class="atelier-stat-card atelier-stat-card--rejected">
+                <div class="atelier-stat-card__top">
+                    <i class="bi bi-x-lg"></i>
+                    <span class="atelier-stat-badge atelier-stat-badge--bad"><i class="bi bi-x-circle"></i> Kapanan</span>
+                </div>
+                <span class="atelier-stat-card__label">Reddedilen</span>
+                <strong class="atelier-stat-card__value">@ViewBag.Red</strong>
+            </article>
+        </section>
+
+        <section class="atelier-actions">
+            <a href="@Url.Action("Yeni", "Oneri")" class="atelier-action-card atelier-action-card--primary">
+                <div class="atelier-action-card__top">
+                    <i class="bi bi-lightbulb"></i>
+                    <span>Yeni Öneri</span>
+                </div>
+                <h2>Yeni Fikir Paylaş</h2>
+                <p>Aklındaki projeyi yönetime ilet ve değerlendirme akışını başlat.</p>
+                <span class="atelier-action-card__cta">Hemen Başla</span>
+            </a>
+
+            <a href="@Url.Action("Sorgula", "Oneri")" class="atelier-action-card atelier-action-card--secondary">
+                <div class="atelier-action-card__top">
+                    <i class="bi bi-search"></i>
+                    <span>Takip</span>
+                </div>
+                <h2>Durum Sorgula</h2>
+                <p>Takip numaranla önerinin güncel aşamasını hızlıca görüntüle.</p>
+                <span class="atelier-action-card__cta">Takip Et</span>
+            </a>
+        </section>
+    </div>
 </div>

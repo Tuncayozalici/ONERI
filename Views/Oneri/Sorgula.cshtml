@@ -3,16 +3,16 @@
 @{
     ViewData["Title"] = "Öneri Durum Sorgula";
 
-    // Helper function to get badge color based on status
+    // Helper function to map status into page-specific badge classes
     string GetBadgeClass(OneriDurum durum)
     {
         return durum switch
         {
-            OneriDurum.Beklemede => "bg-warning text-dark",
-            OneriDurum.Onaylandi => "bg-info text-dark",
-            OneriDurum.KabulEdildi => "bg-success",
-            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "bg-danger",
-            _ => "bg-secondary"
+            OneriDurum.Beklemede => "status-pill--pending",
+            OneriDurum.Onaylandi => "status-pill--review",
+            OneriDurum.KabulEdildi => "status-pill--approved",
+            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "status-pill--rejected",
+            _ => "status-pill--neutral"
         };
     }
 }
@@ -22,105 +22,118 @@
 }
 
 <div class="status-page">
-<div class="container mt-4">
-    <!-- Page Header -->
-    <div class="status-hero mb-5">
-        <div class="status-hero-inner">
-            <div>
+    <div class="container py-4 py-lg-5">
+        <section class="status-intro mb-4">
+            <div class="status-intro__copy">
                 <div class="hero-kicker"><i class="bi bi-search"></i> Takip Merkezi</div>
                 <h1>Öneri Durum Sorgula</h1>
-                <p>Takip numaranızı kullanarak önerinizin güncel durumunu öğrenin.</p>
+                <p>Takip numaranızı kullanarak önerinizin güncel durumunu hızlı ve güvenli biçimde görüntüleyin.</p>
             </div>
-            <div class="hero-chip">
-                <i class="bi bi-shield-check"></i>
-                Gizli ve güvenli sorgu
+            <div class="status-intro__meta">
+                <div class="status-intro__chip">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Gizli ve güvenli sorgu</span>
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Search Form -->
-    <div class="row g-4 justify-content-center">
-        <div class="col-lg-8">
-            <div class="search-card mb-4">
-                <form asp-action="Sorgula" method="post">
-                    @Html.AntiForgeryToken()
-                    <div class="input-wrap">
-                        <label for="token" class="form-label fw-semibold">Takip Numaranız</label>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
-                            <input type="text" id="token" name="token" class="form-control" placeholder="Örn: 13db2b51-4ba2-43ef-9e95-8ec2c456f9d1" value="@ViewBag.SonToken" required>
-                            <button class="btn btn-dark" type="submit"><i class="bi bi-search me-1"></i> Sorgula</button>
-                        </div>
-                        <small class="text-muted">Takip numaranız teşekkür sayfasında size verilmiştir (GUID formatında).</small>
-                    </div>
-                </form>
-
-                @if (ViewBag.Hata != null)
-                {
-                    <div class="alert alert-warning mt-3">@ViewBag.Hata</div>
-                }
-            </div>
-
-            <!-- Search Result -->
-            @if (Model != null)
-            {
-                <div class="result-card">
-                    <div class="result-header">
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-9 col-xl-8">
+                <div class="search-card mb-4">
+                    <div class="search-card__header">
                         <div>
-                            <div class="result-title">Sonuç</div>
-                            <h5>Takip No: @Model.TrackingToken</h5>
+                            <h2>Takip Numarası ile Ara</h2>
+                            <p>Teşekkür sayfasında iletilen takip numarasını girin. Sistem yalnızca eşleşen kaydı gösterir.</p>
                         </div>
-                        <span class="status-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
                     </div>
-                    <div class="card-body p-4">
-                        
-                        <div class="meta-grid">
-                            <div class="meta-item">
-                                <label>Gönderim Tarihi</label>
-                                <div>@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</div>
+
+                    <form asp-action="Sorgula" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="input-wrap">
+                            <label for="token" class="form-label fw-semibold">Takip Numaranız</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                                <input type="text" id="token" name="token" class="form-control" placeholder="Örn: 13db2b51-4ba2-43ef-9e95-8ec2c456f9d1" value="@ViewBag.SonToken" required>
+                                <button class="btn btn-dark" type="submit"><i class="bi bi-search me-1"></i> Sorgula</button>
                             </div>
-                            <div class="meta-item">
-                                <label>Öneri Konusu</label>
-                                <div>@Model.Konu</div>
+                            <small class="text-muted">Takip numaranız teşekkür sayfasında size verilmiştir (GUID formatında).</small>
+                        </div>
+                    </form>
+
+                    @if (ViewBag.Hata != null)
+                    {
+                        <div class="alert alert-warning mt-3">@ViewBag.Hata</div>
+                    }
+                </div>
+
+                @if (Model != null)
+                {
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div>
+                                <div class="result-title">Sorgu Sonucu</div>
+                                <h5>Takip No: @Model.TrackingToken</h5>
                             </div>
+                            <span class="status-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small text-muted">Açıklama</label>
-                            <div class="desc-box">@Model.Aciklama</div>
-                        </div>
-
-                        @if (Model.Degerlendirmeler != null && Model.Degerlendirmeler.Any())
-                        {
-                            var degerlendirme = Model.Degerlendirmeler.First();
-                            <div class="p-3 rounded mb-4 review-box">
-                                <h6 class="border-bottom pb-2 mb-3">Kurul Değerlendirmesi</h6>
-                                @if (!string.IsNullOrEmpty(degerlendirme.KurulYorumu))
-                                {
-                                    <blockquote class="blockquote blockquote-footer bg-white p-2 rounded">
-                                        @degerlendirme.KurulYorumu
-                                    </blockquote>
-                                }
-                                <div class="row text-center">
-                                    <div class="col">
-                                        <div class="small text-muted">Gayret</div><div class="fw-bold">@degerlendirme.GayretPuani</div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="small text-muted">Orijinallik</div><div class="fw-bold">@degerlendirme.OrijinallikPuani</div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="small text-muted">Etki</div><div class="fw-bold">@degerlendirme.EtkiPuani</div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="small text-muted">Toplam</div><div class="fw-bold fs-5 text-success">@degerlendirme.ToplamPuan</div>
-                                    </div>
+                        <div class="result-card__body">
+                            <div class="meta-grid">
+                                <div class="meta-item">
+                                    <label>Gönderim Tarihi</label>
+                                    <div>@Model.Tarih.ToString("dd MMMM yyyy, HH:mm")</div>
+                                </div>
+                                <div class="meta-item">
+                                    <label>Öneri Konusu</label>
+                                    <div>@Model.Konu</div>
                                 </div>
                             </div>
-                        }
+
+                            <div class="content-section">
+                                <label class="form-label small text-muted">Açıklama</label>
+                                <div class="desc-box">@Model.Aciklama</div>
+                            </div>
+
+                            @if (Model.Degerlendirmeler != null && Model.Degerlendirmeler.Any())
+                            {
+                                var degerlendirme = Model.Degerlendirmeler.First();
+                                <div class="review-box">
+                                    <div class="review-box__header">
+                                        <h6>Kurul Değerlendirmesi</h6>
+                                        <span class="review-box__subtitle">İlk kayıtlı değerlendirme özeti</span>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(degerlendirme.KurulYorumu))
+                                    {
+                                        <blockquote class="review-quote">
+                                            @degerlendirme.KurulYorumu
+                                        </blockquote>
+                                    }
+
+                                    <div class="score-grid">
+                                        <div class="score-item">
+                                            <span>Gayret</span>
+                                            <strong>@degerlendirme.GayretPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Orijinallik</span>
+                                            <strong>@degerlendirme.OrijinallikPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Etki</span>
+                                            <strong>@degerlendirme.EtkiPuani</strong>
+                                        </div>
+                                        <div class="score-item score-item--total">
+                                            <span>Toplam</span>
+                                            <strong>@degerlendirme.ToplamPuan</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
         </div>
     </div>
-</div>
 </div>

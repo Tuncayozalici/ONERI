@@ -1,87 +1,135 @@
 @{
     ViewData["Title"] = "Portal Ana Sayfa";
+
+    var moduleCards = new[]
+    {
+        new
+        {
+            Title = "Fikir Atölyesi",
+            Description = "Yeni fikirlerinizi paylaşın ve şirket gelişimine katkı sağlayan önerileri tek akışta yönetin.",
+            Href = Url.Action("Index", "FikirAtolyesi") ?? "#",
+            Icon = "bi-lightbulb",
+            Badge = "İyileştirme Akışı",
+            Cta = "Modüle Git",
+            VariantClass = "portal-home__module-card--idea"
+        },
+        new
+        {
+            Title = "Günlük Veriler",
+            Description = "Üretim, sevkiyat, duraklama ve kalite sinyallerini güncel panolar üzerinden izleyin.",
+            Href = Url.Action("GunlukVeriler", "Home") ?? "#",
+            Icon = "bi-bar-chart-line",
+            Badge = "Operasyon Panosu",
+            Cta = "Paneli Aç",
+            VariantClass = "portal-home__module-card--daily"
+        }
+    };
+
+    var announcements = new[]
+    {
+        new { Icon = "bi-calendar-check", Title = "Yıllık izin planlamaları", Description = "Haftaya bölüm bazlı planlama ile başlatılacaktır." },
+        new { Icon = "bi-lightbulb", Title = "Fikir Atölyesi yayında", Description = "Öneri toplama ve değerlendirme akışı portal içinde aktif." },
+        new { Icon = "bi-stars", Title = "Yeni portal tasarımı", Description = "Gösterge panoları ile uyumlu yeni görünüm devreye alındı." }
+    };
+
+    var usefulLinks = new[]
+    {
+        new { Icon = "bi-globe2", Label = "Şirket Web Sitesi", Href = "https://marwood.com.tr" },
+        new { Icon = "bi-linkedin", Label = "LinkedIn Sayfası", Href = "https://tr.linkedin.com/company/marwood-office-furniture" },
+        new { Icon = "bi-file-earmark-pdf", Label = "Yemek Listesi (PDF)", Href = "#" }
+    };
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/home-index.css" asp-append-version="true" />
 }
 
-<div class="home-page">
-    <div class="container">
-    <!-- 1. Karşılama Alanı -->
-    <div class="welcome-header">
-        <h1>Merhaba!</h1>
-        <p>Yönetim ve veri akışı tek ekranda.</p>
-        <div class="date-pill">
-            <i class="bi bi-calendar3"></i>
-            <span id="current-date"></span>
-        </div>
-    </div>
-
-    <!-- 2. Ana Menü: "İkiz Kartlar" -->
-    <div class="row g-4 mb-5">
-        <!-- Kart 1: Fikir Atölyesi -->
-        <div class="col-lg-6">
-            <a href="@Url.Action("Index", "FikirAtolyesi")" class="twin-card">
-                <div class="icon-wrapper icon-wrapper-fikir">
-                    <i class="bi bi-lightbulb"></i>
-                </div>
-                <div class="content-wrapper">
-                    <h3>Fikir Atölyesi</h3>
-                    <p>Yeni fikirlerinizi paylaşın ve şirketin gelişimine katkıda bulunun.</p>
-                </div>
-                <div class="action-button">
-                     <span class="btn btn-primary">Giriş</span>
-                </div>
-            </a>
-        </div>
-
-        <!-- Kart 2: Günlük Veriler -->
-        <div class="col-lg-6">
-            <a href="@Url.Action("GunlukVeriler", "Home")" class="twin-card">
-                <div class="icon-wrapper icon-wrapper-gunluk">
-                    <i class="bi bi-bar-chart-line"></i>
-                </div>
-                <div class="content-wrapper">
-                    <h3>Günlük Veriler</h3>
-                    <p>Üretim, sevkiyat ve enerji verilerini anlık grafiklerle takip edin.</p>
-                </div>
-                 <div class="action-button">
-                    <span class="btn btn-outline-secondary">İncele</span>
-                </div>
-            </a>
-        </div>
-    </div>
-
-    <!-- 3. Alt Bölüm (Duyurular & Linkler) -->
-    <div class="row g-4">
-        <!-- Sol Sütun (Şirket Duyuruları) -->
-        <div class="col-md-7">
-            <div class="info-panel info-panel-min-height">
-                <div class="card-header">
-                    <i class="bi bi-megaphone"></i> Şirket Duyuruları
-                </div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><span class="text-primary">📢</span> Yıllık izin planlamaları haftaya başlayacaktır.</li>
-                    <li class="list-group-item"><span class="text-info">ℹ️</span> Portalın Fikir Atölyesi modülü yayına alındı!</li>
-                    <li class="list-group-item"><span class="text-success">🎉</span> Yeni portal tasarımına geçiş yapılmıştır.</li>
-                </ul>
+<div class="portal-home">
+    <div class="container py-4 py-lg-5">
+        <section class="portal-home__intro mb-4">
+            <div class="portal-home__intro-copy">
+                <h1>Portal Ana Sayfa</h1>
+                <p>
+                    Günlük operasyon panoları, fikir akışı ve kurumsal bağlantılar için sade başlangıç alanı.
+                </p>
             </div>
-        </div>
-        <!-- Sağ Sütun (Hızlı Erişim / Faydalı Linkler) -->
-        <div class="col-md-5">
-            <div class="info-panel info-panel-min-height">
-                <div class="card-header">
-                    <i class="bi bi-link-45deg"></i> Faydalı Linkler
+            <div class="portal-home__intro-meta">
+                <div class="portal-home__date-pill">
+                    <i class="bi bi-calendar3"></i>
+                    <span id="current-date"></span>
                 </div>
-                <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action">Şirket Web Sitesi</a>
-                    <a href="#" class="list-group-item list-group-item-action">LinkedIn Sayfası</a>
-                    <a href="#" class="list-group-item list-group-item-action">Yemek Listesi (PDF)</a>
-                </div>
+                <small>@moduleCards.Length ana modül, 2 bilgi paneli</small>
             </div>
-        </div>
-    </div>
+        </section>
+
+        <section class="portal-home__modules mb-4">
+            @foreach (var module in moduleCards)
+            {
+                <a href="@module.Href" class="portal-home__module-card @module.VariantClass">
+                    <div class="portal-home__module-top">
+                        <i class="bi @module.Icon portal-home__module-icon"></i>
+                        <span class="portal-home__module-badge">@module.Badge</span>
+                    </div>
+                    <div class="portal-home__module-content">
+                        <h2>@module.Title</h2>
+                        <p>@module.Description</p>
+                    </div>
+                    <div class="portal-home__module-cta">
+                        <span>@module.Cta</span>
+                    </div>
+                </a>
+            }
+        </section>
+
+        <section class="portal-home__info-grid">
+            <article class="portal-home__panel">
+                <div class="portal-home__panel-header">
+                    <div>
+                        <h2>Şirket Duyuruları</h2>
+                        <p>Portal ve organizasyon akışına dair son notlar.</p>
+                    </div>
+                </div>
+                <div class="portal-home__panel-body">
+                    <div class="portal-home__announcement-list">
+                        @foreach (var item in announcements)
+                        {
+                            <div class="portal-home__announcement-item">
+                                <div class="portal-home__announcement-icon">
+                                    <i class="bi @item.Icon"></i>
+                                </div>
+                                <div>
+                                    <strong>@item.Title</strong>
+                                    <p>@item.Description</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </article>
+
+            <article class="portal-home__panel">
+                <div class="portal-home__panel-header">
+                    <div>
+                        <h2>Faydalı Linkler</h2>
+                        <p>Kurumsal erişim için sık kullanılan bağlantılar.</p>
+                    </div>
+                </div>
+                <div class="portal-home__panel-body">
+                    <div class="portal-home__link-list">
+                        @foreach (var link in usefulLinks)
+                        {
+                            <a href="@link.Href" class="portal-home__link-item">
+                                <span class="portal-home__link-icon">
+                                    <i class="bi @link.Icon"></i>
+                                </span>
+                                <span class="portal-home__link-label">@link.Label</span>
+                                <i class="bi bi-arrow-up-right"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </article>
+        </section>
     </div>
 </div>
 

@@ -6,252 +6,314 @@
     var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
     var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Bölüm Bazlı Personel (Toplam)";
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
+    var hataNedeniSayisi = Model.HataNedenLabels.Count;
+    var aktifBolumSayisi = Model.BolumUretimLabels.Count;
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler-dashboard.css" asp-append-version="true" />
 }
 
-<div class="daily-page">
-<div class="container">
-    <div class="daily-hero">
-        <div class="hero-kicker"><i class="bi bi-activity"></i> Günlük Veriler</div>
-        <h2>Fabrika Veri Panosu</h2>
-        <p class="text-muted mb-0">Tüm bölümlerden gelen günlük üretim ve performans verilerini tek ekranda izleyin.</p>
-    </div>
+<div class="gunluk-page">
+    <div class="container py-4 py-lg-5">
+        <section class="gunluk-hero mb-4">
+            <div class="gunluk-hero__content">
+                <div class="gunluk-hero__eyebrow">
+                    <i class="bi bi-activity"></i>
+                    FABRIKA OZETI
+                </div>
+                <h1>Gunluk Veriler Panosu</h1>
+                <p>
+                    Tum bolumlerden gelen gunluk uretim, OEE, hata ve duraklama verilerini tek akista izleyin.
+                    Ozet kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
+                </p>
+                <div class="gunluk-hero__facts">
+                    <div class="gunluk-fact">
+                        <span>Aktif bolum</span>
+                        <strong>@aktifBolumSayisi</strong>
+                    </div>
+                    <div class="gunluk-fact">
+                        <span>Hata nedeni</span>
+                        <strong>@hataNedeniSayisi</strong>
+                    </div>
+                </div>
+            </div>
 
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="summary-card" id="summaryCard">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span>Genel Fabrika Özeti</span>
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <small class="text-muted">Seçili Aralık: @ViewBag.OzetRange</small>
+            <div class="gunluk-hero__panel">
+                <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="gunluk-filter-form js-unified-date-filter-form">
+                    @await Html.PartialAsync("_UnifiedDateFilter")
+                    <div class="gunluk-filter-form__controls">
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="summaryUltraToggle">
                             <label class="form-check-label" for="summaryUltraToggle">Ultrawide</label>
                         </div>
-                        <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="d-flex align-items-center gap-2 js-unified-date-filter-form">
-                            @await Html.PartialAsync("_UnifiedDateFilter")
-                            <button type="submit" class="btn btn-sm btn-primary js-unified-filter-apply" disabled>Filtrele</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
-                        </form>
+                        <div class="gunluk-filter-form__actions">
+                            <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                            <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="gunluk-period">
+                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                </div>
+
+                <div class="gunluk-hero__note">
+                    <p>
+                        <strong>Genel OEE</strong> tum bolumlerden gelen ortalama verim skorudur.
+                        <strong>Makine bazli OEE</strong> ve <strong>bolum bazli OEE</strong> panelleri, genel ortalama ile lokal dagilim farkini birlikte gosterir.
+                    </p>
+                    <p class="mb-0">
+                        Ultrawide modu ozellikle genis ekranlarda panel yogunlugunu azaltmak icin korunur.
+                        Alt bolum kartlari ilgili dashboardlara hizli gecis sunar.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <div id="summaryCard" class="gunluk-board mb-4">
+            <section class="gunluk-top-layout mb-4">
+                <div class="gunluk-kpi-stack">
+                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">Toplam Uretilen Parca</span>
+                        <strong class="gunluk-kpi__value">@Model.ToplamUretim.ToString("N0")</strong>
+                        <small class="gunluk-kpi__meta">Secilen donemin toplam uretim hacmi</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">Hatali Adet</span>
+                        <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
+                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--amber gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">Toplam Duraklama</span>
+                        <strong class="gunluk-kpi__value">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</strong>
+                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure</small>
+                    </article>
+                </div>
+
+                <div class="gunluk-panel h-100 gunluk-panel--gauge">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Genel OEE Skoru</h2>
+                            <p>Fabrika ortalamasinin tek bakista okunan gostergesi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--gauge">
+                        <canvas id="genelOeeGaugeGrafigi"></canvas>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-                    </div>
-                    <div class="summary-top-hub mb-4">
-                        <div class="summary-side-stack summary-side-stack-left">
-                            <div class="kpi-card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Toplam Üretilen Parça</h6>
-                                    <p class="card-text">@Model.ToplamUretim.ToString("N0")</p>
-                                </div>
-                            </div>
-                            <div class="kpi-card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-x-circle me-2"></i>Hatalı Adet</h6>
-                                    <p class="card-text">@Model.ToplamHataAdet.ToString("N0")</p>
-                                </div>
-                            </div>
-                            <div class="kpi-card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-stopwatch me-2"></i>Makine Bazlı Toplam Duraklama</h6>
-                                    <p class="card-text">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</p>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="card shadow-sm h-100 oee-gauge-card summary-hub-chart">
-                            <div class="card-header">Genel OEE Skoru</div>
-                            <div class="card-body">
-                                <canvas id="genelOeeGaugeGrafigi"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="card shadow-sm h-100 oee-machine-card summary-hub-chart">
-                            <div class="card-header">Makine Bazlı OEE (Genel Ortalama)</div>
-                            <div class="card-body">
-                                <canvas id="makineOeeGrafigi"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="summary-side-stack summary-side-stack-right">
-                            <div class="kpi-card kpi-card-info h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>En Çok Hata Nedeni</h6>
-                                    <p class="card-text">@Model.EnCokHataNedeni</p>
-                                </div>
-                            </div>
-                            <div class="kpi-card kpi-card-info h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-diagram-3 me-2"></i>En Çok Hata Bölümü</h6>
-                                    <p class="card-text">@Model.EnCokHataBolum</p>
-                                </div>
-                            </div>
-                            <div class="kpi-card kpi-card-info h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title"><i class="bi bi-person-badge me-2"></i>En Çok Hata Operatörü</h6>
-                                    <p class="card-text">@Model.EnCokHataOperator</p>
-                                </div>
-                            </div>
+                <div class="gunluk-panel h-100">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Makine Bazli OEE</h2>
+                            <p>Tum makinelerin genel ortalama verim siralamasi.</p>
                         </div>
                     </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="makineOeeGrafigi"></canvas>
+                    </div>
+                </div>
 
-                    <div class="summary-charts">
-                        <div class="card shadow-sm h-100 oee-components-card">
-                            <div class="card-header">OEE Bileşenleri (Genel Ortalama)</div>
-                            <div class="card-body">
-                                <canvas id="genelBilesenGrafigi"></canvas>
+                <div class="gunluk-kpi-stack">
+                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
+                        <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
+                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
+                        <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
+                    </article>
+                </div>
+            </section>
+
+            <section class="gunluk-grid">
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>OEE Bilesenleri</h2>
+                            <p>Performans, kullanilabilirlik ve kalite ortalamalari.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="genelBilesenGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Bolum Bazli OEE</h2>
+                            <p>Bolumler arasinda verim dagilimini karsilastirin.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="bolumOeeGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Bolum Bazli Hata</h2>
+                            <p>Toplam hata adedinin bolumlere gore dagilimi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="bolumHataGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>@personelBolumTitle</h2>
+                            <p>Bolumlere gore toplam personel yuk dagilimi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="personelBolumGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Hata Nedenleri</h2>
+                            <p>En yuksek hacimli ilk 6 hata nedeni.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart-pie">
+                        <canvas id="hataNedenGenelGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Duraklama Trendi</h2>
+                            <p>Gun bazli kayip sure hareketi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="duraklamaTrendGrafigi"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Hata Trendi</h2>
+                            <p>Gun bazli hatali adet degisimini izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="genelHataTrend"></canvas>
+                    </div>
+                </div>
+
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Donem Ozeti</h2>
+                            <p>Secilen aralik icin hizli okuma karti.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body">
+                        <div class="gunluk-summary-list">
+                            <div class="gunluk-summary-item">
+                                <span>Secili aralik</span>
+                                <strong>@ViewBag.OzetRange</strong>
+                            </div>
+                            <div class="gunluk-summary-item">
+                                <span>En cok hata nedeni</span>
+                                <strong>@Model.EnCokHataNedeni</strong>
+                            </div>
+                            <div class="gunluk-summary-item">
+                                <span>En cok hata bolumu</span>
+                                <strong>@Model.EnCokHataBolum</strong>
+                            </div>
+                            <div class="gunluk-summary-item">
+                                <span>En cok hata operatoru</span>
+                                <strong>@Model.EnCokHataOperator</strong>
+                            </div>
+                            <div class="gunluk-summary-item">
+                                <span>Ortalama performans</span>
+                                <strong>@Model.OrtalamaPerformans.ToString("N2")%</strong>
+                            </div>
+                            <div class="gunluk-summary-item">
+                                <span>Ortalama fiili calisma</span>
+                                <strong>@Model.OrtalamaFiiliCalisma.ToString("N2")%</strong>
                             </div>
                         </div>
-                        <div class="card shadow-sm h-100 oee-dept-card">
-                            <div class="card-header">Bölüm Bazlı OEE (Genel Ortalama)</div>
-                            <div class="card-body">
-                                <canvas id="bolumOeeGrafigi"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100 bolum-hata-card">
-                            <div class="card-header">Bölüm Bazlı Hata (Toplam Adet)</div>
-                            <div class="card-body">
-                                <canvas id="bolumHataGrafigi"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100 personel-bolum-card">
-                            <div class="card-header">@personelBolumTitle</div>
-                            <div class="card-body">
-                                <canvas id="personelBolumGrafigi"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header">Hata Nedenleri (Top 6)</div>
-                            <div class="card-body">
-                                <div class="chart-pie-wrap">
-                                    <canvas id="hataNedenGenelGrafigi" class="chart-pie"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100 trend-line-card">
-                            <div class="card-header">Duraklama Trendi</div>
-                            <div class="card-body">
-                                <canvas id="duraklamaTrendGrafigi" class="chart-fill"></canvas>
-                            </div>
-                        </div>
-                        <div class="card shadow-sm h-100 trend-line-card">
-                            <div class="card-header">Hata Trendi</div>
-                            <div class="card-body">
-                                <canvas id="genelHataTrend" class="chart-fill"></canvas>
-                            </div>
-                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section id="sectionLinksSection" class="gunluk-section-links">
+            <div class="gunluk-panel">
+                <div class="gunluk-panel__header">
+                    <div>
+                        <h2>Bolum Ekranlari</h2>
+                        <p>Fabrika panosundan ilgili operasyon dashboardlarina hizli gecis.</p>
+                    </div>
+                </div>
+                <div class="gunluk-panel__body">
+                    <div id="sectionNavGrid" class="gunluk-nav-grid">
+                        <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-speedometer2"></i></div>
+                            <h3>Profil Lazer</h3>
+                            <p>Gunluk uretim, verimlilik ve trend analizleri.</p>
+                        </a>
+                        <a href="@Url.Action("BoyahaneDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-paint-bucket"></i></div>
+                            <h3>Boyahane</h3>
+                            <p>Gunluk boyama, fire ve hata analizleri.</p>
+                        </a>
+                        <a href="@Url.Action("PvcDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-bounding-box"></i></div>
+                            <h3>PVC</h3>
+                            <p>Uretim metraji, duraklama ve verimlilik analizleri.</p>
+                        </a>
+                        <a href="@Url.Action("TezgahDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-gear"></i></div>
+                            <h3>Tezgah</h3>
+                            <p>Parca, kisi, kayip sure ve kullanilabilirlik.</p>
+                        </a>
+                        <a href="@Url.Action("EbatlamaDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-tools"></i></div>
+                            <h3>Ebatlama</h3>
+                            <p>Kesim, plaka, duraklama ve mesai analizleri.</p>
+                        </a>
+                        <a href="@Url.Action("CncDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-cpu"></i></div>
+                            <h3>CNC</h3>
+                            <p>Masterwood, Skipper ve Rover-B makineleri.</p>
+                        </a>
+                        <a href="@Url.Action("HataliParcaDashboard", "Home")" class="gunluk-nav-card">
+                            <div class="gunluk-nav-card__icon"><i class="bi bi-bug"></i></div>
+                            <h3>Hatali Parca Analizi</h3>
+                            <p>Hata nedenleri, bolumler ve operator trendleri.</p>
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Bölüm Navigasyon Kartları -->
-    <div id="sectionNavGrid" class="section-nav-grid row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-4">
-        <div class="col">
-            <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-speedometer2"></i>
-                    </div>
-                    <h5>Profil Lazer Bölümü</h5>
-                    <p>Günlük üretim, verimlilik ve trend analizleri.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            <a href="@Url.Action("BoyahaneDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-paint-bucket"></i>
-                    </div>
-                    <h5>Boyahane Bölümü</h5>
-                    <p>Günlük boyama, fire ve hata analizleri.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            <a href="@Url.Action("PvcDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-bounding-box"></i>
-                    </div>
-                    <h5>PVC Bölümü</h5>
-                    <p>Üretim metrajı, duraklama ve verimlilik analizleri.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            <a href="@Url.Action("TezgahDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-gear"></i>
-                    </div>
-                    <h5>Tezgah Bölümü</h5>
-                    <p>Parça, kişi, kayıp süre ve kullanılabilirlik.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="@Url.Action("EbatlamaDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                    <h5>Ebatlama Bölümü</h5>
-                    <p>Kesim, plaka, duraklama ve mesai analizleri.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="@Url.Action("CncDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-cpu"></i>
-                    </div>
-                    <h5>CNC Bölümü</h5>
-                    <p>Masterwood, Skipper ve Rover-B makineleri.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            <a href="@Url.Action("HataliParcaDashboard", "Home")" class="nav-tile">
-                <div class="status-dot active"></div>
-                <div class="text-center">
-                    <div class="icon">
-                        <i class="bi bi-bug"></i>
-                    </div>
-                    <h5>Hatalı Parça Analizi</h5>
-                    <p>Hata nedenleri, bölümler ve operatör trendleri.</p>
-                </div>
-            </a>
-        </div>
+        </section>
     </div>
 </div>
-</div>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="gunluk-veriler-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = ViewBag.OzetResolvedYear, personelSeriesLabel }))
+        @Html.Raw(Json.Serialize(new { model = Model, personelSeriesLabel }))
     </script>
     <script src="~/js/pages/dashboards/gunluk-veriler.js" asp-append-version="true"></script>
 }

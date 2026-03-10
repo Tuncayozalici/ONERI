@@ -1,14 +1,41 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const payload = JSON.parse(document.getElementById('hatali-parca-dashboard-data').textContent);
+    const payloadElement = document.getElementById('hatali-parca-dashboard-data');
+    if (!payloadElement) {
+        return;
+    }
+
+    const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
-    const defaultYear = payload.defaultYear;
+    const chartCanvasIds = [
+        'hataAdetTrend',
+        'hataNedenGrafigi',
+        'bolumGrafigi',
+        'operatorGrafigi',
+        'kalinlikGrafigi',
+        'renkGrafigi',
+        'kesimDurumGrafigi',
+        'pvcDurumGrafigi'
+    ];
+    const chartParents = new Map();
+    const chartTemplates = new Map();
+    const chartInstances = [];
+
+    chartCanvasIds.forEach(function (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) {
+            return;
+        }
+
+        chartParents.set(canvasId, canvas.parentElement);
+        chartTemplates.set(canvasId, canvas.parentElement.innerHTML);
+    });
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
             return value.map(normalizePayloadKeys);
         }
 
-        if (value !== null && typeof value === "object") {
+        if (value !== null && typeof value === 'object') {
             const normalized = {};
             for (const [key, nested] of Object.entries(value)) {
                 const normalizedKey = key.length > 0 ? key[0].toUpperCase() + key.slice(1) : key;
@@ -19,329 +46,443 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-                        const filterInput = document.getElementById('tarihFiltre');
-    const dateInput = document.getElementById('raporTarihi');
-    const startDateInput = document.getElementById('baslangicTarihi');
-    const endDateInput = document.getElementById('bitisTarihi');
-    const monthInput = document.getElementById('ay');
-    const yearInput = document.getElementById('yil');
-    const clearButton = document.getElementById('clearFilter');
 
-    function pad2(value) {
-        return String(value).padStart(2, '0');
-    }
-
-    function isValidIsoDate(isoDate) {
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-        if (!match) {
-            return false;
-        }
-
-        const year = Number(match[1]);
-        const month = Number(match[2]);
-        const day = Number(match[3]);
-        const candidate = new Date(Date.UTC(year, month - 1, day));
-        return candidate.getUTCFullYear() == year
-            && candidate.getUTCMonth() + 1 == month
-            && candidate.getUTCDate() == day;
-    }
-
-    function parseDateToIso(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        if (isValidIsoDate(raw)) {
-            return raw;
-        }
-
-        const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (!trMatch) {
-            return null;
-        }
-
-        const day = pad2(Number(trMatch[1]));
-        const month = pad2(Number(trMatch[2]));
-        const year = trMatch[3];
-        const iso = `${year}-${month}-${day}`;
-        return isValidIsoDate(iso) ? iso : null;
-    }
-
-    function parseMonthValue(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (match) {
-            const month = Number(match[1]);
-            const year = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
-        if (match) {
-            const year = Number(match[1]);
-            const month = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        return null;
-    }
-
-    function parseRangeValue(value) {
-        const raw = String(value || '').trim();
-        const match = /^(.+)\s-\s(.+)$/.exec(raw);
-        if (!match) {
-            return null;
-        }
-
-        const startIso = parseDateToIso(match[1]);
-        const endIso = parseDateToIso(match[2]);
-        if (!startIso || !endIso) {
-            return null;
-        }
-
-        return { baslangic: startIso, bitis: endIso };
-    }
-
-    function isoToDisplay(isoDate) {
-        if (!isValidIsoDate(isoDate)) {
-            return '';
-        }
-
-        const [year, month, day] = isoDate.split('-');
-        return `${day}.${month}.${year}`;
-    }
-
-    function getModelDateIso() {
-        const raw = data.RaporTarihi;
-        if (!raw) {
-            return '';
-        }
-
-        if (typeof raw === 'string') {
-            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (match) {
-                return `${match[1]}-${match[2]}-${match[3]}`;
-            }
-        }
-
-        const parsed = new Date(raw);
-        if (Number.isNaN(parsed.getTime())) {
-            return '';
-        }
-
-        const year = parsed.getFullYear();
-        const month = String(parsed.getMonth() + 1).padStart(2, '0');
-        const day = String(parsed.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    function clearHiddenFilters() {
-        dateInput.value = '';
-        startDateInput.value = '';
-        endDateInput.value = '';
-        monthInput.value = '';
-        yearInput.value = '';
-    }
-
-    function syncHiddenFiltersFromText() {
-        clearHiddenFilters();
-
-        const raw = String(filterInput.value || '').trim();
-        if (!raw) {
-            return;
-        }
-
-        const parsedRange = parseRangeValue(raw);
-        if (parsedRange) {
-            startDateInput.value = parsedRange.baslangic;
-            endDateInput.value = parsedRange.bitis;
-            filterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
-            return;
-        }
-
-        const parsedMonth = parseMonthValue(raw);
-        if (parsedMonth) {
-            monthInput.value = String(parsedMonth.ay);
-            yearInput.value = String(parsedMonth.yil);
-            filterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
-            return;
-        }
-
-        const parsedDate = parseDateToIso(raw);
-        if (parsedDate) {
-            dateInput.value = parsedDate;
-            filterInput.value = isoToDisplay(parsedDate);
-        }
-    }
-
-    if (filterInput) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const raporTarihi = urlParams.get('raporTarihi');
-        const baslangicTarihi = urlParams.get('baslangicTarihi');
-        const bitisTarihi = urlParams.get('bitisTarihi');
-        const ay = urlParams.get('ay');
-        const yil = urlParams.get('yil');
-        const clear = urlParams.get('clear');
-
-        if (clear === '1') {
-            filterInput.value = '';
-        } else if (raporTarihi) {
-            filterInput.value = isoToDisplay(raporTarihi);
-        } else if (baslangicTarihi && bitisTarihi) {
-            filterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
-        } else if (ay && yil) {
-            filterInput.value = `${pad2(Number(ay))}.${yil}`;
-        } else {
-            const modelDateIso = getModelDateIso();
-            filterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
-        }
-
-        syncHiddenFiltersFromText();
-
-        filterInput.addEventListener('blur', syncHiddenFiltersFromText);
-
-        const filterForm = filterInput.closest('form');
-        if (filterForm) {
-            filterForm.addEventListener('submit', function () {
-                syncHiddenFiltersFromText();
-            });
-        }
-
-        clearButton.addEventListener('click', function () {
-            filterInput.value = '';
-            clearHiddenFilters();
-            window.location.href = `${window.location.pathname}?clear=1`;
+    function hasAnyData(values) {
+        return Array.isArray(values) && values.some(function (value) {
+            return Number(value || 0) !== 0;
         });
     }
-    
-                new Chart(document.getElementById('hataAdetTrend').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.HataAdetTrendData,
-                            borderColor: 'rgba(255, 99, 132, 0.9)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.15)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: { responsive: true }
-                });
-    
-                const hataNedenCardHeader = document.querySelector('#hataNedenGrafigi')?.closest('.card')?.querySelector('.card-header');
-                const anaHataNedenBaslik = 'Hata Nedenleri';
-                const donutColors = [
-                    '#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff',
-                    '#ff9f40', '#c9cbcf', '#7acbf9', '#f06292', '#81c784'
+
+    function getThemeName() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    function getThemePalette() {
+        const isDarkTheme = getThemeName() === 'dark';
+        return {
+            textColor: isDarkTheme ? '#9aa8bd' : '#475569',
+            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.32)',
+            trendLine: isDarkTheme ? '#fb7185' : '#e11d48',
+            trendFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            departmentBar: isDarkTheme ? 'rgba(96, 165, 250, 0.78)' : 'rgba(37, 99, 235, 0.72)',
+            departmentBarSelected: isDarkTheme ? 'rgba(59, 130, 246, 1)' : 'rgba(29, 78, 216, 0.96)',
+            operatorBar: isDarkTheme ? 'rgba(167, 139, 250, 0.78)' : 'rgba(124, 58, 237, 0.72)',
+            detailBar: isDarkTheme ? 'rgba(45, 212, 191, 0.74)' : 'rgba(13, 148, 136, 0.68)',
+            detailBarAlt: isDarkTheme ? 'rgba(251, 191, 36, 0.74)' : 'rgba(217, 119, 6, 0.68)'
+        };
+    }
+
+    function configureChartDefaults(palette) {
+        Chart.defaults.color = palette.textColor;
+        Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    }
+
+    function destroyCharts() {
+        while (chartInstances.length > 0) {
+            const instance = chartInstances.pop();
+            instance.destroy();
+        }
+    }
+
+    function restoreChartContainers() {
+        destroyCharts();
+
+        chartCanvasIds.forEach(function (canvasId) {
+            const parent = chartParents.get(canvasId);
+            const template = chartTemplates.get(canvasId);
+            if (!parent || !template) {
+                return;
+            }
+
+            parent.innerHTML = template;
+        });
+    }
+
+    function renderEmptyStateById(canvasId, message) {
+        const parent = chartParents.get(canvasId);
+        if (!parent) {
+            return;
+        }
+
+        parent.innerHTML = `<div class="hatali-empty-state">${message}</div>`;
+    }
+
+    function createChart(canvasId, config, hasData, emptyMessage) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            return null;
+        }
+
+        if (!hasData) {
+            renderEmptyStateById(canvasId, emptyMessage);
+            return null;
+        }
+
+        const instance = new Chart(canvas.getContext('2d'), config);
+        chartInstances.push(instance);
+        return instance;
+    }
+
+    function renderCharts() {
+        const palette = getThemePalette();
+        configureChartDefaults(palette);
+        restoreChartContainers();
+
+        const donutColors = [
+            '#fb7185', '#60a5fa', '#fbbf24', '#2dd4bf', '#a78bfa',
+            '#fb923c', '#94a3b8', '#22c55e', '#f472b6', '#38bdf8'
+        ];
+        const titleElement = document.getElementById('hataNedenPanelTitle');
+        const normalizeKey = function (value) {
+            return String(value ?? '').trim().toLocaleLowerCase('tr-TR');
+        };
+        const bolumBazliMap = new Map(
+            (Array.isArray(data.BolumBazliHataNedenleri) ? data.BolumBazliHataNedenleri : []).map(function (item) {
+                return [
+                    normalizeKey(item.Bolum),
+                    {
+                        labels: Array.isArray(item.NedenLabels) ? item.NedenLabels : [],
+                        values: Array.isArray(item.NedenData) ? item.NedenData : []
+                    }
                 ];
-                const normalizeBolumKey = (value) => String(value ?? '')
-                    .trim()
-                    .toLocaleLowerCase('tr-TR');
+            })
+        );
 
-                const bolumBazliMap = new Map(
-                    (Array.isArray(data.BolumBazliHataNedenleri) ? data.BolumBazliHataNedenleri : []).map(item => [
-                        normalizeBolumKey(item.Bolum),
-                        {
-                            labels: Array.isArray(item.NedenLabels) ? item.NedenLabels : [],
-                            values: Array.isArray(item.NedenData) ? item.NedenData : []
+        createChart('hataAdetTrend', {
+            type: 'line',
+            data: {
+                labels: data.TrendLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.HataAdetTrendData || [],
+                        borderColor: palette.trendLine,
+                        backgroundColor: palette.trendFill,
+                        tension: 0.28,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
                         }
-                    ])
-                );
-
-                const hataNedenChart = new Chart(document.getElementById('hataNedenGrafigi').getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.HataNedenLabels,
-                        datasets: [{
-                            data: data.HataNedenData,
-                            backgroundColor: donutColors
-                        }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-
-                let seciliBolum = null;
-                const bolumBarDefault = 'rgba(54, 162, 235, 0.6)';
-                const bolumBarSelected = 'rgba(59, 130, 246, 0.95)';
-
-                function updateHataNedenByBolum(bolum) {
-                    const detay = bolum ? bolumBazliMap.get(normalizeBolumKey(bolum)) : null;
-                    if (detay && detay.labels.length > 0) {
-                        hataNedenChart.data.labels = detay.labels;
-                        hataNedenChart.data.datasets[0].data = detay.values;
-                        if (hataNedenCardHeader) {
-                            hataNedenCardHeader.textContent = `Hata Nedenleri - ${bolum}`;
-                        }
-                    } else {
-                        hataNedenChart.data.labels = data.HataNedenLabels;
-                        hataNedenChart.data.datasets[0].data = data.HataNedenData;
-                        if (hataNedenCardHeader) {
-                            hataNedenCardHeader.textContent = anaHataNedenBaslik;
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
                         }
                     }
-                    hataNedenChart.update();
                 }
+            }
+        }, hasAnyData(data.HataAdetTrendData), 'Seçilen dönem için hatalı parça trend verisi bulunamadı.');
 
-                const bolumChart = new Chart(document.getElementById('bolumGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.BolumLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.BolumData,
-                            backgroundColor: data.BolumLabels.map(() => bolumBarDefault),
-                            borderColor: 'rgba(54, 162, 235, 0.9)',
-                            borderWidth: 1
-                        }]
+        const hataNedenChart = createChart('hataNedenGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: data.HataNedenLabels || [],
+                datasets: [
+                    {
+                        data: data.HataNedenData || [],
+                        backgroundColor: donutColors,
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                cutout: '58%'
+            }
+        }, hasAnyData(data.HataNedenData), 'Hata nedeni dağılımı için veri bulunamadı.');
+
+        let seciliBolum = null;
+
+        function updateHataNedenByBolum(bolum) {
+            if (!hataNedenChart) {
+                return;
+            }
+
+            const detay = bolum ? bolumBazliMap.get(normalizeKey(bolum)) : null;
+            if (detay && detay.labels.length > 0) {
+                hataNedenChart.data.labels = detay.labels;
+                hataNedenChart.data.datasets[0].data = detay.values;
+                if (titleElement) {
+                    titleElement.textContent = `Hata Nedenleri - ${bolum}`;
+                }
+            } else {
+                hataNedenChart.data.labels = data.HataNedenLabels || [];
+                hataNedenChart.data.datasets[0].data = data.HataNedenData || [];
+                if (titleElement) {
+                    titleElement.textContent = 'Hata Nedenleri';
+                }
+            }
+
+            hataNedenChart.update();
+        }
+
+        const bolumChart = createChart('bolumGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.BolumLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.BolumData || [],
+                        backgroundColor: (data.BolumLabels || []).map(function () { return palette.departmentBar; }),
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                onClick: function (_, elements) {
+                    if (!elements || !elements.length) {
+                        return;
+                    }
+
+                    const index = elements[0].index;
+                    const tiklananBolum = data.BolumLabels[index];
+                    seciliBolum = seciliBolum === tiklananBolum ? null : tiklananBolum;
+
+                    bolumChart.data.datasets[0].backgroundColor = (data.BolumLabels || []).map(function (label) {
+                        return label === seciliBolum ? palette.departmentBarSelected : palette.departmentBar;
+                    });
+                    bolumChart.update();
+                    updateHataNedenByBolum(seciliBolum);
+                },
+                onHover: function (event, elements) {
+                    if (event?.native?.target) {
+                        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
                     },
-                    options: {
-                        responsive: true,
-                        onClick: function (_, elements) {
-                            if (!elements || !elements.length) {
-                                return;
-                            }
-
-                            const index = elements[0].index;
-                            const tiklananBolum = data.BolumLabels[index];
-                            seciliBolum = seciliBolum === tiklananBolum ? null : tiklananBolum;
-
-                            bolumChart.data.datasets[0].backgroundColor = data.BolumLabels.map(label =>
-                                label === seciliBolum ? bolumBarSelected : bolumBarDefault
-                            );
-                            bolumChart.update();
-
-                            updateHataNedenByBolum(seciliBolum);
-                        },
-                        onHover: function (event, elements) {
-                            event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
                         }
                     }
-                });
-    
-                new Chart(document.getElementById('operatorGrafigi').getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.OperatorLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.OperatorData,
-                            backgroundColor: 'rgba(153, 102, 255, 0.6)',
-                            borderColor: 'rgba(153, 102, 255, 0.9)',
-                            borderWidth: 1
-                        }]
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.BolumData), 'Bölüme göre hata grafiği için veri bulunamadı.');
+
+        createChart('operatorGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.OperatorLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.OperatorData || [],
+                        backgroundColor: palette.operatorBar,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
                     },
-                    options: { responsive: true }
-                });
-    
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.OperatorData), 'Operatöre göre hata grafiği için veri bulunamadı.');
+
+        createChart('kalinlikGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.KalinlikLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.KalinlikData || [],
+                        backgroundColor: palette.detailBar,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.KalinlikData), 'Kalınlık dağılımı için veri bulunamadı.');
+
+        createChart('renkGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.RenkLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.RenkData || [],
+                        backgroundColor: palette.detailBarAlt,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.RenkData), 'Renk dağılımı için veri bulunamadı.');
+
+        createChart('kesimDurumGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.KesimDurumLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.KesimDurumData || [],
+                        backgroundColor: palette.departmentBar,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.KesimDurumData), 'Kesim durumu dağılımı için veri bulunamadı.');
+
+        createChart('pvcDurumGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.PvcDurumLabels || [],
+                datasets: [
+                    {
+                        label: 'Hatalı Adet',
+                        data: data.PvcDurumData || [],
+                        backgroundColor: palette.operatorBar,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.PvcDurumData), 'PVC durumu dağılımı için veri bulunamadı.');
+    }
+
+    renderCharts();
+
+    let activeTheme = getThemeName();
+    const themeObserver = new MutationObserver(function () {
+        const nextTheme = getThemeName();
+        if (nextTheme === activeTheme) {
+            return;
+        }
+
+        activeTheme = nextTheme;
+        renderCharts();
+    });
+
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });

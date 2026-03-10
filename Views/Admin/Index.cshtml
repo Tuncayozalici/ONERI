@@ -5,7 +5,6 @@
 @{
     ViewData["Title"] = "Yönetim Paneli";
 
-    // Statistics Calculation
     var bekleyenSayisi = Model.Count(o => o.Durum == OneriDurum.Beklemede);
     var onaylananSayisi = Model.Count(o => o.Durum == OneriDurum.Onaylandi);
     var bugunGelenSayisi = Model.Count(o => o.Tarih.Date == DateTime.Today);
@@ -24,89 +23,80 @@
 }
 
 <div class="admin-page">
-<div class="container mt-4">
+    <div class="container py-4 py-lg-5">
+        <section class="admin-intro mb-4">
+            <div class="admin-intro__copy">
+                <div class="hero-kicker"><i class="bi bi-shield-lock"></i> Yönetim Merkezi</div>
+                <h1>Yönetim Paneli</h1>
+                <p>Bekleyen işlerinizi, durum akışını ve yönetim işlemlerini tek yüzeyden yönetin.</p>
+            </div>
+            <div class="admin-intro__actions">
+                @if (canBolumYoneticileri)
+                {
+                    <a asp-action="BolumYoneticileri" class="btn btn-dark">
+                        <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
+                    </a>
+                }
+            </div>
+        </section>
 
-    <!-- Step 1: Dashboard Header -->
-    <div class="admin-hero mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-            <div class="hero-kicker"><i class="bi bi-shield-lock"></i> Yönetim Merkezi</div>
-            <h1 class="fw-bold display-6 mb-1">Yönetim Paneli</h1>
-            <p class="text-muted mb-0">Bekleyen işlerinizi buradan yönetebilirsiniz.</p>
-        </div>
-        <div class="d-flex gap-2">
-            @if (canBolumYoneticileri)
-            {
-                <a asp-action="BolumYoneticileri" class="btn btn-dark">
-                    <i class="bi bi-people-fill me-1"></i> Yöneticileri Yönet
-                </a>
-            }
-        </div>
-    </div>
-
-    <!-- Stat Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon warn"><i class="bi bi-hourglass-split"></i></div>
-                    <div>
-                        <div class="stat-label">Bekleyen</div>
-                        <div class="stat-value">@bekleyenSayisi</div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card h-100">
+                    <div class="stat-card__body">
+                        <div class="stat-icon warn"><i class="bi bi-hourglass-split"></i></div>
+                        <div>
+                            <div class="stat-label">Bekleyen</div>
+                            <div class="stat-value">@bekleyenSayisi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card h-100">
+                    <div class="stat-card__body">
+                        <div class="stat-icon info"><i class="bi bi-patch-check"></i></div>
+                        <div>
+                            <div class="stat-label">Onaylanan</div>
+                            <div class="stat-value">@onaylananSayisi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card h-100">
+                    <div class="stat-card__body">
+                        <div class="stat-icon primary"><i class="bi bi-calendar-check"></i></div>
+                        <div>
+                            <div class="stat-label">Bugün Gelen</div>
+                            <div class="stat-value">@bugunGelenSayisi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card h-100">
+                    <div class="stat-card__body">
+                        <div class="stat-icon neutral"><i class="bi bi-collection"></i></div>
+                        <div>
+                            <div class="stat-label">Toplam</div>
+                            <div class="stat-value">@toplamOneriSayisi</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon info"><i class="bi bi-patch-check"></i></div>
-                    <div>
-                        <div class="stat-label">Onaylanan</div>
-                        <div class="stat-value">@onaylananSayisi</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon primary"><i class="bi bi-calendar-check"></i></div>
-                    <div>
-                        <div class="stat-label">Bugün Gelen</div>
-                        <div class="stat-value">@bugunGelenSayisi</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon neutral"><i class="bi bi-collection"></i></div>
-                    <div>
-                        <div class="stat-label">Toplam</div>
-                        <div class="stat-value">@toplamOneriSayisi</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-
-    <!-- Step 2: Control Bar -->
-    <div class="filter-bar mb-4">
-        <div class="card-body">
-                <form asp-controller="Admin" asp-action="Index" method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-                    <!-- Search Input -->
+        <div class="filter-bar mb-4">
+            <form asp-controller="Admin" asp-action="Index" method="get" class="filter-form">
                 <div class="input-group filter-search-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                    <input type="text" name="arama" class="form-control border-start-0" placeholder="Konu veya açıklamada ara..." value="@ViewData["MevcutArama"]">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="arama" class="form-control" placeholder="Konu veya açıklamada ara..." value="@ViewData["MevcutArama"]">
                 </div>
 
-                <!-- Filter Dropdown -->
-                <div class="d-flex align-items-center gap-2">
-                    <label class="form-label text-muted mb-0">Durum:</label>
-                    <select name="durum" class="form-select filter-status-select" data-auto-submit="true">
+                <div class="filter-form__meta">
+                    <label class="form-label mb-0" for="durumSecici">Durum</label>
+                    <select id="durumSecici" name="durum" class="form-select filter-status-select" data-auto-submit="true">
                         <option value="Tümü" selected="@(ViewData["MevcutDurum"] as string == "Tümü")">Tümü</option>
                         <option value="Bekleyen" selected="@(ViewData["MevcutDurum"] as string == "Bekleyen")">Bekleyen</option>
                         <option value="Onaylanan" selected="@(ViewData["MevcutDurum"] as string == "Onaylanan")">Onaylanan</option>
@@ -114,8 +104,7 @@
                     </select>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2">
+                <div class="filter-form__actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-funnel-fill me-1"></i> Filtrele
                     </button>
@@ -125,21 +114,25 @@
                 </div>
             </form>
         </div>
-    </div>
 
+        <div class="table-card">
+            <div class="table-card__header">
+                <div>
+                    <h2>Öneri Listesi</h2>
+                    <p>Filtrelenen tüm kayıtlar tarih, bölüm, konu ve durum bilgisi ile listelenir.</p>
+                </div>
+                <div class="table-card__meta">@toplamOneriSayisi kayıt</div>
+            </div>
 
-    <!-- Step 3 & 4: "Smart List" Table -->
-    <div class="card table-card">
-        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-borderless align-middle">
-                    <thead class="bg-light">
+                <table class="table table-borderless align-middle admin-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="text-uppercase text-muted small p-3">Tarih</th>
-                            <th scope="col" class="text-uppercase text-muted small p-3">Bölüm</th>
-                            <th scope="col" class="text-uppercase text-muted small p-3">Konu</th>
-                            <th scope="col" class="text-uppercase text-muted small p-3">Durum</th>
-                            <th scope="col" class="text-uppercase text-muted small p-3 text-end">İşlemler</th>
+                            <th scope="col">Tarih</th>
+                            <th scope="col">Bölüm</th>
+                            <th scope="col">Konu</th>
+                            <th scope="col">Durum</th>
+                            <th scope="col" class="text-end">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -147,28 +140,28 @@
                         {
                             <tr>
                                 <td class="p-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-semibold">@item.Tarih.ToString("dd MMM yyyy")</span>
-                                        <small class="text-muted">@item.Tarih.ToString("HH:mm")</small>
+                                    <div class="table-date">
+                                        <span>@item.Tarih.ToString("dd MMM yyyy")</span>
+                                        <small>@item.Tarih.ToString("HH:mm")</small>
                                     </div>
                                 </td>
                                 <td class="p-3">
-                                    <span class="badge bg-light text-dark border">@(item.CalistigiBolum != null ? item.CalistigiBolum : "Belirtilmemiş")</span>
+                                    <span class="table-badge">@(item.CalistigiBolum != null ? item.CalistigiBolum : "Belirtilmemiş")</span>
                                 </td>
                                 <td class="p-3">
-                                    <div class="d-flex flex-column">
-                                        <a href="#" class="text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#aciklamaModal-@item.Id">
+                                    <div class="table-topic">
+                                        <a href="#" class="table-topic__link" data-bs-toggle="modal" data-bs-target="#aciklamaModal-@item.Id">
                                             @item.Konu
                                         </a>
-                                        <small class="text-muted">@Truncate(item.Aciklama, 70)...</small>
+                                        <small>@Truncate(item.Aciklama, 70)...</small>
                                     </div>
                                 </td>
                                 <td class="p-3">
-                                    <span class="badge rounded-pill @GetBadgeClass(item.Durum)">@GetStatusName(item.Durum)</span>
+                                    <span class="status-pill @GetBadgeClass(item.Durum)">@GetStatusName(item.Durum)</span>
                                 </td>
                                 <td class="p-3 text-end">
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-light" type="button" id="dropdownMenuButton-@item.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                                        <button class="btn btn-sm table-action-btn" type="button" id="dropdownMenuButton-@item.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-@item.Id">
@@ -233,7 +226,6 @@
                                 </td>
                             </tr>
 
-                            <!-- Modal for details -->
                             <div class="modal fade" id="aciklamaModal-@item.Id" tabindex="-1" aria-labelledby="modalLabel-@item.Id" aria-hidden="true">
                                 <div class="modal-dialog modal-lg modal-dialog-centered">
                                     <div class="modal-content modal-content-soft">
@@ -258,7 +250,6 @@
         </div>
     </div>
 </div>
-</div>
 
 @functions {
     string GetStatusName(OneriDurum durum)
@@ -278,11 +269,11 @@
     {
         return durum switch
         {
-            OneriDurum.Beklemede => "bg-warning text-dark",
-            OneriDurum.Onaylandi => "bg-info text-dark",
-            OneriDurum.KabulEdildi => "bg-success",
-            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "bg-danger",
-            _ => "bg-secondary"
+            OneriDurum.Beklemede => "status-pill--pending",
+            OneriDurum.Onaylandi => "status-pill--review",
+            OneriDurum.KabulEdildi => "status-pill--approved",
+            OneriDurum.Reddedildi or OneriDurum.PuanlamaRed => "status-pill--rejected",
+            _ => "status-pill--neutral"
         };
     }
 
@@ -292,6 +283,7 @@
         {
             return value;
         }
+
         return value.Substring(0, maxLength);
     }
 }

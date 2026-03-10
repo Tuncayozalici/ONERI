@@ -1,17 +1,46 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const payload = JSON.parse(document.getElementById('gunluk-veriler-data').textContent);
+    const payloadElement = document.getElementById('gunluk-veriler-data');
+    if (!payloadElement) {
+        return;
+    }
+
+    const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
-    const defaultYear = payload.defaultYear;
     const personelSeriesLabel = typeof payload.personelSeriesLabel === 'string' && payload.personelSeriesLabel.trim()
         ? payload.personelSeriesLabel.trim()
         : 'Personel';
+    const chartCanvasIds = [
+        'genelOeeGaugeGrafigi',
+        'makineOeeGrafigi',
+        'genelBilesenGrafigi',
+        'bolumOeeGrafigi',
+        'bolumHataGrafigi',
+        'personelBolumGrafigi',
+        'hataNedenGenelGrafigi',
+        'duraklamaTrendGrafigi',
+        'genelHataTrend'
+    ];
+    const chartParents = new Map();
+    const chartTemplates = new Map();
+    const chartInstances = [];
+    const horizontalPercentLabelPluginFactory = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin;
+
+    chartCanvasIds.forEach(function (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) {
+            return;
+        }
+
+        chartParents.set(canvasId, canvas.parentElement);
+        chartTemplates.set(canvasId, canvas.parentElement.innerHTML);
+    });
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
             return value.map(normalizePayloadKeys);
         }
 
-        if (value !== null && typeof value === "object") {
+        if (value !== null && typeof value === 'object') {
             const normalized = {};
             for (const [key, nested] of Object.entries(value)) {
                 const normalizedKey = key.length > 0 ? key[0].toUpperCase() + key.slice(1) : key;
@@ -22,692 +51,633 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-                function getModelDateIso() {
-                    const raw = data.RaporTarihi;
-                    if (!raw) {
-                        return '';
-                    }
 
-                    if (typeof raw === 'string') {
-                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                        if (match) {
-                            return `${match[1]}-${match[2]}-${match[3]}`;
-                        }
-                    }
+    function getThemeName() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
 
-                    const parsed = new Date(raw);
-                    if (Number.isNaN(parsed.getTime())) {
-                        return '';
-                    }
+    function getThemePalette() {
+        const isDarkTheme = getThemeName() === 'dark';
+        return {
+            textColor: isDarkTheme ? '#9aa8bd' : '#475569',
+            strongTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
+            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
+            gaugePrimary: isDarkTheme ? '#34d399' : '#10b981',
+            gaugeMuted: isDarkTheme ? 'rgba(71, 85, 105, 0.42)' : 'rgba(148, 163, 184, 0.38)',
+            oeeBar: isDarkTheme ? 'rgba(59, 130, 246, 0.78)' : 'rgba(37, 99, 235, 0.7)',
+            oeeBarBorder: isDarkTheme ? 'rgba(96, 165, 250, 1)' : 'rgba(29, 78, 216, 0.96)',
+            componentBars: [
+                isDarkTheme ? 'rgba(96, 165, 250, 0.82)' : 'rgba(37, 99, 235, 0.74)',
+                isDarkTheme ? 'rgba(52, 211, 153, 0.82)' : 'rgba(16, 185, 129, 0.74)',
+                isDarkTheme ? 'rgba(196, 181, 253, 0.82)' : 'rgba(124, 58, 237, 0.72)'
+            ],
+            componentBorders: [
+                isDarkTheme ? 'rgba(147, 197, 253, 1)' : 'rgba(29, 78, 216, 1)',
+                isDarkTheme ? 'rgba(110, 231, 183, 1)' : 'rgba(5, 150, 105, 1)',
+                isDarkTheme ? 'rgba(221, 214, 254, 1)' : 'rgba(109, 40, 217, 1)'
+            ],
+            errorBar: isDarkTheme ? 'rgba(251, 113, 133, 0.82)' : 'rgba(225, 29, 72, 0.72)',
+            errorBarBorder: isDarkTheme ? 'rgba(253, 164, 175, 1)' : 'rgba(190, 24, 93, 0.96)',
+            personnelBar: isDarkTheme ? 'rgba(34, 211, 238, 0.82)' : 'rgba(8, 145, 178, 0.72)',
+            personnelBarBorder: isDarkTheme ? 'rgba(103, 232, 249, 1)' : 'rgba(14, 116, 144, 0.96)',
+            trendPurple: isDarkTheme ? '#8b5cf6' : '#7c3aed',
+            trendPurpleFill: isDarkTheme ? 'rgba(139, 92, 246, 0.14)' : 'rgba(124, 58, 237, 0.12)',
+            trendRose: isDarkTheme ? '#fb7185' : '#e11d48',
+            trendRoseFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            donutColors: [
+                '#fb7185', '#60a5fa', '#fbbf24', '#2dd4bf', '#a78bfa',
+                '#fb923c', '#94a3b8', '#22c55e', '#f472b6', '#38bdf8'
+            ]
+        };
+    }
 
-                    const year = parsed.getFullYear();
-                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-                    const day = String(parsed.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                }
-                const summaryCard = document.getElementById('summaryCard');
-                const summaryToggle = document.getElementById('summaryUltraToggle');
-                const sectionNavGrid = document.getElementById('sectionNavGrid');
-                if (summaryCard && summaryToggle) {
-                    const saved = localStorage.getItem('summary_ultra');
-                    const enabled = saved === '1';
-                    summaryCard.classList.toggle('summary-ultra', enabled);
-                    sectionNavGrid?.classList.toggle('section-nav-grid-ultra', enabled);
-                    summaryToggle.checked = enabled;
-                    summaryToggle.addEventListener('change', function() {
-                        summaryCard.classList.toggle('summary-ultra', summaryToggle.checked);
-                        sectionNavGrid?.classList.toggle('section-nav-grid-ultra', summaryToggle.checked);
-                        localStorage.setItem('summary_ultra', summaryToggle.checked ? '1' : '0');
-                    });
-                }
-    
-                                const summaryFilterInput = document.getElementById('summaryTarihFiltre');
-                const summaryDate = document.getElementById('summaryDate');
-                const summaryStartDate = document.getElementById('summaryStartDate');
-                const summaryEndDate = document.getElementById('summaryEndDate');
-                const summaryMonth = document.getElementById('summaryMonth');
-                const summaryYear = document.getElementById('summaryYear');
-                const summaryClear = document.getElementById('summaryClear');
-                const summaryForm = document.getElementById('summaryFilterForm');
+    function configureChartDefaults(palette) {
+        Chart.defaults.color = palette.textColor;
+        Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    }
 
-                function pad2(value) {
-                    return String(value).padStart(2, '0');
-                }
+    function clampPercent(value) {
+        const number = Number(value) || 0;
+        return Math.max(0, Math.min(100, number));
+    }
 
-                function isValidIsoDate(isoDate) {
-                    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-                    if (!match) {
-                        return false;
-                    }
+    function hasAnyData(values) {
+        return Array.isArray(values) && values.some(function (value) {
+            return Number(value || 0) !== 0;
+        });
+    }
 
-                    const year = Number(match[1]);
-                    const month = Number(match[2]);
-                    const day = Number(match[3]);
-                    const candidate = new Date(Date.UTC(year, month - 1, day));
-                    return candidate.getUTCFullYear() == year
-                        && candidate.getUTCMonth() + 1 == month
-                        && candidate.getUTCDate() == day;
-                }
+    function destroyCharts() {
+        while (chartInstances.length > 0) {
+            const instance = chartInstances.pop();
+            instance.destroy();
+        }
+    }
 
-                function parseDateToIso(value) {
-                    const raw = String(value || '').trim();
-                    if (!raw) {
-                        return null;
-                    }
+    function restoreChartContainers() {
+        destroyCharts();
 
-                    if (isValidIsoDate(raw)) {
-                        return raw;
-                    }
+        chartCanvasIds.forEach(function (canvasId) {
+            const parent = chartParents.get(canvasId);
+            const template = chartTemplates.get(canvasId);
+            if (!parent || !template) {
+                return;
+            }
 
-                    const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
-                    if (!trMatch) {
-                        return null;
-                    }
+            parent.innerHTML = template;
+        });
+    }
 
-                    const day = pad2(Number(trMatch[1]));
-                    const month = pad2(Number(trMatch[2]));
-                    const year = trMatch[3];
-                    const iso = `${year}-${month}-${day}`;
-                    return isValidIsoDate(iso) ? iso : null;
-                }
+    function renderEmptyStateById(canvasId, message) {
+        const parent = chartParents.get(canvasId);
+        if (!parent) {
+            return;
+        }
 
-                function parseMonthValue(value) {
-                    const raw = String(value || '').trim();
-                    if (!raw) {
-                        return null;
-                    }
+        parent.innerHTML = '<div class="gunluk-empty-state">' + message + '</div>';
+    }
 
-                    let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
-                    if (match) {
-                        const month = Number(match[1]);
-                        const year = Number(match[2]);
-                        if (month >= 1 && month <= 12) {
-                            return { ay: month, yil: year };
-                        }
-                    }
+    function createChart(canvasId, config, hasData, emptyMessage) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            return null;
+        }
 
-                    match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
-                    if (match) {
-                        const year = Number(match[1]);
-                        const month = Number(match[2]);
-                        if (month >= 1 && month <= 12) {
-                            return { ay: month, yil: year };
-                        }
-                    }
+        if (!hasData) {
+            renderEmptyStateById(canvasId, emptyMessage);
+            return null;
+        }
 
-                    return null;
+        const instance = new Chart(canvas.getContext('2d'), config);
+        chartInstances.push(instance);
+        return instance;
+    }
+
+    function createHorizontalValueLabelPlugin(palette) {
+        return {
+            id: 'gunlukHorizontalValueLabels',
+            afterDatasetsDraw(chart) {
+                if (!chart || chart.options.indexAxis !== 'y') {
+                    return;
                 }
 
-                function parseRangeValue(value) {
-                    const raw = String(value || '').trim();
-                    const match = /^(.+)\s-\s(.+)$/.exec(raw);
-                    if (!match) {
-                        return null;
-                    }
-
-                    const startIso = parseDateToIso(match[1]);
-                    const endIso = parseDateToIso(match[2]);
-                    if (!startIso || !endIso) {
-                        return null;
-                    }
-
-                    return { baslangic: startIso, bitis: endIso };
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                if (!ctx || !chartArea) {
+                    return;
                 }
 
-                function isoToDisplay(isoDate) {
-                    if (!isValidIsoDate(isoDate)) {
-                        return '';
-                    }
+                ctx.save();
+                ctx.font = '600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textBaseline = 'middle';
 
-                    const [year, month, day] = isoDate.split('-');
-                    return `${day}.${month}.${year}`;
-                }
-
-                function clearSummaryHiddenFilters() {
-                    summaryDate.value = '';
-                    summaryStartDate.value = '';
-                    summaryEndDate.value = '';
-                    summaryMonth.value = '';
-                    summaryYear.value = '';
-                }
-
-                function syncSummaryHiddenFilters() {
-                    clearSummaryHiddenFilters();
-
-                    const raw = String(summaryFilterInput.value || '').trim();
-                    if (!raw) {
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta || meta.hidden) {
                         return;
                     }
 
-                    const parsedRange = parseRangeValue(raw);
-                    if (parsedRange) {
-                        summaryStartDate.value = parsedRange.baslangic;
-                        summaryEndDate.value = parsedRange.bitis;
-                        summaryFilterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
-                        return;
-                    }
-
-                    const parsedMonth = parseMonthValue(raw);
-                    if (parsedMonth) {
-                        summaryMonth.value = String(parsedMonth.ay);
-                        summaryYear.value = String(parsedMonth.yil);
-                        summaryFilterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
-                        return;
-                    }
-
-                    const parsedDate = parseDateToIso(raw);
-                    if (parsedDate) {
-                        summaryDate.value = parsedDate;
-                        summaryFilterInput.value = isoToDisplay(parsedDate);
-                    }
-                }
-
-                if (summaryFilterInput) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const raporTarihi = urlParams.get('raporTarihi');
-                    const baslangicTarihi = urlParams.get('baslangicTarihi');
-                    const bitisTarihi = urlParams.get('bitisTarihi');
-                    const ay = urlParams.get('ay');
-                    const yil = urlParams.get('yil');
-
-                    if (raporTarihi) {
-                        summaryFilterInput.value = isoToDisplay(raporTarihi);
-                    } else if (baslangicTarihi && bitisTarihi) {
-                        summaryFilterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
-                    } else if (ay && yil) {
-                        summaryFilterInput.value = `${pad2(Number(ay))}.${yil}`;
-                    } else {
-                        const modelDateIso = getModelDateIso();
-                        summaryFilterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
-                    }
-
-                    syncSummaryHiddenFilters();
-
-                    summaryFilterInput.addEventListener('blur', syncSummaryHiddenFilters);
-
-                    if (summaryForm) {
-                        summaryForm.addEventListener('submit', function() {
-                            syncSummaryHiddenFilters();
-                        });
-                    }
-
-                    summaryClear.addEventListener('click', function() {
-                        summaryFilterInput.value = '';
-                        clearSummaryHiddenFilters();
-                        window.location.href = '/Home/GunlukVeriler';
-                    });
-                }
-    
-                new Chart(document.getElementById('genelHataTrend').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Hatalı Adet',
-                            data: data.HataTrendData,
-                            borderColor: 'rgba(255, 99, 132, 0.9)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.15)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-    
-                new Chart(document.getElementById('hataNedenGenelGrafigi').getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.HataNedenLabels,
-                        datasets: [{
-                            data: data.HataNedenData,
-                            backgroundColor: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff', '#ff9f40']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-    
-                new Chart(document.getElementById('duraklamaTrendGrafigi').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.TrendLabels,
-                        datasets: [{
-                            label: 'Duraklama (dk)',
-                            data: data.DuraklamaTrendData,
-                            borderColor: 'rgba(153, 102, 255, 0.9)',
-                            backgroundColor: 'rgba(153, 102, 255, 0.12)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-
-                const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
-                const axisTickColor = isDarkTheme ? '#cbd5e1' : '#1f2937';
-                const axisGridColor = isDarkTheme ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.45)';
-                const oeeAccentColor = isDarkTheme ? '#34d399' : '#16a34a';
-                const horizontalPercentLabelPlugin = window.OneriChartHelpers?.createHorizontalPercentLabelPlugin?.({
-                    textColor: axisTickColor,
-                    insideTextColor: '#ffffff',
-                    font: '600 12px Poppins, sans-serif'
-                });
-                const clampPercent = (value) => {
-                    const num = Number(value) || 0;
-                    return Math.max(0, Math.min(100, num));
-                };
-                const createRankGradientColors = (count) => {
-                    if (count <= 0) {
-                        return { background: [], border: [] };
-                    }
-
-                    const background = [];
-                    const border = [];
-                    const maxIndex = Math.max(1, count - 1);
-
-                    for (let i = 0; i < count; i++) {
-                        const ratio = i / maxIndex;
-                        const hue = 130 - (130 * ratio); // 130=green -> 0=red
-                        background.push(`hsla(${hue}, 74%, 46%, 0.78)`);
-                        border.push(`hsla(${hue}, 78%, 40%, 1)`);
-                    }
-
-                    return { background, border };
-                };
-                const horizontalValueLabelPlugin = {
-                    id: 'horizontalValueLabels',
-                    afterDatasetsDraw(chart) {
-                        if (!chart || !chart.options || chart.options.indexAxis !== 'y') {
+                    meta.data.forEach(function (bar, dataIndex) {
+                        const value = Number(dataset.data[dataIndex]);
+                        if (!Number.isFinite(value) || value <= 0) {
                             return;
                         }
 
-                        const { ctx, chartArea } = chart;
-                        if (!ctx || !chartArea) {
+                        const maximumFractionDigits = Math.abs(value - Math.round(value)) > 0.001 ? 1 : 0;
+                        const label = value.toLocaleString('tr-TR', {
+                            maximumFractionDigits: maximumFractionDigits
+                        });
+                        const barStartX = Math.min(bar.base, bar.x);
+                        const barEndX = Math.max(bar.base, bar.x);
+                        const barWidth = Math.max(0, barEndX - barStartX);
+                        const labelWidth = ctx.measureText(label).width;
+                        const fitsInside = barWidth >= (labelWidth + 14);
+
+                        if (fitsInside) {
+                            ctx.textAlign = 'right';
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(label, barEndX - 8, bar.y);
                             return;
                         }
 
-                        ctx.save();
-                        ctx.font = '600 12px Poppins, sans-serif';
-                        ctx.textBaseline = 'middle';
+                        const x = Math.min(barEndX + 8, chartArea.right - labelWidth - 2);
+                        ctx.textAlign = 'left';
+                        ctx.fillStyle = palette.textColor;
+                        ctx.fillText(label, x, bar.y);
+                    });
+                });
 
-                        chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            const meta = chart.getDatasetMeta(datasetIndex);
-                            if (!meta || meta.hidden) {
-                                return;
-                            }
+                ctx.restore();
+            }
+        };
+    }
 
-                            meta.data.forEach((bar, dataIndex) => {
-                                const value = Number(dataset.data[dataIndex]);
-                                if (!Number.isFinite(value) || value <= 0) {
-                                    return;
-                                }
+    function createGaugeCenterPlugin(value, palette) {
+        return {
+            id: 'gunlukGaugeCenterText',
+            afterDraw(chart) {
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                if (!ctx || !chartArea) {
+                    return;
+                }
 
-                                const maximumFractionDigits = Math.abs(value - Math.round(value)) > 0.001 ? 1 : 0;
-                                const label = value.toLocaleString('tr-TR', {
-                                    maximumFractionDigits
-                                });
-                                const barStartX = Math.min(bar.base, bar.x);
-                                const barEndX = Math.max(bar.base, bar.x);
-                                const barWidth = Math.max(0, barEndX - barStartX);
-                                if (barWidth <= 0) {
-                                    return;
-                                }
-                                const y = bar.y;
-                                const labelWidth = ctx.measureText(label).width;
-                                const fitsInside = barWidth >= (labelWidth + 14);
+                const centerX = chartArea.left + ((chartArea.right - chartArea.left) / 2);
+                const centerY = chartArea.top + ((chartArea.bottom - chartArea.top) * 0.82);
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.fillStyle = palette.gaugePrimary;
+                ctx.font = '700 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(value.toFixed(2) + ' %', centerX, centerY);
+                ctx.fillStyle = palette.textColor;
+                ctx.font = '500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText('Genel OEE', centerX, centerY + 24);
+                ctx.restore();
+            }
+        };
+    }
 
-                                if (fitsInside) {
-                                    const x = barEndX - 8;
-                                    ctx.save();
-                                    ctx.beginPath();
-                                    ctx.rect(
-                                        barStartX + 1,
-                                        y - (Math.max(0, bar.height || 0) / 2) + 1,
-                                        Math.max(0, barWidth - 2),
-                                        Math.max(0, Math.max(0, bar.height || 0) - 2)
-                                    );
-                                    ctx.clip();
+    function createRankGradientColors(count) {
+        if (count <= 0) {
+            return { background: [], border: [] };
+        }
 
-                                    ctx.textAlign = 'right';
-                                    ctx.fillStyle = '#ffffff';
-                                    ctx.fillText(label, x, y);
-                                    ctx.restore();
-                                } else {
-                                    const preferredX = barEndX + 8;
-                                    const clampedX = Math.min(
-                                        preferredX,
-                                        chartArea.right - labelWidth - 2
-                                    );
-                                    ctx.textAlign = 'left';
-                                    ctx.fillStyle = axisTickColor;
-                                    ctx.fillText(label, clampedX, y);
-                                }
-                            });
-                        });
+        const background = [];
+        const border = [];
+        const maxIndex = Math.max(1, count - 1);
 
-                        ctx.restore();
+        for (let index = 0; index < count; index += 1) {
+            const ratio = index / maxIndex;
+            const hue = 165 - (120 * ratio);
+            background.push('hsla(' + hue + ', 74%, 48%, 0.76)');
+            border.push('hsla(' + hue + ', 78%, 42%, 1)');
+        }
+
+        return { background: background, border: border };
+    }
+
+    function setupUltraToggle() {
+        const summaryCard = document.getElementById('summaryCard');
+        const summaryToggle = document.getElementById('summaryUltraToggle');
+        const sectionNavGrid = document.getElementById('sectionNavGrid');
+        const sectionLinksSection = document.getElementById('sectionLinksSection');
+        if (!summaryCard || !summaryToggle) {
+            return;
+        }
+
+        const saved = localStorage.getItem('summary_ultra');
+        const enabled = saved === '1';
+        summaryCard.classList.toggle('summary-ultra', enabled);
+        if (sectionLinksSection) {
+            sectionLinksSection.classList.toggle('section-links-ultra', enabled);
+        }
+        if (sectionNavGrid) {
+            sectionNavGrid.classList.toggle('section-nav-grid-ultra', enabled);
+        }
+        summaryToggle.checked = enabled;
+
+        summaryToggle.addEventListener('change', function () {
+            summaryCard.classList.toggle('summary-ultra', summaryToggle.checked);
+            if (sectionLinksSection) {
+                sectionLinksSection.classList.toggle('section-links-ultra', summaryToggle.checked);
+            }
+            if (sectionNavGrid) {
+                sectionNavGrid.classList.toggle('section-nav-grid-ultra', summaryToggle.checked);
+            }
+            localStorage.setItem('summary_ultra', summaryToggle.checked ? '1' : '0');
+        });
+    }
+
+    function renderCharts() {
+        const palette = getThemePalette();
+        const horizontalPercentLabelPlugin = horizontalPercentLabelPluginFactory
+            ? horizontalPercentLabelPluginFactory({
+                textColor: palette.textColor,
+                insideTextColor: '#ffffff',
+                font: '600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+            })
+            : null;
+        const horizontalValueLabelPlugin = createHorizontalValueLabelPlugin(palette);
+
+        configureChartDefaults(palette);
+        restoreChartContainers();
+
+        const trendLabels = Array.isArray(data.TrendLabels) ? data.TrendLabels : [];
+        const trendHasData = trendLabels.length > 0;
+
+        const oeeValue = clampPercent(data.OrtalamaOee);
+        createChart('genelOeeGaugeGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: ['OEE', 'Kalan'],
+                datasets: [
+                    {
+                        data: [oeeValue, 100 - oeeValue],
+                        backgroundColor: [palette.gaugePrimary, palette.gaugeMuted],
+                        borderWidth: 0,
+                        hoverOffset: 0
                     }
-                };
-
-                const genelBilesenCanvas = document.getElementById('genelBilesenGrafigi');
-                if (genelBilesenCanvas) {
-                    new Chart(genelBilesenCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: ['Performans', 'Kullanılabilirlik', 'Kalite'],
-                            datasets: [{
-                                label: 'Ortalama (%)',
-                                data: [
-                                    clampPercent(data.OrtalamaPerformans),
-                                    clampPercent(data.OrtalamaKullanilabilirlik),
-                                    clampPercent(data.OrtalamaKalite)
-                                ],
-                                backgroundColor: [
-                                    'rgba(59, 130, 246, 0.82)',
-                                    'rgba(16, 185, 129, 0.82)',
-                                    'rgba(168, 85, 247, 0.82)'
-                                ],
-                                borderColor: [
-                                    'rgba(59, 130, 246, 1)',
-                                    'rgba(16, 185, 129, 1)',
-                                    'rgba(168, 85, 247, 1)'
-                                ],
-                                borderWidth: 1,
-                                borderRadius: 8,
-                                barThickness: 28
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',
-                            scales: {
-                                x: {
-                                    min: 0,
-                                    max: 100,
-                                    ticks: {
-                                        color: axisTickColor,
-                                        callback: (value) => `${value}%`
-                                    },
-                                    grid: { color: axisGridColor }
-                                },
-                                y: {
-                                    ticks: { color: axisTickColor },
-                                    grid: { color: axisGridColor }
-                                }
-                            },
-                            plugins: {
-                                legend: { labels: { color: axisTickColor } }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                rotation: -90,
+                circumference: 180,
+                cutout: '74%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.label + ': ' + Number(context.parsed || 0).toFixed(2) + '%';
                             }
-                        },
-                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
-                    });
-                }
-
-                const genelOeeGaugeCanvas = document.getElementById('genelOeeGaugeGrafigi');
-                if (genelOeeGaugeCanvas) {
-                    const oeeValue = clampPercent(data.OrtalamaOee);
-                    const centerTextPlugin = {
-                        id: 'centerTextPlugin',
-                        afterDraw(chart) {
-                            const { ctx, chartArea } = chart;
-                            if (!chartArea) return;
-                            const centerX = chartArea.left + (chartArea.right - chartArea.left) / 2;
-                            const centerY = chartArea.top + (chartArea.bottom - chartArea.top) * 0.82;
-                            ctx.save();
-                            ctx.textAlign = 'center';
-                            ctx.fillStyle = oeeAccentColor;
-                            ctx.font = '700 30px Poppins, sans-serif';
-                            ctx.fillText(`${oeeValue.toFixed(2)} %`, centerX, centerY);
-                            ctx.fillStyle = isDarkTheme ? '#cbd5e1' : '#334155';
-                            ctx.font = '500 13px Poppins, sans-serif';
-                            ctx.fillText('Genel OEE', centerX, centerY + 24);
-                            ctx.restore();
                         }
-                    };
+                    }
+                }
+            },
+            plugins: [createGaugeCenterPlugin(oeeValue, palette)]
+        }, true, '');
 
-                    new Chart(genelOeeGaugeCanvas.getContext('2d'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['OEE', 'Kalan'],
-                            datasets: [{
-                                data: [oeeValue, 100 - oeeValue],
-                                backgroundColor: [
-                                    isDarkTheme ? 'rgba(52, 211, 153, 0.9)' : 'rgba(22, 163, 74, 0.9)',
-                                    isDarkTheme ? 'rgba(71, 85, 105, 0.45)' : 'rgba(148, 163, 184, 0.45)'
-                                ],
-                                borderWidth: 0,
-                                hoverOffset: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            rotation: -90,
-                            circumference: 180,
-                            cutout: '74%',
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    callbacks: {
-                                        label: (context) => `${context.label}: ${context.parsed.toFixed(2)}%`
-                                    }
-                                }
+        const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
+        const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
+        const machinePalette = createRankGradientColors(machineValues.length);
+        createChart('makineOeeGrafigi', {
+            type: 'bar',
+            data: {
+                labels: machineLabels,
+                datasets: [
+                    {
+                        label: 'Ortalama OEE (%)',
+                        data: machineValues,
+                        backgroundColor: machinePalette.background,
+                        borderColor: machinePalette.border,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        barThickness: 22
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
                             }
                         },
-                        plugins: [centerTextPlugin]
-                    });
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
+            },
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, hasAnyData(machineValues), 'Makine bazli OEE verisi bulunamadi.');
 
-                const makineOeeCanvas = document.getElementById('makineOeeGrafigi');
-                if (makineOeeCanvas) {
-                    const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
-                    const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
-                    const hasMachineData = machineLabels.length > 0 && machineValues.some(v => v > 0);
-                    const machinePalette = createRankGradientColors(machineValues.length);
-                    const machineBarColors = hasMachineData
-                        ? machinePalette.background
-                        : ['rgba(148, 163, 184, 0.35)'];
-                    const machineBorderColors = hasMachineData
-                        ? machinePalette.border
-                        : ['rgba(100, 116, 139, 0.7)'];
-
-                    new Chart(makineOeeCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: hasMachineData ? machineLabels : ['Veri Yok'],
-                            datasets: [{
-                                label: 'Ortalama OEE (%)',
-                                data: hasMachineData ? machineValues : [0],
-                                backgroundColor: machineBarColors,
-                                borderColor: machineBorderColors,
-                                borderWidth: 1,
-                                borderRadius: 8,
-                                barThickness: 28
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',
-                            scales: {
-                                x: {
-                                    min: 0,
-                                    max: 100,
-                                    ticks: {
-                                        color: axisTickColor,
-                                        callback: (value) => `${value}%`
-                                    },
-                                    grid: { color: axisGridColor }
-                                },
-                                y: {
-                                    ticks: { color: axisTickColor },
-                                    grid: { color: axisGridColor }
-                                }
-                            },
-                            plugins: {
-                                legend: { display: false }
+        createChart('genelBilesenGrafigi', {
+            type: 'bar',
+            data: {
+                labels: ['Performans', 'Kullanilabilirlik', 'Kalite'],
+                datasets: [
+                    {
+                        label: 'Ortalama (%)',
+                        data: [
+                            clampPercent(data.OrtalamaPerformans),
+                            clampPercent(data.OrtalamaKullanilabilirlik),
+                            clampPercent(data.OrtalamaKalite)
+                        ],
+                        backgroundColor: palette.componentBars,
+                        borderColor: palette.componentBorders,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        barThickness: 28
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
                             }
                         },
-                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
-                    });
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
                 }
+            },
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, true, '');
 
-                const bolumOeeCanvas = document.getElementById('bolumOeeGrafigi');
-                if (bolumOeeCanvas) {
-                    const deptLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
-                    const deptValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
-                    const hasDeptData = deptLabels.length > 0 && deptValues.some(v => v > 0);
-                    const deptPalette = createRankGradientColors(deptValues.length);
-
-                    new Chart(bolumOeeCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: hasDeptData ? deptLabels : ['Veri Yok'],
-                            datasets: [{
-                                label: 'Ortalama OEE (%)',
-                                data: hasDeptData ? deptValues : [0],
-                                backgroundColor: hasDeptData
-                                    ? deptPalette.background
-                                    : 'rgba(148, 163, 184, 0.35)',
-                                borderColor: hasDeptData
-                                    ? deptPalette.border
-                                    : 'rgba(100, 116, 139, 0.7)',
-                                borderWidth: 1,
-                                borderRadius: 8,
-                                barThickness: 28
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',
-                            scales: {
-                                x: {
-                                    min: 0,
-                                    max: 100,
-                                    ticks: {
-                                        color: axisTickColor,
-                                        callback: (value) => `${value}%`
-                                    },
-                                    grid: { color: axisGridColor }
-                                },
-                                y: {
-                                    ticks: { color: axisTickColor },
-                                    grid: { color: axisGridColor }
-                                }
-                            },
-                            plugins: {
-                                legend: { labels: { color: axisTickColor } }
+        const bolumOeeLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
+        const bolumOeeValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
+        createChart('bolumOeeGrafigi', {
+            type: 'bar',
+            data: {
+                labels: bolumOeeLabels,
+                datasets: [
+                    {
+                        label: 'Ortalama OEE (%)',
+                        data: bolumOeeValues,
+                        backgroundColor: palette.oeeBar,
+                        borderColor: palette.oeeBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
                             }
                         },
-                        plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
-                    });
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
+            },
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, hasAnyData(bolumOeeValues), 'Bolum bazli OEE verisi bulunamadi.');
 
-                const bolumHataCanvas = document.getElementById('bolumHataGrafigi');
-                if (bolumHataCanvas) {
-                    const deptHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
-                    const deptHataValues = (Array.isArray(data.BolumHataData) ? data.BolumHataData : []).map(v => Math.max(0, Number(v) || 0));
-                    const hasDeptHataData = deptHataLabels.length > 0 && deptHataValues.some(v => v > 0);
-
-                    new Chart(bolumHataCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: hasDeptHataData ? deptHataLabels : ['Veri Yok'],
-                            datasets: [{
-                                label: 'Hatalı Adet',
-                                data: hasDeptHataData ? deptHataValues : [0],
-                                backgroundColor: hasDeptHataData
-                                    ? 'rgba(244, 63, 94, 0.72)'
-                                    : 'rgba(148, 163, 184, 0.35)',
-                                borderColor: hasDeptHataData
-                                    ? 'rgba(244, 63, 94, 1)'
-                                    : 'rgba(100, 116, 139, 0.7)',
-                                borderWidth: 1,
-                                borderRadius: 8,
-                                barThickness: 28
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',
-                            scales: {
-                                x: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        color: axisTickColor,
-                                        precision: 0
-                                    },
-                                    grid: { color: axisGridColor }
-                                },
-                                y: {
-                                    ticks: { color: axisTickColor },
-                                    grid: { color: axisGridColor }
-                                }
-                            },
-                            plugins: {
-                                legend: { display: false }
-                            }
-                        },
-                        plugins: [horizontalValueLabelPlugin]
-                    });
+        const bolumHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
+        const bolumHataValues = Array.isArray(data.BolumHataData) ? data.BolumHataData : [];
+        createChart('bolumHataGrafigi', {
+            type: 'bar',
+            data: {
+                labels: bolumHataLabels,
+                datasets: [
+                    {
+                        label: 'Hatali Adet',
+                        data: bolumHataValues,
+                        backgroundColor: palette.errorBar,
+                        borderColor: palette.errorBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
+            },
+            plugins: [horizontalValueLabelPlugin]
+        }, hasAnyData(bolumHataValues), 'Bolum bazli hata verisi bulunamadi.');
 
-                const personelBolumCanvas = document.getElementById('personelBolumGrafigi');
-                if (personelBolumCanvas) {
-                    const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
-                    const personelValues = (Array.isArray(data.PersonelBolumData) ? data.PersonelBolumData : []).map(v => Math.max(0, Number(v) || 0));
-                    const hasPersonelFraction = personelValues.some(v => Math.abs(v - Math.round(v)) > 0.001);
-                    const hasPersonelData = personelLabels.length > 0 && personelValues.some(v => v > 0);
-
-                    new Chart(personelBolumCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: hasPersonelData ? personelLabels : ['Veri Yok'],
-                            datasets: [{
-                                label: personelSeriesLabel,
-                                data: hasPersonelData ? personelValues : [0],
-                                backgroundColor: hasPersonelData
-                                    ? 'rgba(6, 182, 212, 0.72)'
-                                    : 'rgba(148, 163, 184, 0.35)',
-                                borderColor: hasPersonelData
-                                    ? 'rgba(6, 182, 212, 1)'
-                                    : 'rgba(100, 116, 139, 0.7)',
-                                borderWidth: 1,
-                                borderRadius: 8,
-                                barThickness: 20
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',
-                            scales: {
-                                x: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        color: axisTickColor,
-                                        precision: hasPersonelFraction ? 1 : 0
-                                    },
-                                    grid: { color: axisGridColor }
-                                },
-                                y: {
-                                    ticks: { color: axisTickColor },
-                                    grid: { color: axisGridColor }
-                                }
-                            },
-                            plugins: {
-                                legend: { labels: { color: axisTickColor } }
-                            }
-                        },
-                        plugins: [horizontalValueLabelPlugin]
-                    });
+        const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
+        const personelValues = Array.isArray(data.PersonelBolumData) ? data.PersonelBolumData : [];
+        createChart('personelBolumGrafigi', {
+            type: 'bar',
+            data: {
+                labels: personelLabels,
+                datasets: [
+                    {
+                        label: personelSeriesLabel,
+                        data: personelValues,
+                        backgroundColor: palette.personnelBar,
+                        borderColor: palette.personnelBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
                 }
+            },
+            plugins: [horizontalValueLabelPlugin]
+        }, hasAnyData(personelValues), 'Bolum bazli personel verisi bulunamadi.');
+
+        const hataNedenLabels = Array.isArray(data.HataNedenLabels) ? data.HataNedenLabels : [];
+        const hataNedenValues = Array.isArray(data.HataNedenData) ? data.HataNedenData : [];
+        createChart('hataNedenGenelGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: hataNedenLabels,
+                datasets: [
+                    {
+                        data: hataNedenValues,
+                        backgroundColor: palette.donutColors,
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                cutout: '58%'
+            }
+        }, hasAnyData(hataNedenValues), 'Hata nedeni dagilimi icin veri bulunamadi.');
+
+        const duraklamaValues = Array.isArray(data.DuraklamaTrendData) ? data.DuraklamaTrendData : [];
+        createChart('duraklamaTrendGrafigi', {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        label: 'Duraklama (dk)',
+                        data: duraklamaValues,
+                        borderColor: palette.trendPurple,
+                        backgroundColor: palette.trendPurpleFill,
+                        tension: 0.28,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                }
+            }
+        }, trendHasData && hasAnyData(duraklamaValues), 'Duraklama trend verisi bulunamadi.');
+
+        const hataTrendValues = Array.isArray(data.HataTrendData) ? data.HataTrendData : [];
+        createChart('genelHataTrend', {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        label: 'Hatali Adet',
+                        data: hataTrendValues,
+                        borderColor: palette.trendRose,
+                        backgroundColor: palette.trendRoseFill,
+                        tension: 0.28,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                }
+            }
+        }, trendHasData && hasAnyData(hataTrendValues), 'Hata trend verisi bulunamadi.');
+    }
+
+    setupUltraToggle();
+    renderCharts();
+
+    let activeTheme = getThemeName();
+    const themeObserver = new MutationObserver(function () {
+        const nextTheme = getThemeName();
+        if (nextTheme === activeTheme) {
+            return;
+        }
+
+        activeTheme = nextTheme;
+        renderCharts();
+    });
+
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });

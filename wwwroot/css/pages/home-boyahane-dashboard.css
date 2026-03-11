@@ -179,11 +179,12 @@ html[data-theme="dark"] .boya-hero__note {
 
 .boya-kpis {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 1rem;
 }
 
 .boya-kpi {
+    grid-column: span 3;
     padding: 1.1rem 1.15rem;
     border-radius: 22px;
     min-height: 154px;
@@ -282,6 +283,12 @@ html[data-theme="dark"] .boya-kpi--violet .boya-kpi__value {
 
 html[data-theme="dark"] .boya-kpi--stone .boya-kpi__value {
     color: #dbeafe;
+}
+
+.boya-kpis > .boya-kpi:nth-child(5),
+.boya-kpis > .boya-kpi:nth-child(6),
+.boya-kpis > .boya-kpi:nth-child(7) {
+    grid-column: span 4;
 }
 
 .boya-panel {
@@ -408,6 +415,13 @@ html[data-theme="dark"] .boya-empty-state {
 
     .boya-kpis {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .boya-kpi,
+    .boya-kpis > .boya-kpi:nth-child(5),
+    .boya-kpis > .boya-kpi:nth-child(6),
+    .boya-kpis > .boya-kpi:nth-child(7) {
+        grid-column: auto;
     }
 }
 

@@ -218,9 +218,9 @@ namespace ONERI.Controllers
 
             // Güvenlik Hesabı: Toplam puanı backend'de yeniden hesapla.
             degerlendirme.ToplamPuan = degerlendirme.GayretPuani +
-                                     degerlendirme.OrijinallikPuani +
-                                     degerlendirme.EtkiPuani +
-                                     degerlendirme.UygulanabilirlikPuani;
+                                    degerlendirme.OrijinallikPuani +
+                                    degerlendirme.EtkiPuani +
+                                    degerlendirme.UygulanabilirlikPuani;
             
             // İlgili öneriyi veritabanından bul.
             var oneri = await _context.Oneriler.FindAsync(degerlendirme.OneriId);

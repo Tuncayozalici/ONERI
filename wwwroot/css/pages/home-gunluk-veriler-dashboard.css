@@ -263,11 +263,11 @@ html[data-theme="dark"] .gunluk-kpi {
 }
 
 .gunluk-kpi--stone .gunluk-kpi__value {
-    color: #334155;
+    color: #16a34a;
 }
 
 .gunluk-kpi--slate .gunluk-kpi__value {
-    color: #475569;
+    color: #0ea5e9;
 }
 
 html[data-theme="dark"] .gunluk-kpi--cyan .gunluk-kpi__value {
@@ -287,11 +287,11 @@ html[data-theme="dark"] .gunluk-kpi--violet .gunluk-kpi__value {
 }
 
 html[data-theme="dark"] .gunluk-kpi--stone .gunluk-kpi__value {
-    color: #dbeafe;
+    color: #86efac;
 }
 
 html[data-theme="dark"] .gunluk-kpi--slate .gunluk-kpi__value {
-    color: #cbd5e1;
+    color: #7dd3fc;
 }
 
 .gunluk-panel {

@@ -151,14 +151,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         backgroundColor: palette.productionFill,
                         fill: true,
                         tension: 0.28
-                    },
-                    {
-                        label: 'Performans İçin Parça',
-                        data: data.HedefTrendData || [],
-                        borderColor: palette.targetLine,
-                        backgroundColor: palette.targetFill,
-                        fill: true,
-                        tension: 0.28
                     }
                 ]
             },
@@ -185,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.UretimTrendData) || hasAnyData(data.HedefTrendData), 'Seçilen dönem için üretim veya hedef verisi bulunamadı.');
+        }, hasAnyData(data.UretimTrendData), 'Seçilen dönem için üretim verisi bulunamadı.');
 
         createChart('boyaOeeBilesenTrendGrafigi', {
             type: 'line',

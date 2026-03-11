@@ -640,8 +640,8 @@ namespace ONERI.Controllers
                 if (raporModeli.GecikmeAdetSayisi > 0)
                 {
                     var toplam = raporModeli.GecikmeAdetSayisi;
-                    var hammaddeToplam = hamGecikmeler.Where(x => IsHammaddeKaynakli(x.Neden)).Sum(x => x.Adet);
                     var isBeklemesiToplam = hamGecikmeler.Where(x => IsIsBeklemesiKaynakli(x.Neden)).Sum(x => x.Adet);
+                    var hammaddeToplam = hamGecikmeler.Where(x => IsHammaddeKaynakli(x.Neden)).Sum(x => x.Adet);
 
                     raporModeli.HammaddeKaynakliGecikmeOrani = (double)hammaddeToplam / toplam * 100d;
                     raporModeli.IsBeklemesiKaynakliGecikmeOrani = (double)isBeklemesiToplam / toplam * 100d;

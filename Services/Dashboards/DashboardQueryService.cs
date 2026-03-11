@@ -410,6 +410,33 @@ public class DashboardQueryService : IDashboardQueryService
             return result;
         }
 
+        static string NormalizeBoyaMakineAdiForGunluk(string? makine)
+        {
+            if (string.IsNullOrWhiteSpace(makine))
+            {
+                return "Bilinmeyen";
+            }
+
+            var trimmed = makine.Trim();
+            var key = DashboardParsingHelper.NormalizeHeaderForMatch(trimmed);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return DashboardParsingHelper.NormalizeLabel(trimmed);
+            }
+
+            if (key.Contains("konveyor", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Konveyör Hattı";
+            }
+
+            if (key.Contains("kucukfirin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Küçük Fırın";
+            }
+
+            return DashboardParsingHelper.NormalizeLabel(trimmed);
+        }
+
         foreach (var row in profilRows)
         {
             AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
@@ -617,8 +644,12 @@ public class DashboardQueryService : IDashboardQueryService
         var machineOeeRows = new List<(string Machine, double Oee)>();
         machineOeeRows.AddRange(boyaRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
-            .Where(x => !string.IsNullOrWhiteSpace(x.Makine) && !x.Makine.Equals("Bilinmeyen", StringComparison.OrdinalIgnoreCase))
-            .Select(x => ($"Boya - {x.Makine}", x.Oee)));
+            .Select(x =>
+            {
+                var makineAdi = NormalizeBoyaMakineAdiForGunluk(x.Makine);
+                return (Makine: makineAdi, Oee: x.Oee);
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Makine) && !x.Makine.Equals("Bilinmeyen", StringComparison.OrdinalIgnoreCase)));
         machineOeeRows.AddRange(pvcRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
             .Select(x => (DashboardParsingHelper.NormalizeLabel(x.Makine), x.Oee)));
@@ -646,6 +677,35 @@ public class DashboardQueryService : IDashboardQueryService
             .OrderByDescending(x => x.OrtalamaOee)
             .ToList();
 
+        var zorunluMakineSirasi = new[] { "Konveyör Hattı", "Küçük Fırın" };
+        var zorunluMakineDictionary = boyaRows
+            .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && !string.IsNullOrWhiteSpace(x.Makine))
+            .Select(x => new
+            {
+                Makine = NormalizeBoyaMakineAdiForGunluk(x.Makine),
+                Oee = x.Oee
+            })
+            .Where(x => zorunluMakineSirasi.Contains(x.Makine, StringComparer.OrdinalIgnoreCase))
+            .GroupBy(x => x.Makine)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Where(x => x.Oee > 0).Select(x => x.Oee).DefaultIfEmpty(0).Average(),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var makineAdi in zorunluMakineSirasi)
+        {
+            if (!machineOeeSummary.Any(x => x.Makine.Equals(makineAdi, StringComparison.OrdinalIgnoreCase)))
+            {
+                machineOeeSummary.Add(new
+                {
+                    Makine = makineAdi,
+                    OrtalamaOee = zorunluMakineDictionary.TryGetValue(makineAdi, out var oee) ? oee : 0
+                });
+            }
+        }
+
+        machineOeeSummary = machineOeeSummary.OrderByDescending(x => x.OrtalamaOee).ToList();
+
         model.MakineOeeLabels = machineOeeSummary.Select(x => x.Makine).ToList();
         model.MakineOeeData = machineOeeSummary.Select(x => x.OrtalamaOee).ToList();
 
@@ -669,6 +729,20 @@ public class DashboardQueryService : IDashboardQueryService
         bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.ProfilRows, "Profil Lazer", ozetStart, ozetEnd));
         bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.BoyaUretimRows, "Boyahane", ozetStart, ozetEnd));
         bolumOeeRows.AddRange(ExtractDeptOeeRows(snapshot.TezgahRows, "Tezgah", ozetStart, ozetEnd));
+
+        if (!bolumOeeRows.Any(x => x.Bolum.Equals("Boyahane", StringComparison.OrdinalIgnoreCase)))
+        {
+            var boyahaneOee = boyaRows
+                .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
+                .Select(x => x.Oee)
+                .DefaultIfEmpty(0)
+                .Average();
+
+            if (boyahaneOee > 0)
+            {
+                bolumOeeRows.Add(("Boyahane", boyahaneOee));
+            }
+        }
 
         var bolumOeeSummary = bolumOeeRows
             .GroupBy(x => x.Bolum)

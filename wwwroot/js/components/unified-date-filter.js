@@ -1,8 +1,42 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const filterStorageKey = "oneri.dashboardDateFilter";
+    const dashboardPaths = new Set([
+        "/home/gunlukveriler",
+        "/home/profillazerverileri",
+        "/home/boyahanedashboard",
+        "/home/pvcdashboard",
+        "/home/cncdashboard",
+        "/home/masterwooddashboard",
+        "/home/skipperdashboard",
+        "/home/roverbdashboard",
+        "/home/tezgahdashboard",
+        "/home/ebatlamadashboard",
+        "/home/hataliparcadashboard"
+    ]);
     const monthNames = [
         "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
         "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
     ];
+
+    if (hasClearFlag(window.location)) {
+        clearStoredFilter();
+    } else {
+        const locationFilter = getFilterStateFromLocation(window.location);
+        if (locationFilter) {
+            persistFilterState(locationFilter);
+        }
+    }
+
+    const initialStoredFilter = getStoredFilterState();
+    if (!getFilterStateFromLocation(window.location) && isDashboardPath(window.location.pathname) && initialStoredFilter) {
+        const redirectUrl = buildUrlWithFilter(window.location.href, initialStoredFilter);
+        if (redirectUrl !== window.location.pathname + window.location.search + window.location.hash) {
+            window.location.replace(redirectUrl);
+            return;
+        }
+    }
+
+    refreshDashboardLinks(initialStoredFilter);
 
     const forms = document.querySelectorAll("form.js-unified-date-filter-form");
     forms.forEach(initUnifiedDateFilter);
@@ -38,8 +72,9 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const initialStart = parseIsoDate(hiddenStart.value);
-        const initialEnd = parseIsoDate(hiddenEnd.value);
+        const fallbackFilter = (!hiddenStart.value && !hiddenEnd.value) ? getStoredFilterState() : null;
+        const initialStart = parseIsoDate(hiddenStart.value || fallbackFilter?.startDate);
+        const initialEnd = parseIsoDate(hiddenEnd.value || fallbackFilter?.endDate);
         const initialMode = detectMode(initialStart, initialEnd);
 
         const state = {
@@ -102,6 +137,8 @@ document.addEventListener("DOMContentLoaded", function () {
             state.monthValue = null;
             hiddenStart.value = "";
             hiddenEnd.value = "";
+            clearStoredFilter();
+            refreshDashboardLinks(null);
             render();
             const clearUrl = form.getAttribute("data-clear-url") || window.location.pathname;
             window.location.href = clearUrl;
@@ -114,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             syncHiddenDates();
+            persistCurrentSelection();
         });
 
         document.addEventListener("click", function (event) {
@@ -144,6 +182,12 @@ document.addEventListener("DOMContentLoaded", function () {
             display.textContent = getDisplayValue();
             applyButton.disabled = !isValid();
             clearButton.disabled = !(state.startDate && state.endDate);
+
+            if (isValid()) {
+                persistCurrentSelection();
+            } else {
+                refreshDashboardLinks(getStoredFilterState());
+            }
         }
 
         function renderMonthGrid() {
@@ -176,6 +220,19 @@ document.addEventListener("DOMContentLoaded", function () {
         function syncHiddenDates() {
             hiddenStart.value = state.startDate ? toIsoDate(state.startDate) : "";
             hiddenEnd.value = state.endDate ? toIsoDate(state.endDate) : "";
+        }
+
+        function persistCurrentSelection() {
+            if (!isValid()) {
+                return;
+            }
+
+            persistFilterState({
+                startDate: toIsoDate(state.startDate),
+                endDate: toIsoDate(state.endDate)
+            });
+
+            refreshDashboardLinks(getStoredFilterState());
         }
 
         function isValid() {
@@ -283,6 +340,176 @@ document.addEventListener("DOMContentLoaded", function () {
             endDate.getDate() === new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
 
         return isMonthSelection ? "month" : "date_range";
+    }
+
+    function getFilterStateFromLocation(locationLike) {
+        const params = new URLSearchParams(locationLike.search);
+        const startDate = params.get("startDate");
+        const endDate = params.get("endDate");
+        const normalizedPair = normalizeIsoPair(startDate, endDate);
+        if (normalizedPair) {
+            return normalizedPair;
+        }
+
+        const raporTarihi = normalizeIsoValue(params.get("raporTarihi"));
+        if (raporTarihi) {
+            return {
+                startDate: raporTarihi,
+                endDate: raporTarihi
+            };
+        }
+
+        const legacyPair = normalizeIsoPair(
+            params.get("baslangicTarihi"),
+            params.get("bitisTarihi")
+        );
+        if (legacyPair) {
+            return legacyPair;
+        }
+
+        const ay = Number(params.get("ay"));
+        const yil = Number(params.get("yil"));
+        if (Number.isInteger(ay) && ay >= 1 && ay <= 12 && Number.isInteger(yil) && yil >= 2000 && yil <= 2099) {
+            return {
+                startDate: toIsoDate(new Date(yil, ay - 1, 1)),
+                endDate: toIsoDate(new Date(yil, ay, 0))
+            };
+        }
+
+        return null;
+    }
+
+    function hasClearFlag(locationLike) {
+        return new URLSearchParams(locationLike.search).get("clear") === "1";
+    }
+
+    function getStoredFilterState() {
+        try {
+            const raw = window.localStorage.getItem(filterStorageKey);
+            if (!raw) {
+                return null;
+            }
+
+            const parsed = JSON.parse(raw);
+            return normalizeIsoPair(parsed?.startDate, parsed?.endDate);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function persistFilterState(filterState) {
+        const normalized = normalizeIsoPair(filterState?.startDate, filterState?.endDate);
+        if (!normalized) {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(filterStorageKey, JSON.stringify(normalized));
+        } catch (error) {
+            // ignore storage errors
+        }
+    }
+
+    function clearStoredFilter() {
+        try {
+            window.localStorage.removeItem(filterStorageKey);
+        } catch (error) {
+            // ignore storage errors
+        }
+    }
+
+    function refreshDashboardLinks(filterState) {
+        document.querySelectorAll("a[href]").forEach(function (anchor) {
+            const currentHref = anchor.getAttribute("href");
+            if (!currentHref || currentHref.startsWith("#") || currentHref.startsWith("javascript:")) {
+                return;
+            }
+
+            const baseHref = anchor.dataset.baseHref || currentHref;
+            if (!anchor.dataset.baseHref) {
+                anchor.dataset.baseHref = baseHref;
+            }
+
+            if (!isDashboardHref(baseHref)) {
+                return;
+            }
+
+            anchor.setAttribute("href", filterState ? buildUrlWithFilter(baseHref, filterState) : stripFilterFromUrl(baseHref));
+        });
+    }
+
+    function isDashboardHref(href) {
+        try {
+            const url = new URL(href, window.location.origin);
+            return isDashboardPath(url.pathname);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function isDashboardPath(pathname) {
+        return dashboardPaths.has((pathname || "").toLowerCase());
+    }
+
+    function buildUrlWithFilter(href, filterState) {
+        const url = new URL(href, window.location.origin);
+        stripFilterParams(url.searchParams);
+        url.searchParams.set("startDate", filterState.startDate);
+        url.searchParams.set("endDate", filterState.endDate);
+        return url.pathname + url.search + url.hash;
+    }
+
+    function stripFilterFromUrl(href) {
+        const url = new URL(href, window.location.origin);
+        stripFilterParams(url.searchParams);
+        return url.pathname + url.search + url.hash;
+    }
+
+    function stripFilterParams(searchParams) {
+        [
+            "startDate",
+            "endDate",
+            "raporTarihi",
+            "baslangicTarihi",
+            "bitisTarihi",
+            "ay",
+            "yil",
+            "clear"
+        ].forEach(function (key) {
+            searchParams.delete(key);
+        });
+    }
+
+    function normalizeIsoPair(startDate, endDate) {
+        const normalizedStart = normalizeIsoValue(startDate);
+        const normalizedEnd = normalizeIsoValue(endDate);
+
+        if (!normalizedStart && !normalizedEnd) {
+            return null;
+        }
+
+        const start = parseIsoDate(normalizedStart || normalizedEnd);
+        const end = parseIsoDate(normalizedEnd || normalizedStart);
+        if (!start || !end) {
+            return null;
+        }
+
+        if (end < start) {
+            return {
+                startDate: toIsoDate(end),
+                endDate: toIsoDate(start)
+            };
+        }
+
+        return {
+            startDate: toIsoDate(start),
+            endDate: toIsoDate(end)
+        };
+    }
+
+    function normalizeIsoValue(value) {
+        const parsed = parseIsoDate(value || "");
+        return parsed ? toIsoDate(parsed) : null;
     }
 
 });

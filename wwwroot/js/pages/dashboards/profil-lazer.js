@@ -9,10 +9,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartCanvasIds = [
         'pastaGrafigi',
         'cizgiGrafigi',
-        'hataliTrendGrafigi',
+        'makineUretimGrafigi',
         'urunSureGrafigi',
-        'hataNedenGrafigi',
-        'hataUrunSonucGrafigi'
+        'duraklamaNedenGrafigi'
     ];
     const chartParents = new Map();
     const chartTemplates = new Map();
@@ -53,8 +52,8 @@ document.addEventListener('DOMContentLoaded', function () {
             gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
             productionLine: isDarkTheme ? '#67e8f9' : '#0891b2',
             productionFill: isDarkTheme ? 'rgba(103, 232, 249, 0.18)' : 'rgba(8, 145, 178, 0.12)',
-            errorLine: isDarkTheme ? '#fb7185' : '#e11d48',
-            errorFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            machineBar: isDarkTheme ? 'rgba(34, 197, 94, 0.8)' : 'rgba(22, 163, 74, 0.72)',
+            machineBarBorder: isDarkTheme ? 'rgba(134, 239, 172, 1)' : 'rgba(21, 128, 61, 1)',
             durationBar: isDarkTheme ? 'rgba(196, 181, 253, 0.82)' : 'rgba(124, 58, 237, 0.72)',
             durationBarBorder: isDarkTheme ? 'rgba(221, 214, 254, 1)' : 'rgba(109, 40, 217, 1)',
             donutColors: [
@@ -186,27 +185,23 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(data.GunlukUretimSayilari), 'Uretim trend verisi bulunamadi.');
 
-        createChart('hataliTrendGrafigi', {
-            type: 'line',
+        createChart('makineUretimGrafigi', {
+            type: 'bar',
             data: {
-                labels: data.Son7GunTarihleri || [],
+                labels: data.MakineLabels || [],
                 datasets: [
                     {
-                        label: 'Hatali Urun Adedi',
-                        data: data.GunlukHataliUrunSayilari || [],
-                        borderColor: palette.errorLine,
-                        backgroundColor: palette.errorFill,
-                        fill: true,
-                        tension: 0.28
+                        label: 'Uretim Adedi',
+                        data: data.MakineUretimData || [],
+                        backgroundColor: palette.machineBar,
+                        borderColor: palette.machineBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10
                     }
                 ]
             },
             options: {
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
                 scales: {
                     x: {
                         grid: {
@@ -221,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.GunlukHataliUrunSayilari), 'Hatali urun trend verisi bulunamadi.');
+        }, hasAnyData(data.MakineUretimData), 'Makine bazli uretim verisi bulunamadi.');
 
         createChart('urunSureGrafigi', {
             type: 'bar',
@@ -266,13 +261,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(data.UrunHarcananSure), 'Sure dagilim verisi bulunamadi.');
 
-        createChart('hataNedenGrafigi', {
+        createChart('duraklamaNedenGrafigi', {
             type: 'doughnut',
             data: {
-                labels: data.HataNedenleri || [],
+                labels: data.DuraklamaNedenLabels || [],
                 datasets: [
                     {
-                        data: data.HataNedenAdetleri || [],
+                        data: data.DuraklamaNedenData || [],
                         backgroundColor: palette.donutColors,
                         borderWidth: 0,
                         cutout: '58%'
@@ -287,30 +282,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.HataNedenAdetleri), 'Hata nedeni verisi bulunamadi.');
+        }, hasAnyData(data.DuraklamaNedenData), 'Duraklama verisi bulunamadi.');
 
-        createChart('hataUrunSonucGrafigi', {
-            type: 'doughnut',
-            data: {
-                labels: data.HataUrunSonuclari || [],
-                datasets: [
-                    {
-                        data: data.HataUrunSonucAdetleri || [],
-                        backgroundColor: palette.donutColors,
-                        borderWidth: 0,
-                        cutout: '58%'
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                }
-            }
-        }, hasAnyData(data.HataUrunSonucAdetleri), 'Hata sonucu verisi bulunamadi.');
     }
 
     renderCharts();

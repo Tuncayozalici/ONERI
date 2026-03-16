@@ -1229,8 +1229,10 @@ public class DashboardQueryService : IDashboardQueryService
             gununVerileri = gununVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
         }
 
-        viewModel.GunlukToplamUretim = gununVerileri.Sum(x => x.UretimAdedi);
-        viewModel.GunlukToplamSure = gununVerileri.Sum(x => x.CalismaSuresi);
+        var gununVerileriList = gununVerileri.ToList();
+
+        viewModel.GunlukToplamUretim = gununVerileriList.Sum(x => x.UretimAdedi);
+        viewModel.GunlukToplamSure = gununVerileriList.Sum(x => x.CalismaSuresi);
         viewModel.OrtalamaIslemSuresi = viewModel.GunlukToplamUretim > 0
             ? (double)viewModel.GunlukToplamSure / viewModel.GunlukToplamUretim
             : 0;
@@ -1256,12 +1258,14 @@ public class DashboardQueryService : IDashboardQueryService
             profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
         }
 
-        viewModel.HataliUrunAdedi = profilHataVerileri.Sum(x => x.Adet);
-        viewModel.HurdaAdedi = profilHataVerileri
+        var profilHataVerileriList = profilHataVerileri.ToList();
+
+        viewModel.HataliUrunAdedi = profilHataVerileriList.Sum(x => x.Adet);
+        viewModel.HurdaAdedi = profilHataVerileriList
             .Where(x => (x.HataUrunSonucu ?? string.Empty).ToLowerInvariant().Contains("hurda"))
             .Sum(x => x.Adet);
 
-        var hataNedenGruplari = profilHataVerileri
+        var hataNedenGruplari = profilHataVerileriList
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
             .Select(g => new { Neden = g.Key, Toplam = g.Sum(x => x.Adet) })
             .OrderByDescending(x => x.Toplam)
@@ -1270,7 +1274,7 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.HataNedenleri = hataNedenGruplari.Select(x => x.Neden).ToList();
         viewModel.HataNedenAdetleri = hataNedenGruplari.Select(x => x.Toplam).ToList();
 
-        var hataUrunGruplari = profilHataVerileri
+        var hataUrunGruplari = profilHataVerileriList
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataUrunSonucu))
             .Select(g => new { Sonuc = g.Key, Toplam = g.Sum(x => x.Adet) })
             .OrderByDescending(x => x.Toplam)
@@ -1279,9 +1283,8 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.HataUrunSonuclari = hataUrunGruplari.Select(x => x.Sonuc).ToList();
         viewModel.HataUrunSonucAdetleri = hataUrunGruplari.Select(x => x.Toplam).ToList();
 
-        var pastaGrafikData = gununVerileri
-            .AsEnumerable()
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.ProfilTipi))
+        var pastaGrafikData = gununVerileriList
+            .GroupBy(x => DashboardParsingHelper.NormalizeProfilLabel(x.ProfilTipi))
             .Select(g => new { Profil = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
             .OrderByDescending(x => x.ToplamUretim)
             .ToList();
@@ -1289,9 +1292,8 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.ProfilIsimleri = pastaGrafikData.Select(x => x.Profil).Where(p => !string.IsNullOrWhiteSpace(p)).Cast<string>().ToList();
         viewModel.ProfilUretimAdetleri = pastaGrafikData.Select(x => x.ToplamUretim).ToList();
 
-        var urunBazliSureData = gununVerileri
-            .AsEnumerable()
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.ProfilTipi))
+        var urunBazliSureData = gununVerileriList
+            .GroupBy(x => DashboardParsingHelper.NormalizeProfilLabel(x.ProfilTipi))
             .Select(g => new { Urun = g.Key, ToplamSure = g.Sum(x => x.CalismaSuresi) })
             .OrderByDescending(x => x.ToplamSure)
             .ToList();
@@ -1301,6 +1303,39 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.UrunHarcananSure = urunBazliSureData
             .Select(x => toplamSureTumUrunler > 0 ? (int)Math.Round(x.ToplamSure / toplamSureTumUrunler * 100) : 0)
             .ToList();
+
+        var makineBazliUretim = gununVerileriList
+            .Where(x => !string.IsNullOrWhiteSpace(x.CalisilanMakine) && x.UretimAdedi > 0)
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.CalisilanMakine))
+            .Select(g => new { Makine = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
+            .OrderByDescending(x => x.ToplamUretim)
+            .ToList();
+        viewModel.MakineLabels = makineBazliUretim.Select(x => x.Makine).ToList();
+        viewModel.MakineUretimData = makineBazliUretim.Select(x => x.ToplamUretim).ToList();
+
+        var mesaiDurumuDagilimi = gununVerileriList
+            .Where(x => !string.IsNullOrWhiteSpace(x.MesaiDurumu))
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.MesaiDurumu))
+            .Select(g => new { Mesai = g.Key, ToplamSure = g.Sum(x => x.CalismaSuresi) })
+            .OrderByDescending(x => x.ToplamSure)
+            .ToList();
+        viewModel.MesaiDurumuLabels = mesaiDurumuDagilimi.Select(x => x.Mesai).ToList();
+        viewModel.MesaiDurumuData = mesaiDurumuDagilimi.Select(x => x.ToplamSure).ToList();
+
+        var duraklamaDagilimi = gununVerileriList
+            .SelectMany(x => new[]
+            {
+                new { Neden = x.DuraklamaNedeni1, Sure = x.DuraklamaSuresi1 },
+                new { Neden = x.DuraklamaNedeni2, Sure = x.DuraklamaSuresi2 },
+                new { Neden = x.DuraklamaNedeni3, Sure = x.DuraklamaSuresi3 }
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Neden) && x.Sure > 0)
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
+            .Select(g => new { Neden = g.Key, ToplamSure = g.Sum(x => x.Sure) })
+            .OrderByDescending(x => x.ToplamSure)
+            .ToList();
+        viewModel.DuraklamaNedenLabels = duraklamaDagilimi.Select(x => x.Neden).ToList();
+        viewModel.DuraklamaNedenData = duraklamaDagilimi.Select(x => x.ToplamSure).ToList();
 
         DateTime trendBaslangic;
         DateTime trendBitis;

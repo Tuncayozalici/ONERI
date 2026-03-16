@@ -2,10 +2,11 @@
 @{
     ViewData["Title"] = "Profil Lazer Verileri";
     var aktifProfilSayisi = Model.ProfilIsimleri.Count;
+    var aktifMakineSayisi = Model.MakineLabels.Count;
     var kayitGunSayisi = Model.Son7GunTarihleri.Count > 0 ? Model.Son7GunTarihleri.Count : 1;
     var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
-    var baskinHataNedeni = Model.HataNedenleri.FirstOrDefault() ?? "Hata kaydi yok";
-    var baskinHataSonucu = Model.HataUrunSonuclari.FirstOrDefault() ?? "Sonuc kaydi yok";
+    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydi yok";
+    var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydi yok";
 }
 
 @section Styles {
@@ -40,16 +41,16 @@ else
                             <strong>@kayitGunSayisi</strong>
                         </div>
                         <div class="profile-fact">
-                            <span>Aktif profil tipi</span>
-                            <strong>@aktifProfilSayisi</strong>
+                            <span>Aktif makine</span>
+                            <strong>@aktifMakineSayisi</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
                             <span>One cikan profil</span>
                             <strong>@oneCikanProfil</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
-                            <span>Baskin hata nedeni</span>
-                            <strong>@baskinHataNedeni</strong>
+                            <span>Baskin duraklama</span>
+                            <strong>@baskinDuraklama</strong>
                         </div>
                     </div>
                 </div>
@@ -73,8 +74,8 @@ else
                             <strong>Ortalama sure</strong> toplam sure / toplam uretim uzerinden okunur.
                         </p>
                         <p class="mb-0">
-                            <strong>Hata nedeni</strong> ve <strong>hurda sonucu</strong> panelleri kalite akisindaki kayip dagilimini gosterir.
-                            <strong>Baskin sonuc</strong> bu donemde en sik gorulen karar: @baskinHataSonucu.
+                            <strong>Makine</strong>, <strong>mesai</strong> ve <strong>duraklama</strong> panelleri yeni lazer veri yapisindaki operasyon akisina gore guncellendi.
+                            <strong>Baskin mesai durumu</strong> bu donemde en yogun sureye sahip kayit: @baskinMesai.
                         </p>
                     </div>
                 </div>
@@ -141,17 +142,31 @@ else
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>Hatali Urun Trendi</h2>
-                                <p>Gun bazli hatali urun degisimini karsilastirin.</p>
+                                <h2>Makine Bazli Uretim</h2>
+                                <p>Calisilan makinelerin toplam uretim hacmini karsilastirin.</p>
                             </div>
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart">
-                            <canvas id="hataliTrendGrafigi"></canvas>
+                            <canvas id="makineUretimGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Duraklama Nedenleri</h2>
+                                <p>Kayitli duraklama surelerini neden bazli dagilimda izleyin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart-pie">
+                            <canvas id="duraklamaNedenGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
@@ -165,33 +180,6 @@ else
                     </div>
                 </div>
 
-                <div class="col-12 col-xl-6">
-                    <div class="profile-panel h-100">
-                        <div class="profile-panel__header">
-                            <div>
-                                <h2>Hata Nedenleri</h2>
-                                <p>Secilen donemde hata yogunlugunu neden bazinda izleyin.</p>
-                            </div>
-                        </div>
-                        <div class="profile-panel__body profile-panel__body--chart-pie">
-                            <canvas id="hataNedenGrafigi"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-xl-6">
-                    <div class="profile-panel h-100">
-                        <div class="profile-panel__header">
-                            <div>
-                                <h2>Hatali Urun Sonuclari</h2>
-                                <p>Hatali urunlerin hurda veya yeniden isleme dagilimini gorun.</p>
-                            </div>
-                        </div>
-                        <div class="profile-panel__body profile-panel__body--chart-pie">
-                            <canvas id="hataUrunSonucGrafigi"></canvas>
-                        </div>
-                    </div>
-                </div>
             </section>
         </div>
     </div>

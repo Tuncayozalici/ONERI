@@ -456,4 +456,23 @@ public static class DashboardParsingHelper
         var lower = trimmed.ToLower(culture);
         return culture.TextInfo.ToTitleCase(lower);
     }
+
+    public static string NormalizeProfilLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Bilinmeyen";
+        }
+
+        var normalized = value.Trim()
+            .Replace('×', 'X')
+            .Replace('x', 'X')
+            .Replace('*', 'X');
+
+        normalized = Regex.Replace(normalized, @"(?<=\d)\s*X\s*(?=\d)", "X");
+        normalized = Regex.Replace(normalized, @"\b([A-Za-z])\s+(\d+)\b", "$1$2");
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+
+        return normalized.ToUpper(new CultureInfo("tr-TR"));
+    }
 }

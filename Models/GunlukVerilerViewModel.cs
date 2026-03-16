@@ -25,6 +25,12 @@ namespace ONERI.Models
         // Pasta Grafik için
         public List<string> ProfilIsimleri { get; set; }
         public List<int> ProfilUretimAdetleri { get; set; }
+        public List<string> MakineLabels { get; set; } = new List<string>();
+        public List<int> MakineUretimData { get; set; } = new List<int>();
+        public List<string> MesaiDurumuLabels { get; set; } = new List<string>();
+        public List<int> MesaiDurumuData { get; set; } = new List<int>();
+        public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
+        public List<int> DuraklamaNedenData { get; set; } = new List<int>();
 
         // Çizgi Grafik için
         public List<string> Son7GunTarihleri { get; set; }

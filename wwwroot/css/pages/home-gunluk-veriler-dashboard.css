@@ -623,6 +623,22 @@ html[data-theme="dark"] .gunluk-duraklama-card {
     background: linear-gradient(90deg, rgba(245, 158, 11, 0.86), rgba(217, 119, 6, 0.94));
 }
 
+.gunluk-duraklama-item__bar--uretim span {
+    background: linear-gradient(90deg, rgba(8, 145, 178, 0.86), rgba(14, 165, 233, 0.94));
+}
+
+.gunluk-duraklama-item__bar--hata span {
+    background: linear-gradient(90deg, rgba(225, 29, 72, 0.86), rgba(244, 63, 94, 0.94));
+}
+
+html[data-theme="dark"] .gunluk-duraklama-item__bar--uretim span {
+    background: linear-gradient(90deg, rgba(103, 232, 249, 0.88), rgba(34, 211, 238, 0.96));
+}
+
+html[data-theme="dark"] .gunluk-duraklama-item__bar--hata span {
+    background: linear-gradient(90deg, rgba(253, 164, 175, 0.88), rgba(251, 113, 133, 0.96));
+}
+
 @media (max-width: 1399.98px) {
     .gunluk-top-layout {
         grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(0, 1fr);

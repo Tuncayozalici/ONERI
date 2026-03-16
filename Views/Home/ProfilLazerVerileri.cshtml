@@ -1,156 +1,206 @@
 @model ONERI.Models.GunlukVerilerViewModel
 @{
     ViewData["Title"] = "Profil Lazer Verileri";
+    var aktifProfilSayisi = Model.ProfilIsimleri.Count;
+    var kayitGunSayisi = Model.Son7GunTarihleri.Count > 0 ? Model.Son7GunTarihleri.Count : 1;
+    var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
+    var baskinHataNedeni = Model.HataNedenleri.FirstOrDefault() ?? "Hata kaydi yok";
+    var baskinHataSonucu = Model.HataUrunSonuclari.FirstOrDefault() ?? "Sonuc kaydi yok";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/boyahane.css" />
+    <link rel="stylesheet" href="~/css/pages/home-profil-lazer-dashboard.css" asp-append-version="true" />
 }
 
 @if (ViewBag.ErrorMessage != null)
 {
-    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+    <div class="container py-4">
+        <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+    </div>
 }
+else
+{
+    <div class="profile-page">
+        <div class="container py-4 py-lg-5">
+            <section class="profile-hero mb-4">
+                <div class="profile-hero__content">
+                    <div class="profile-hero__eyebrow">
+                        <i class="bi bi-layers"></i>
+                        OPERASYON RAPORU
+                    </div>
+                    <h1>Profil Lazer Operasyon Panosu</h1>
+                    <p>
+                        Uretim, sure, hatali urun ve hurda sinyallerini tek panel yapisinda izleyin.
+                        KPI kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
+                    </p>
 
-<div class="container">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="display-6">Profil Lazer Üretim Raporu</h2>
-        </div>
-        <div class="col-md-6">
-            <form asp-action="ProfilLazerVerileri" method="get" class="d-flex justify-content-md-end align-items-center gap-2 js-unified-date-filter-form">
-                @await Html.PartialAsync("_UnifiedDateFilter")
-                <button type="submit" class="btn btn-primary js-unified-filter-apply" disabled>Filtrele</button>
-                <button type="button" class="btn btn-secondary js-unified-filter-clear" disabled>Temizle</button>
-            </form>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-        </div>
-    </div>
-
-    <!-- KPI Kartları -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-5 g-4 mb-5">
-        <div class="col">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Toplam Üretim</h5>
-                    <p class="card-text">@Model.GunlukToplamUretim.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-clock me-2"></i>Toplam Süre</h5>
-                    <p class="card-text">@Model.GunlukToplamSure.ToString("N0") dk</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-speedometer2 me-2"></i>Ortalama Süre</h5>
-                    <p class="card-text">@Model.OrtalamaIslemSuresi.ToString("F2") dk/adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>Hatalı Ürün</h5>
-                    <p class="card-text">@Model.HataliUrunAdedi.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="kpi-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-trash3 me-2"></i>Hurda</h5>
-                    <p class="card-text">@Model.HurdaAdedi.ToString("N0") adet</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Grafikler -->
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Profil Tipine Göre Bugünün Üretim Dağılımı
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="pastaGrafigi" class="chart-pie"></canvas>
+                    <div class="profile-hero__facts">
+                        <div class="profile-fact">
+                            <span>Kayit gunu</span>
+                            <strong>@kayitGunSayisi</strong>
+                        </div>
+                        <div class="profile-fact">
+                            <span>Aktif profil tipi</span>
+                            <strong>@aktifProfilSayisi</strong>
+                        </div>
+                        <div class="profile-fact profile-fact--wide">
+                            <span>One cikan profil</span>
+                            <strong>@oneCikanProfil</strong>
+                        </div>
+                        <div class="profile-fact profile-fact--wide">
+                            <span>Baskin hata nedeni</span>
+                            <strong>@baskinHataNedeni</strong>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    @(ViewBag.TrendTitle ?? "Son 7 Günlük Üretim Trendi")
-                </div>
-                <div class="card-body">
-                    <canvas id="cizgiGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Hatalı Ürün Trendi
-                </div>
-                <div class="card-body">
-                    <canvas id="hataliTrendGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Profil Tipine Göre Süre Dağılımı
-                </div>
-                <div class="card-body">
-                    <canvas id="urunSureGrafigi"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Hata Nedenleri
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="hataNedenGrafigi" class="chart-pie"></canvas>
+
+                <div class="profile-hero__panel">
+                    <form asp-action="ProfilLazerVerileri" method="get" class="profile-filter-form js-unified-date-filter-form">
+                        @await Html.PartialAsync("_UnifiedDateFilter")
+                        <div class="profile-filter-form__actions">
+                            <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                            <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                        </div>
+                    </form>
+
+                    <div class="profile-period">
+                        @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                    </div>
+
+                    <div class="profile-hero__note">
+                        <p>
+                            <strong>Toplam sure</strong> secilen donemde profil lazer operasyonu icin kaydedilen toplam calisma suresidir.
+                            <strong>Ortalama sure</strong> toplam sure / toplam uretim uzerinden okunur.
+                        </p>
+                        <p class="mb-0">
+                            <strong>Hata nedeni</strong> ve <strong>hurda sonucu</strong> panelleri kalite akisindaki kayip dagilimini gosterir.
+                            <strong>Baskin sonuc</strong> bu donemde en sik gorulen karar: @baskinHataSonucu.
+                        </p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    Hatalı Ürün Ne Olacak?
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie-wrap">
-                        <canvas id="hataUrunSonucGrafigi" class="chart-pie"></canvas>
+            </section>
+
+            <section class="profile-kpis mb-4">
+                <article class="profile-kpi profile-kpi--cyan">
+                    <span class="profile-kpi__label">Toplam Uretim</span>
+                    <strong class="profile-kpi__value">@Model.GunlukToplamUretim.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Secilen donemde uretilen toplam adet</small>
+                </article>
+                <article class="profile-kpi profile-kpi--amber">
+                    <span class="profile-kpi__label">Toplam Sure</span>
+                    <strong class="profile-kpi__value">@Model.GunlukToplamSure.ToString("N0") dk</strong>
+                    <small class="profile-kpi__meta">Toplam operasyon suresi</small>
+                </article>
+                <article class="profile-kpi profile-kpi--violet">
+                    <span class="profile-kpi__label">Ortalama Sure</span>
+                    <strong class="profile-kpi__value">@Model.OrtalamaIslemSuresi.ToString("F2") dk/adet</strong>
+                    <small class="profile-kpi__meta">Birim basina islem suresi</small>
+                </article>
+                <article class="profile-kpi profile-kpi--rose">
+                    <span class="profile-kpi__label">Hatali Urun</span>
+                    <strong class="profile-kpi__value">@Model.HataliUrunAdedi.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Secilen donemde tespit edilen toplam hata</small>
+                </article>
+                <article class="profile-kpi profile-kpi--slate">
+                    <span class="profile-kpi__label">Hurda</span>
+                    <strong class="profile-kpi__value">@Model.HurdaAdedi.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Hurda karari verilen toplam adet</small>
+                </article>
+            </section>
+
+            <section class="row g-4">
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Profil Tipine Gore Uretim Dagilimi</h2>
+                                <p>Secilen donemde profil karmasinin adet bazli dagilimini inceleyin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart-pie">
+                            <canvas id="pastaGrafigi"></canvas>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>@(ViewBag.TrendTitle ?? "Uretim Trendi")</h2>
+                                <p>Gun bazli uretim akisini tek eksende izleyin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="cizgiGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Hatali Urun Trendi</h2>
+                                <p>Gun bazli hatali urun degisimini karsilastirin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="hataliTrendGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Profil Tipine Gore Sure Dagilimi</h2>
+                                <p>Toplam sureden hangi profil tipinin ne kadar pay aldigini okuyun.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="urunSureGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Hata Nedenleri</h2>
+                                <p>Secilen donemde hata yogunlugunu neden bazinda izleyin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart-pie">
+                            <canvas id="hataNedenGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Hatali Urun Sonuclari</h2>
+                                <p>Hatali urunlerin hurda veya yeniden isleme dagilimini gorun.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart-pie">
+                            <canvas id="hataUrunSonucGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
-</div>
-
+}
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="profil-lazer-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, defaultYear = DateTime.Now.Year, resolvedYear = (int?)null }))
+        @Html.Raw(Json.Serialize(new { model = Model }))
     </script>
     <script src="~/js/pages/dashboards/profil-lazer.js" asp-append-version="true"></script>
 }

@@ -1,14 +1,39 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const payload = JSON.parse(document.getElementById('profil-lazer-data').textContent);
+    const payloadElement = document.getElementById('profil-lazer-data');
+    if (!payloadElement) {
+        return;
+    }
+
+    const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
-    const defaultYear = payload.defaultYear;
+    const chartCanvasIds = [
+        'pastaGrafigi',
+        'cizgiGrafigi',
+        'hataliTrendGrafigi',
+        'urunSureGrafigi',
+        'hataNedenGrafigi',
+        'hataUrunSonucGrafigi'
+    ];
+    const chartParents = new Map();
+    const chartTemplates = new Map();
+    const chartInstances = [];
+
+    chartCanvasIds.forEach(function (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) {
+            return;
+        }
+
+        chartParents.set(canvasId, canvas.parentElement);
+        chartTemplates.set(canvasId, canvas.parentElement.innerHTML);
+    });
 
     function normalizePayloadKeys(value) {
         if (Array.isArray(value)) {
             return value.map(normalizePayloadKeys);
         }
 
-        if (value !== null && typeof value === "object") {
+        if (value !== null && typeof value === 'object') {
             const normalized = {};
             for (const [key, nested] of Object.entries(value)) {
                 const normalizedKey = key.length > 0 ? key[0].toUpperCase() + key.slice(1) : key;
@@ -19,399 +44,290 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-                        const filterInput = document.getElementById('tarihFiltre');
-    const dateInput = document.getElementById('raporTarihi');
-    const startDateInput = document.getElementById('baslangicTarihi');
-    const endDateInput = document.getElementById('bitisTarihi');
-    const monthInput = document.getElementById('ay');
-    const yearInput = document.getElementById('yil');
-    const clearButton = document.getElementById('clearFilter');
 
-    function pad2(value) {
-        return String(value).padStart(2, '0');
+    function getThemePalette() {
+        const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+        return {
+            textColor: isDarkTheme ? '#9aa8bd' : '#475569',
+            strongTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
+            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
+            productionLine: isDarkTheme ? '#67e8f9' : '#0891b2',
+            productionFill: isDarkTheme ? 'rgba(103, 232, 249, 0.18)' : 'rgba(8, 145, 178, 0.12)',
+            errorLine: isDarkTheme ? '#fb7185' : '#e11d48',
+            errorFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            durationBar: isDarkTheme ? 'rgba(196, 181, 253, 0.82)' : 'rgba(124, 58, 237, 0.72)',
+            durationBarBorder: isDarkTheme ? 'rgba(221, 214, 254, 1)' : 'rgba(109, 40, 217, 1)',
+            donutColors: [
+                '#67e8f9', '#f59e0b', '#34d399', '#a78bfa', '#fb7185',
+                '#38bdf8', '#f97316', '#22c55e', '#eab308', '#818cf8'
+            ]
+        };
     }
 
-    function isValidIsoDate(isoDate) {
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-        if (!match) {
-            return false;
-        }
-
-        const year = Number(match[1]);
-        const month = Number(match[2]);
-        const day = Number(match[3]);
-        const candidate = new Date(Date.UTC(year, month - 1, day));
-        return candidate.getUTCFullYear() == year
-            && candidate.getUTCMonth() + 1 == month
-            && candidate.getUTCDate() == day;
+    function configureChartDefaults(palette) {
+        Chart.defaults.color = palette.textColor;
+        Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
     }
 
-    function parseDateToIso(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        if (isValidIsoDate(raw)) {
-            return raw;
-        }
-
-        const trMatch = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (!trMatch) {
-            return null;
-        }
-
-        const day = pad2(Number(trMatch[1]));
-        const month = pad2(Number(trMatch[2]));
-        const year = trMatch[3];
-        const iso = `${year}-${month}-${day}`;
-        return isValidIsoDate(iso) ? iso : null;
-    }
-
-    function parseMonthValue(value) {
-        const raw = String(value || '').trim();
-        if (!raw) {
-            return null;
-        }
-
-        let match = /^(\d{1,2})[./-](\d{4})$/.exec(raw);
-        if (match) {
-            const month = Number(match[1]);
-            const year = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        match = /^(\d{4})[./-](\d{1,2})$/.exec(raw);
-        if (match) {
-            const year = Number(match[1]);
-            const month = Number(match[2]);
-            if (month >= 1 && month <= 12) {
-                return { ay: month, yil: year };
-            }
-        }
-
-        return null;
-    }
-
-    function parseRangeValue(value) {
-        const raw = String(value || '').trim();
-        const match = /^(.+)\s-\s(.+)$/.exec(raw);
-        if (!match) {
-            return null;
-        }
-
-        const startIso = parseDateToIso(match[1]);
-        const endIso = parseDateToIso(match[2]);
-        if (!startIso || !endIso) {
-            return null;
-        }
-
-        return { baslangic: startIso, bitis: endIso };
-    }
-
-    function isoToDisplay(isoDate) {
-        if (!isValidIsoDate(isoDate)) {
-            return '';
-        }
-
-        const [year, month, day] = isoDate.split('-');
-        return `${day}.${month}.${year}`;
-    }
-
-    function getModelDateIso() {
-        const raw = data.RaporTarihi;
-        if (!raw) {
-            return '';
-        }
-
-        if (typeof raw === 'string') {
-            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (match) {
-                return `${match[1]}-${match[2]}-${match[3]}`;
-            }
-        }
-
-        const parsed = new Date(raw);
-        if (Number.isNaN(parsed.getTime())) {
-            return '';
-        }
-
-        const year = parsed.getFullYear();
-        const month = String(parsed.getMonth() + 1).padStart(2, '0');
-        const day = String(parsed.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    function clearHiddenFilters() {
-        dateInput.value = '';
-        startDateInput.value = '';
-        endDateInput.value = '';
-        monthInput.value = '';
-        yearInput.value = '';
-    }
-
-    function syncHiddenFiltersFromText() {
-        clearHiddenFilters();
-
-        const raw = String(filterInput.value || '').trim();
-        if (!raw) {
-            return;
-        }
-
-        const parsedRange = parseRangeValue(raw);
-        if (parsedRange) {
-            startDateInput.value = parsedRange.baslangic;
-            endDateInput.value = parsedRange.bitis;
-            filterInput.value = `${isoToDisplay(parsedRange.baslangic)} - ${isoToDisplay(parsedRange.bitis)}`;
-            return;
-        }
-
-        const parsedMonth = parseMonthValue(raw);
-        if (parsedMonth) {
-            monthInput.value = String(parsedMonth.ay);
-            yearInput.value = String(parsedMonth.yil);
-            filterInput.value = `${pad2(parsedMonth.ay)}.${parsedMonth.yil}`;
-            return;
-        }
-
-        const parsedDate = parseDateToIso(raw);
-        if (parsedDate) {
-            dateInput.value = parsedDate;
-            filterInput.value = isoToDisplay(parsedDate);
-        }
-    }
-
-    if (filterInput) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const raporTarihi = urlParams.get('raporTarihi');
-        const baslangicTarihi = urlParams.get('baslangicTarihi');
-        const bitisTarihi = urlParams.get('bitisTarihi');
-        const ay = urlParams.get('ay');
-        const yil = urlParams.get('yil');
-        const clear = urlParams.get('clear');
-
-        if (clear === '1') {
-            filterInput.value = '';
-        } else if (raporTarihi) {
-            filterInput.value = isoToDisplay(raporTarihi);
-        } else if (baslangicTarihi && bitisTarihi) {
-            filterInput.value = `${isoToDisplay(baslangicTarihi)} - ${isoToDisplay(bitisTarihi)}`;
-        } else if (ay && yil) {
-            filterInput.value = `${pad2(Number(ay))}.${yil}`;
-        } else {
-            const modelDateIso = getModelDateIso();
-            filterInput.value = modelDateIso ? isoToDisplay(modelDateIso) : '';
-        }
-
-        syncHiddenFiltersFromText();
-
-        filterInput.addEventListener('blur', syncHiddenFiltersFromText);
-
-        const filterForm = filterInput.closest('form');
-        if (filterForm) {
-            filterForm.addEventListener('submit', function () {
-                syncHiddenFiltersFromText();
-            });
-        }
-
-        clearButton.addEventListener('click', function () {
-            filterInput.value = '';
-            clearHiddenFilters();
-            window.location.href = `${window.location.pathname}?clear=1`;
+    function hasAnyData(values) {
+        return Array.isArray(values) && values.some(function (value) {
+            return Number(value || 0) !== 0;
         });
     }
-    
-                // Chart rendering code...
-                // Pasta Grafik
-                const pastaCtx = document.getElementById('pastaGrafigi').getContext('2d');
-                if ((data.ProfilIsimleri || []).length > 0) {
-                    new Chart(pastaCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.ProfilIsimleri,
-                            datasets: [{
-                                label: 'Üretim Adedi',
-                                data: data.ProfilUretimAdetleri,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)'
-                                ],
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                }
-                            }
-                        }
-                    });
+
+    function destroyCharts() {
+        while (chartInstances.length > 0) {
+            chartInstances.pop().destroy();
+        }
+    }
+
+    function restoreChartContainers() {
+        destroyCharts();
+
+        chartCanvasIds.forEach(function (canvasId) {
+            const parent = chartParents.get(canvasId);
+            const template = chartTemplates.get(canvasId);
+            if (!parent || !template) {
+                return;
+            }
+
+            parent.innerHTML = template;
+        });
+    }
+
+    function renderEmptyStateById(canvasId, message) {
+        const parent = chartParents.get(canvasId);
+        if (!parent) {
+            return;
+        }
+
+        parent.innerHTML = '<div class="profile-empty-state">' + message + '</div>';
+    }
+
+    function createChart(canvasId, config, hasData, emptyMessage) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            return null;
+        }
+
+        if (!hasData) {
+            renderEmptyStateById(canvasId, emptyMessage);
+            return null;
+        }
+
+        const instance = new Chart(canvas.getContext('2d'), config);
+        chartInstances.push(instance);
+        return instance;
+    }
+
+    function renderCharts() {
+        const palette = getThemePalette();
+        configureChartDefaults(palette);
+        restoreChartContainers();
+
+        createChart('pastaGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: data.ProfilIsimleri || [],
+                datasets: [
+                    {
+                        data: data.ProfilUretimAdetleri || [],
+                        backgroundColor: palette.donutColors,
+                        borderWidth: 0,
+                        cutout: '58%'
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
                 }
-    
-                // Çizgi Grafik
-                const cizgiCtx = document.getElementById('cizgiGrafigi').getContext('2d');
-                if ((data.Son7GunTarihleri || []).length > 0) {
-                    new Chart(cizgiCtx, {
-                        type: 'line',
-                        data: {
-                            labels: data.Son7GunTarihleri,
-                            datasets: [{
-                                label: 'Günlük Üretim Adedi',
-                                data: data.GunlukUretimSayilari,
-                                fill: false,
-                                borderColor: 'rgb(75, 192, 192)',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
+            }
+        }, hasAnyData(data.ProfilUretimAdetleri), 'Profil dagilim verisi bulunamadi.');
+
+        createChart('cizgiGrafigi', {
+            type: 'line',
+            data: {
+                labels: data.Son7GunTarihleri || [],
+                datasets: [
+                    {
+                        label: 'Gunluk Uretim Adedi',
+                        data: data.GunlukUretimSayilari || [],
+                        borderColor: palette.productionLine,
+                        backgroundColor: palette.productionFill,
+                        fill: true,
+                        tension: 0.28
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
                         }
-                    });
-                }
-    
-                const hataliTrendCtx = document.getElementById('hataliTrendGrafigi').getContext('2d');
-                if ((data.Son7GunTarihleri || []).length > 0) {
-                    new Chart(hataliTrendCtx, {
-                        type: 'line',
-                        data: {
-                            labels: data.Son7GunTarihleri,
-                            datasets: [{
-                                label: 'Hatalı Ürün Adedi',
-                                data: data.GunlukHataliUrunSayilari,
-                                fill: false,
-                                borderColor: 'rgb(255, 99, 132)',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                y: { beginAtZero: true }
-                            }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
                         }
-                    });
+                    }
                 }
-    
-                const urunSureCtx = document.getElementById('urunSureGrafigi').getContext('2d');
-                if ((data.UrunIsimleri || []).length > 0) {
-                    new Chart(urunSureCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: data.UrunIsimleri,
-                            datasets: [{
-                                label: 'Süre Yüzdesi (%)',
-                                data: data.UrunHarcananSure,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)'
-                                ],
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return value + '%'
-                                        }
-                                    }
-                                }
-                            }
+            }
+        }, hasAnyData(data.GunlukUretimSayilari), 'Uretim trend verisi bulunamadi.');
+
+        createChart('hataliTrendGrafigi', {
+            type: 'line',
+            data: {
+                labels: data.Son7GunTarihleri || [],
+                datasets: [
+                    {
+                        label: 'Hatali Urun Adedi',
+                        data: data.GunlukHataliUrunSayilari || [],
+                        borderColor: palette.errorLine,
+                        backgroundColor: palette.errorFill,
+                        fill: true,
+                        tension: 0.28
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
                         }
-                    });
-                }
-    
-                const hataNedenCtx = document.getElementById('hataNedenGrafigi').getContext('2d');
-                if ((data.HataNedenleri || []).length > 0) {
-                    new Chart(hataNedenCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.HataNedenleri,
-                            datasets: [{
-                                label: 'Hatalı Adet',
-                                data: data.HataNedenAdetleri,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)'
-                                ],
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                }
-                            }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
                         }
-                    });
+                    }
                 }
-    
-                const hataUrunSonucCtx = document.getElementById('hataUrunSonucGrafigi').getContext('2d');
-                if ((data.HataUrunSonuclari || []).length > 0) {
-                    new Chart(hataUrunSonucCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.HataUrunSonuclari,
-                            datasets: [{
-                                label: 'Hatalı Ürün Adet',
-                                data: data.HataUrunSonucAdetleri,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)'
-                                ],
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                }
-                            }
+            }
+        }, hasAnyData(data.GunlukHataliUrunSayilari), 'Hatali urun trend verisi bulunamadi.');
+
+        createChart('urunSureGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.UrunIsimleri || [],
+                datasets: [
+                    {
+                        label: 'Sure Yuzdesi (%)',
+                        data: data.UrunHarcananSure || [],
+                        backgroundColor: palette.durationBar,
+                        borderColor: palette.durationBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
                         }
-                    });
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
+            }
+        }, hasAnyData(data.UrunHarcananSure), 'Sure dagilim verisi bulunamadi.');
+
+        createChart('hataNedenGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: data.HataNedenleri || [],
+                datasets: [
+                    {
+                        data: data.HataNedenAdetleri || [],
+                        backgroundColor: palette.donutColors,
+                        borderWidth: 0,
+                        cutout: '58%'
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                }
+            }
+        }, hasAnyData(data.HataNedenAdetleri), 'Hata nedeni verisi bulunamadi.');
+
+        createChart('hataUrunSonucGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: data.HataUrunSonuclari || [],
+                datasets: [
+                    {
+                        data: data.HataUrunSonucAdetleri || [],
+                        backgroundColor: palette.donutColors,
+                        borderWidth: 0,
+                        cutout: '58%'
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                }
+            }
+        }, hasAnyData(data.HataUrunSonucAdetleri), 'Hata sonucu verisi bulunamadi.');
+    }
+
+    renderCharts();
+
+    let activeTheme = document.documentElement.getAttribute('data-theme');
+    const themeObserver = new MutationObserver(function () {
+        const nextTheme = document.documentElement.getAttribute('data-theme');
+        if (nextTheme === activeTheme) {
+            return;
+        }
+
+        activeTheme = nextTheme;
+        renderCharts();
+    });
+
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });

@@ -8,6 +8,32 @@
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
     var hataNedeniSayisi = Model.HataNedenLabels.Count;
     var aktifBolumSayisi = Model.BolumUretimLabels.Count;
+    var enYuksekUretimBolumu = Model.UretimBolumDetaylari.FirstOrDefault();
+    var enYuksekUretimMakinesi = Model.UretimBolumDetaylari
+        .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
+        .OrderByDescending(x => x.Deger)
+        .FirstOrDefault();
+    var enYuksekHataBolumu = Model.HataBolumDetaylari.FirstOrDefault();
+    var enYuksekHataMakinesi = Model.HataBolumDetaylari
+        .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
+        .OrderByDescending(x => x.Deger)
+        .FirstOrDefault();
+    var enYuksekDuraklamaBolumu = Model.DuraklamaBolumDetaylari.FirstOrDefault();
+    var enYuksekDuraklamaMakinesi = Model.DuraklamaBolumDetaylari
+        .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Dakika = m.DuraklamaDakika }))
+        .OrderByDescending(x => x.Dakika)
+        .FirstOrDefault();
+    Func<double, string> formatDuration = totalMinutes =>
+    {
+        var roundedMinutes = (int)Math.Round(totalMinutes, MidpointRounding.AwayFromZero);
+        var hours = roundedMinutes / 60;
+        var minutes = roundedMinutes % 60;
+        return $"{hours:N0} sa {minutes:D2} dk";
+    };
+    Func<double, string> formatCount = total =>
+    {
+        return Math.Round(total, MidpointRounding.AwayFromZero).ToString("N0");
+    };
 }
 
 @section Styles {
@@ -74,21 +100,33 @@
         <div id="summaryCard" class="gunluk-board mb-4">
             <section class="gunluk-top-layout mb-4">
                 <div class="gunluk-kpi-stack">
-                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked">
+                    <button type="button"
+                            class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked gunluk-kpi--interactive"
+                            data-bs-toggle="modal"
+                            data-bs-target="#uretimDetayModal"
+                            aria-label="Toplam uretilen parca detaylarini ac">
                         <span class="gunluk-kpi__label">Toplam Uretilen Parca</span>
                         <strong class="gunluk-kpi__value">@Model.ToplamUretim.ToString("N0")</strong>
-                        <small class="gunluk-kpi__meta">Secilen donemin toplam uretim hacmi</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked">
+                        <small class="gunluk-kpi__meta">Secilen donemin toplam uretim hacmi. Detay icin tiklayin.</small>
+                    </button>
+                    <button type="button"
+                            class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked gunluk-kpi--interactive"
+                            data-bs-toggle="modal"
+                            data-bs-target="#hataDetayModal"
+                            aria-label="Hatali adet detaylarini ac">
                         <span class="gunluk-kpi__label">Hatali Adet</span>
                         <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
-                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--amber gunluk-kpi--stacked">
+                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata. Detay icin tiklayin.</small>
+                    </button>
+                    <button type="button"
+                            class="gunluk-kpi gunluk-kpi--amber gunluk-kpi--stacked gunluk-kpi--interactive"
+                            data-bs-toggle="modal"
+                            data-bs-target="#duraklamaDetayModal"
+                            aria-label="Toplam duraklama detaylarini ac">
                         <span class="gunluk-kpi__label">Toplam Duraklama</span>
                         <strong class="gunluk-kpi__value">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</strong>
-                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure</small>
-                    </article>
+                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure. Detay icin tiklayin.</small>
+                    </button>
                 </div>
 
                 <div class="gunluk-panel h-100 gunluk-panel--gauge">
@@ -307,6 +345,219 @@
                 </div>
             </div>
         </section>
+    </div>
+</div>
+
+<div class="modal fade" id="uretimDetayModal" tabindex="-1" aria-labelledby="uretimDetayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content gunluk-modal">
+            <div class="modal-header gunluk-modal__header border-0">
+                <div>
+                    <h5 class="modal-title" id="uretimDetayModalLabel">Uretim Detayi</h5>
+                    <p class="gunluk-modal__subtitle mb-0">Bölüm ve makine bazli toplam üretilen parca kirilimi.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body gunluk-modal__body">
+                <div class="gunluk-modal__summary">
+                    <article class="gunluk-modal__summary-card">
+                        <span>Toplam uretim</span>
+                        <strong>@formatCount(Model.ToplamUretim)</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek bolum</span>
+                        <strong>@(enYuksekUretimBolumu != null ? $"{enYuksekUretimBolumu.Bolum} ({formatCount(enYuksekUretimBolumu.ToplamDeger)})" : "-")</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek makine</span>
+                        <strong>@(enYuksekUretimMakinesi != null ? $"{enYuksekUretimMakinesi.Makine} ({formatCount(enYuksekUretimMakinesi.Deger)})" : "-")</strong>
+                    </article>
+                </div>
+
+                @if (Model.UretimBolumDetaylari.Any())
+                {
+                    <div class="gunluk-duraklama-grid">
+                        @foreach (var bolum in Model.UretimBolumDetaylari)
+                        {
+                            <section class="gunluk-duraklama-card">
+                                <div class="gunluk-duraklama-card__header">
+                                    <div>
+                                        <h6>@bolum.Bolum</h6>
+                                        <p class="mb-0">@bolum.MakineDetaylari.Count makine kaydi</p>
+                                    </div>
+                                    <strong>@formatCount(bolum.ToplamDeger)</strong>
+                                </div>
+
+                                <div class="gunluk-duraklama-card__body">
+                                    @foreach (var makine in bolum.MakineDetaylari)
+                                    {
+                                        var oran = bolum.ToplamDeger > 0
+                                            ? (makine.Deger / bolum.ToplamDeger) * 100
+                                            : 0;
+                                        var oranStyle = $"width:{oran.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+                                        <div class="gunluk-duraklama-item">
+                                            <div class="gunluk-duraklama-item__row">
+                                                <span>@makine.Makine</span>
+                                                <strong>@formatCount(makine.Deger)</strong>
+                                            </div>
+                                            <div class="gunluk-duraklama-item__bar">
+                                                <span style="@oranStyle"></span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </section>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gunluk-empty-state gunluk-empty-state--compact">Secilen donem icin uretim detayi bulunamadi.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="hataDetayModal" tabindex="-1" aria-labelledby="hataDetayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content gunluk-modal">
+            <div class="modal-header gunluk-modal__header border-0">
+                <div>
+                    <h5 class="modal-title" id="hataDetayModalLabel">Hata Detayi</h5>
+                    <p class="gunluk-modal__subtitle mb-0">Karttaki toplam hata mantigiyla bölüm ve makine kirilimi.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body gunluk-modal__body">
+                <div class="gunluk-modal__summary">
+                    <article class="gunluk-modal__summary-card">
+                        <span>Toplam hata</span>
+                        <strong>@formatCount(Model.ToplamHataAdet)</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek bolum</span>
+                        <strong>@(enYuksekHataBolumu != null ? $"{enYuksekHataBolumu.Bolum} ({formatCount(enYuksekHataBolumu.ToplamDeger)})" : "-")</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek makine</span>
+                        <strong>@(enYuksekHataMakinesi != null ? $"{enYuksekHataMakinesi.Makine} ({formatCount(enYuksekHataMakinesi.Deger)})" : "-")</strong>
+                    </article>
+                </div>
+
+                @if (Model.HataBolumDetaylari.Any())
+                {
+                    <div class="gunluk-duraklama-grid">
+                        @foreach (var bolum in Model.HataBolumDetaylari)
+                        {
+                            <section class="gunluk-duraklama-card">
+                                <div class="gunluk-duraklama-card__header">
+                                    <div>
+                                        <h6>@bolum.Bolum</h6>
+                                        <p class="mb-0">@bolum.MakineDetaylari.Count makine kaydi</p>
+                                    </div>
+                                    <strong>@formatCount(bolum.ToplamDeger)</strong>
+                                </div>
+
+                                <div class="gunluk-duraklama-card__body">
+                                    @foreach (var makine in bolum.MakineDetaylari)
+                                    {
+                                        var oran = bolum.ToplamDeger > 0
+                                            ? (makine.Deger / bolum.ToplamDeger) * 100
+                                            : 0;
+                                        var oranStyle = $"width:{oran.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+                                        <div class="gunluk-duraklama-item">
+                                            <div class="gunluk-duraklama-item__row">
+                                                <span>@makine.Makine</span>
+                                                <strong>@formatCount(makine.Deger)</strong>
+                                            </div>
+                                            <div class="gunluk-duraklama-item__bar">
+                                                <span style="@oranStyle"></span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </section>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gunluk-empty-state gunluk-empty-state--compact">Secilen donem icin hata detayi bulunamadi.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="duraklamaDetayModal" tabindex="-1" aria-labelledby="duraklamaDetayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content gunluk-modal">
+            <div class="modal-header gunluk-modal__header border-0">
+                <div>
+                    <h5 class="modal-title" id="duraklamaDetayModalLabel">Duraklama Detayi</h5>
+                    <p class="gunluk-modal__subtitle mb-0">Bölüm ve makine bazli kayip sure kirilimi.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body gunluk-modal__body">
+                <div class="gunluk-modal__summary">
+                    <article class="gunluk-modal__summary-card">
+                        <span>Toplam duraklama</span>
+                        <strong>@formatDuration(Model.ToplamDuraklamaDakika)</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek bolum</span>
+                        <strong>@(enYuksekDuraklamaBolumu != null ? $"{enYuksekDuraklamaBolumu.Bolum} ({formatDuration(enYuksekDuraklamaBolumu.ToplamDuraklamaDakika)})" : "-")</strong>
+                    </article>
+                    <article class="gunluk-modal__summary-card">
+                        <span>En yuksek makine</span>
+                        <strong>@(enYuksekDuraklamaMakinesi != null ? $"{enYuksekDuraklamaMakinesi.Makine} ({formatDuration(enYuksekDuraklamaMakinesi.Dakika)})" : "-")</strong>
+                    </article>
+                </div>
+
+                @if (Model.DuraklamaBolumDetaylari.Any())
+                {
+                    <div class="gunluk-duraklama-grid">
+                        @foreach (var bolum in Model.DuraklamaBolumDetaylari)
+                        {
+                            <section class="gunluk-duraklama-card">
+                                <div class="gunluk-duraklama-card__header">
+                                    <div>
+                                        <h6>@bolum.Bolum</h6>
+                                        <p class="mb-0">@bolum.MakineDetaylari.Count makine kaydi</p>
+                                    </div>
+                                    <strong>@formatDuration(bolum.ToplamDuraklamaDakika)</strong>
+                                </div>
+
+                                <div class="gunluk-duraklama-card__body">
+                                    @foreach (var makine in bolum.MakineDetaylari)
+                                    {
+                                        var oran = bolum.ToplamDuraklamaDakika > 0
+                                            ? (makine.DuraklamaDakika / bolum.ToplamDuraklamaDakika) * 100
+                                            : 0;
+                                        var oranStyle = $"width:{oran.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+                                        <div class="gunluk-duraklama-item">
+                                            <div class="gunluk-duraklama-item__row">
+                                                <span>@makine.Makine</span>
+                                                <strong>@formatDuration(makine.DuraklamaDakika)</strong>
+                                            </div>
+                                            <div class="gunluk-duraklama-item__bar">
+                                                <span style="@oranStyle"></span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </section>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gunluk-empty-state gunluk-empty-state--compact">Secilen donem icin duraklama detayi bulunamadi.</div>
+                }
+            </div>
+        </div>
     </div>
 </div>
 

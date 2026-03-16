@@ -273,6 +273,9 @@ public class DashboardQueryService : IDashboardQueryService
         var hataTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var duraklamaTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var bolumKatki = new Dictionary<string, double>();
+        var uretimDetayMap = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
+        var hataDetayMap = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
+        var duraklamaDetayMap = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
 
         static void AddDaily(Dictionary<DateTime, double> dict, DateTime date, double value)
         {
@@ -295,6 +298,74 @@ public class DashboardQueryService : IDashboardQueryService
             }
         }
 
+        static void AddDuraklamaDetay(Dictionary<string, Dictionary<string, double>> dict, string bolum, string makine, double dakika)
+        {
+            if (dakika <= 0)
+            {
+                return;
+            }
+
+            if (!dict.TryGetValue(bolum, out var makineMap))
+            {
+                makineMap = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                dict[bolum] = makineMap;
+            }
+
+            if (makineMap.ContainsKey(makine))
+            {
+                makineMap[makine] += dakika;
+            }
+            else
+            {
+                makineMap[makine] = dakika;
+            }
+        }
+
+        static void AddKpiDetay(Dictionary<string, Dictionary<string, double>> dict, string bolum, string makine, double deger)
+        {
+            if (deger <= 0)
+            {
+                return;
+            }
+
+            if (!dict.TryGetValue(bolum, out var makineMap))
+            {
+                makineMap = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                dict[bolum] = makineMap;
+            }
+
+            if (makineMap.ContainsKey(makine))
+            {
+                makineMap[makine] += deger;
+            }
+            else
+            {
+                makineMap[makine] = deger;
+            }
+        }
+
+        static List<KpiBolumDetayModel> BuildKpiDetayList(Dictionary<string, Dictionary<string, double>> dict)
+        {
+            return dict
+                .Select(bolum => new KpiBolumDetayModel
+                {
+                    Bolum = bolum.Key,
+                    ToplamDeger = bolum.Value.Values.Sum(),
+                    MakineDetaylari = bolum.Value
+                        .OrderByDescending(x => x.Value)
+                        .ThenBy(x => x.Key)
+                        .Select(x => new KpiMakineDetayModel
+                        {
+                            Makine = x.Key,
+                            Deger = x.Value
+                        })
+                        .ToList()
+                })
+                .OrderByDescending(x => x.ToplamDeger)
+                .ThenBy(x => x.Bolum)
+                .ToList();
+        }
+
         static bool IsProfilLazerHataBolumu(string? bolumAdi)
         {
             if (string.IsNullOrWhiteSpace(bolumAdi))
@@ -310,6 +381,30 @@ public class DashboardQueryService : IDashboardQueryService
         {
             var normalized = DashboardParsingHelper.NormalizeLabel(hataNedeni);
             return normalized.Contains("makine hatası", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool IsCncBolum(string? bolumAdi)
+        {
+            if (string.IsNullOrWhiteSpace(bolumAdi))
+            {
+                return false;
+            }
+
+            var normalized = DashboardParsingHelper.NormalizeLabel(bolumAdi);
+            return normalized.Contains("cnc", StringComparison.OrdinalIgnoreCase)
+                || normalized.Contains("delik", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool IsPvcBolum(string? bolumAdi)
+        {
+            if (string.IsNullOrWhiteSpace(bolumAdi))
+            {
+                return false;
+            }
+
+            var normalized = DashboardParsingHelper.NormalizeLabel(bolumAdi);
+            return normalized.Contains("pvc", StringComparison.OrdinalIgnoreCase)
+                || normalized.Contains("bantlama", StringComparison.OrdinalIgnoreCase);
         }
 
         static double ReadNumericProperty(object? value)
@@ -444,6 +539,7 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDept(bolumKatki, "Profil Lazer", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "Profil Lazer", "Profil Lazer", row.Uretim);
             }
         }
 
@@ -456,6 +552,8 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "Boyahane", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.Uretim);
+                AddDuraklamaDetay(duraklamaDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.Duraklama);
             }
         }
 
@@ -468,6 +566,16 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "PVC", row.Uretim);
+                AddKpiDetay(
+                    uretimDetayMap,
+                    "PVC",
+                    string.IsNullOrWhiteSpace(row.Makine) ? "Bilinmeyen Hat" : DashboardParsingHelper.NormalizeLabel(row.Makine),
+                    row.Uretim);
+                AddDuraklamaDetay(
+                    duraklamaDetayMap,
+                    "PVC",
+                    string.IsNullOrWhiteSpace(row.Makine) ? "Bilinmeyen Hat" : DashboardParsingHelper.NormalizeLabel(row.Makine),
+                    row.Duraklama);
             }
         }
 
@@ -480,6 +588,8 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "CNC", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "CNC", "Masterwood", row.Uretim);
+                AddDuraklamaDetay(duraklamaDetayMap, "CNC", "Masterwood", row.Duraklama);
             }
         }
 
@@ -492,6 +602,8 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "CNC", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "CNC", "Skipper", row.Uretim);
+                AddDuraklamaDetay(duraklamaDetayMap, "CNC", "Skipper", row.Duraklama);
             }
         }
 
@@ -504,6 +616,8 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "CNC", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "CNC", "Rover-B", row.Uretim);
+                AddDuraklamaDetay(duraklamaDetayMap, "CNC", "Rover-B", row.Duraklama);
             }
         }
 
@@ -516,6 +630,8 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "Tezgah", row.Uretim);
+                AddKpiDetay(uretimDetayMap, "Tezgah", "Makine bilgisi yok", row.Uretim);
+                AddDuraklamaDetay(duraklamaDetayMap, "Tezgah", "Makine bilgisi yok", row.Duraklama);
             }
         }
 
@@ -528,6 +644,16 @@ public class DashboardQueryService : IDashboardQueryService
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
                 AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "Ebatlama", row.Uretim);
+                AddKpiDetay(
+                    uretimDetayMap,
+                    "Ebatlama",
+                    string.IsNullOrWhiteSpace(row.Makine) ? "Bilinmeyen Makine" : DashboardParsingHelper.NormalizeLabel(row.Makine),
+                    row.Uretim);
+                AddDuraklamaDetay(
+                    duraklamaDetayMap,
+                    "Ebatlama",
+                    string.IsNullOrWhiteSpace(row.Makine) ? "Bilinmeyen Makine" : DashboardParsingHelper.NormalizeLabel(row.Makine),
+                    row.Duraklama);
             }
         }
 
@@ -541,39 +667,207 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var filteredHatali = hataliRows.Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd).ToList();
+        var profilHataDetayRows = snapshot.ProfilHataRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && IsProfilLazerHataBolumu(x.BolumAdi))
+            .ToList();
+        foreach (var row in profilHataDetayRows)
+        {
+            AddKpiDetay(hataDetayMap, "Profil Lazer", "Makine bilgisi yok", row.Adet);
+        }
+
         var profilDashboardHataAdedi = snapshot.ProfilHataRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
                 && x.Tarih.Date <= ozetEnd
                 && IsProfilLazerHataBolumu(x.BolumAdi))
             .Sum(x => (double)x.Adet);
-        var boyahaneDashboardHataAdedi = snapshot.BoyaUretimRows
+
+        var boyahaneHataSatirlari = snapshot.BoyaUretimRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
-                && x.Tarih.Date <= ozetEnd)
-            .Sum(x => (double)x.HataliParcaSayisi);
-        if (boyahaneDashboardHataAdedi <= 0)
+                && x.Tarih.Date <= ozetEnd
+                && x.HataliParcaSayisi > 0)
+            .ToList();
+        var boyahaneDashboardHataAdedi = boyahaneHataSatirlari.Sum(x => (double)x.HataliParcaSayisi);
+        if (boyahaneDashboardHataAdedi > 0)
         {
-            boyahaneDashboardHataAdedi = snapshot.BoyaHataRows
+            foreach (var row in boyahaneHataSatirlari)
+            {
+                AddKpiDetay(hataDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.HataliParcaSayisi);
+            }
+        }
+        else
+        {
+            var boyaLegacyHataSatirlari = snapshot.BoyaHataRows
                 .Where(x => x.Tarih != DateTime.MinValue
                     && x.Tarih.Date >= ozetStart
                     && x.Tarih.Date <= ozetEnd)
-                .Sum(x => (double)x.HataliAdet);
+                .ToList();
+            boyahaneDashboardHataAdedi = boyaLegacyHataSatirlari.Sum(x => (double)x.HataliAdet);
+            foreach (var row in boyaLegacyHataSatirlari)
+            {
+                AddKpiDetay(hataDetayMap, "Boyahane", "Makine bilgisi yok", row.HataliAdet);
+            }
         }
 
-        var boyahaneHataKatkisi = snapshot.BoyaUretimRows
+        var boyahaneMakineDisiHataSatirlari = snapshot.BoyaUretimRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
-                && x.Tarih.Date <= ozetEnd)
-            .Sum(x => (double)x.HataliParcaSayisi);
-        if (boyahaneHataKatkisi <= 0)
+                && x.Tarih.Date <= ozetEnd
+                && x.HataliParcaSayisi > 0)
+            .ToList();
+        var boyahaneHataKatkisi = boyahaneMakineDisiHataSatirlari.Sum(x => (double)x.HataliParcaSayisi);
+        if (boyahaneHataKatkisi > 0)
         {
-            boyahaneHataKatkisi = snapshot.BoyaHataRows
+            foreach (var row in boyahaneMakineDisiHataSatirlari)
+            {
+                AddKpiDetay(hataDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.HataliParcaSayisi);
+            }
+        }
+        else
+        {
+            var boyaLegacyMakineDisiHataSatirlari = snapshot.BoyaHataRows
                 .Where(x => x.Tarih != DateTime.MinValue
                     && x.Tarih.Date >= ozetStart
                     && x.Tarih.Date <= ozetEnd
                     && !IsMakineHatasi(x.HataNedeni))
-                .Sum(x => (double)x.HataliAdet);
+                .ToList();
+            boyahaneHataKatkisi = boyaLegacyMakineDisiHataSatirlari.Sum(x => (double)x.HataliAdet);
+            foreach (var row in boyaLegacyMakineDisiHataSatirlari)
+            {
+                AddKpiDetay(hataDetayMap, "Boyahane", "Makine bilgisi yok", row.HataliAdet);
+            }
+        }
+
+        var cncGenelHataToplami = snapshot.HataliParcaRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !IsMakineHatasi(x.HataNedeni)
+                && IsCncBolum(x.BolumAdi))
+            .Sum(x => x.Adet);
+        var pvcGenelHataRows = snapshot.HataliParcaRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !IsMakineHatasi(x.HataNedeni)
+                && IsPvcBolum(x.BolumAdi))
+            .ToList();
+        var pvcGenelHataToplami = pvcGenelHataRows.Sum(x => x.Adet);
+        var pvcBolumAdi = pvcGenelHataRows
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.BolumAdi))
+            .OrderByDescending(g => g.Sum(x => x.Adet))
+            .Select(g => g.Key)
+            .FirstOrDefault() ?? "PVC";
+
+        foreach (var row in snapshot.HataliParcaRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !IsMakineHatasi(x.HataNedeni)
+                && !IsCncBolum(x.BolumAdi)
+                && !IsPvcBolum(x.BolumAdi)))
+        {
+            AddKpiDetay(
+                hataDetayMap,
+                DashboardParsingHelper.NormalizeLabel(row.BolumAdi),
+                "Makine bilgisi yok",
+                row.Adet);
+        }
+
+        foreach (var row in snapshot.ProfilHataRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !IsMakineHatasi(x.HataNedeni)))
+        {
+            var bolumAdi = IsProfilLazerHataBolumu(row.BolumAdi)
+                ? "Profil Lazer"
+                : DashboardParsingHelper.NormalizeLabel(row.BolumAdi);
+            AddKpiDetay(hataDetayMap, bolumAdi, "Makine bilgisi yok", row.Adet);
+        }
+
+        if (cncGenelHataToplami > 0)
+        {
+            var masterwoodCncHata = snapshot.MasterwoodRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd)
+                .Sum(x => x.HataliParca);
+            var skipperCncHata = snapshot.SkipperRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd)
+                .Sum(x => x.HataliParca);
+            var roverBCncHata = snapshot.RoverBRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd)
+                .Sum(x => x.HataliParca);
+
+            var cncMakineToplami = masterwoodCncHata + skipperCncHata + roverBCncHata;
+            if (cncMakineToplami > 0)
+            {
+                var oran = cncMakineToplami > cncGenelHataToplami
+                    ? cncGenelHataToplami / cncMakineToplami
+                    : 1d;
+                AddKpiDetay(hataDetayMap, "Cnc (Delik)", "Masterwood", masterwoodCncHata * oran);
+                AddKpiDetay(hataDetayMap, "Cnc (Delik)", "Skipper", skipperCncHata * oran);
+                AddKpiDetay(hataDetayMap, "Cnc (Delik)", "Rover-B", roverBCncHata * oran);
+
+                var eslesmeyenHata = cncGenelHataToplami - (cncMakineToplami * oran);
+                if (eslesmeyenHata > 0.001)
+                {
+                    AddKpiDetay(hataDetayMap, "Cnc (Delik)", "Makine eslesmedi", eslesmeyenHata);
+                }
+            }
+            else
+            {
+                AddKpiDetay(hataDetayMap, "Cnc (Delik)", "Makine bilgisi yok", cncGenelHataToplami);
+            }
+        }
+
+        if (pvcGenelHataToplami > 0)
+        {
+            var pvcMakineHataGruplari = snapshot.PvcRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd
+                    && x.HataliParca > 0)
+                .GroupBy(x => string.IsNullOrWhiteSpace(x.Makine) ? "Bilinmeyen Hat" : DashboardParsingHelper.NormalizeLabel(x.Makine))
+                .Select(g => new
+                {
+                    Makine = g.Key,
+                    Toplam = g.Sum(x => x.HataliParca)
+                })
+                .OrderByDescending(x => x.Toplam)
+                .ToList();
+
+            var pvcMakineHataToplami = pvcMakineHataGruplari.Sum(x => x.Toplam);
+            if (pvcMakineHataToplami > 0)
+            {
+                var oran = pvcMakineHataToplami > pvcGenelHataToplami
+                    ? pvcGenelHataToplami / pvcMakineHataToplami
+                    : 1d;
+
+                foreach (var grup in pvcMakineHataGruplari)
+                {
+                    AddKpiDetay(hataDetayMap, pvcBolumAdi, grup.Makine, grup.Toplam * oran);
+                }
+
+                var eslesmeyenHata = pvcGenelHataToplami - (pvcMakineHataToplami * oran);
+                if (eslesmeyenHata > 0.001)
+                {
+                    AddKpiDetay(hataDetayMap, pvcBolumAdi, "Makine eslesmedi", eslesmeyenHata);
+                }
+            }
+            else
+            {
+                AddKpiDetay(hataDetayMap, pvcBolumAdi, "Makine bilgisi yok", pvcGenelHataToplami);
+            }
         }
 
         var hataliParcaDashboardHataAdedi = snapshot.HataliParcaRows
@@ -594,6 +888,26 @@ public class DashboardQueryService : IDashboardQueryService
         model.ToplamHataAdet = profilDashboardHataAdedi + boyahaneDashboardHataAdedi + hataliParcaDashboardHataAdedi;
         model.ToplamHataM2 = filteredHatali.Sum(x => x.M2);
         model.ToplamDuraklamaDakika = duraklamaGunluk.Values.Sum();
+        model.UretimBolumDetaylari = BuildKpiDetayList(uretimDetayMap);
+        model.HataBolumDetaylari = BuildKpiDetayList(hataDetayMap);
+        model.DuraklamaBolumDetaylari = duraklamaDetayMap
+            .Select(bolum => new DuraklamaBolumDetayModel
+            {
+                Bolum = bolum.Key,
+                ToplamDuraklamaDakika = bolum.Value.Values.Sum(),
+                MakineDetaylari = bolum.Value
+                    .OrderByDescending(x => x.Value)
+                    .ThenBy(x => x.Key)
+                    .Select(x => new DuraklamaMakineDetayModel
+                    {
+                        Makine = x.Key,
+                        DuraklamaDakika = x.Value
+                    })
+                    .ToList()
+            })
+            .OrderByDescending(x => x.ToplamDuraklamaDakika)
+            .ThenBy(x => x.Bolum)
+            .ToList();
 
         var oeeMetricRows = new List<(double Performans, double Kullanilabilirlik, double Kalite, double Oee)>();
         oeeMetricRows.AddRange(pvcRows

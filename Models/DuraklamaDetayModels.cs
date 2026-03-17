@@ -14,4 +14,11 @@ namespace ONERI.Models
         public string Makine { get; set; } = string.Empty;
         public double DuraklamaDakika { get; set; }
     }
+
+    public class MakineDuraklamaNedenDagilimModel
+    {
+        public string Makine { get; set; } = string.Empty;
+        public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
+        public List<int> DuraklamaNedenData { get; set; } = new List<int>();
+    }
 }

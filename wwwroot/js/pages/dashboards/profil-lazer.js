@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartParents = new Map();
     const chartTemplates = new Map();
     const chartInstances = [];
+    const duraklamaTitleElement = document.getElementById('duraklamaPanelTitle');
+    const duraklamaDescriptionElement = document.getElementById('duraklamaPanelDescription');
+    let selectedMachine = null;
+    let machineProductionChart = null;
+    let duraklamaChart = null;
 
     chartCanvasIds.forEach(function (canvasId) {
         const canvas = document.getElementById(canvasId);
@@ -120,10 +125,99 @@ document.addEventListener('DOMContentLoaded', function () {
         return instance;
     }
 
+    function getMachineDuraklamaDataset(machineName) {
+        if (!machineName) {
+            return {
+                labels: data.DuraklamaNedenLabels || [],
+                values: data.DuraklamaNedenData || []
+            };
+        }
+
+        const machineBreakdowns = Array.isArray(data.MakineDuraklamaDagilimlari)
+            ? data.MakineDuraklamaDagilimlari
+            : [];
+        const selectedBreakdown = machineBreakdowns.find(function (item) {
+            return item && item.Makine === machineName;
+        });
+
+        return {
+            labels: selectedBreakdown && Array.isArray(selectedBreakdown.DuraklamaNedenLabels)
+                ? selectedBreakdown.DuraklamaNedenLabels
+                : [],
+            values: selectedBreakdown && Array.isArray(selectedBreakdown.DuraklamaNedenData)
+                ? selectedBreakdown.DuraklamaNedenData
+                : []
+        };
+    }
+
+    function syncDuraklamaPanelText(machineName) {
+        if (!duraklamaTitleElement || !duraklamaDescriptionElement) {
+            return;
+        }
+
+        if (machineName) {
+            duraklamaTitleElement.textContent = 'Duraklama Nedenleri - ' + machineName;
+            duraklamaDescriptionElement.textContent = 'Secili makinenin kayitli duraklama sureleri gosteriliyor. Ayni cubuga tekrar tiklayarak filtreyi kaldirabilirsiniz.';
+            return;
+        }
+
+        duraklamaTitleElement.textContent = 'Duraklama Nedenleri';
+        duraklamaDescriptionElement.textContent = 'Makine bazli filtrelemek icin soldaki grafikten bir makineye tiklayin.';
+    }
+
+    function buildMachineBarStyles(machineLabels, palette) {
+        const selectedMachineIndex = machineLabels.findIndex(function (label) {
+            return label === selectedMachine;
+        });
+
+        return {
+            backgroundColor: machineLabels.map(function (_, index) {
+                return index === selectedMachineIndex
+                    ? palette.machineBarBorder
+                    : palette.machineBar;
+            }),
+            borderColor: machineLabels.map(function (_, index) {
+                return index === selectedMachineIndex
+                    ? palette.strongTextColor
+                    : palette.machineBarBorder;
+            }),
+            borderWidth: machineLabels.map(function (_, index) {
+                return index === selectedMachineIndex ? 2 : 1;
+            })
+        };
+    }
+
+    function updateMachineSelection(palette) {
+        const machineLabels = data.MakineLabels || [];
+        const machineDuraklamaDataset = getMachineDuraklamaDataset(selectedMachine);
+
+        syncDuraklamaPanelText(selectedMachine);
+
+        if (machineProductionChart) {
+            const machineStyles = buildMachineBarStyles(machineLabels, palette);
+            machineProductionChart.data.datasets[0].backgroundColor = machineStyles.backgroundColor;
+            machineProductionChart.data.datasets[0].borderColor = machineStyles.borderColor;
+            machineProductionChart.data.datasets[0].borderWidth = machineStyles.borderWidth;
+            machineProductionChart.update();
+        }
+
+        if (duraklamaChart) {
+            duraklamaChart.data.labels = machineDuraklamaDataset.labels;
+            duraklamaChart.data.datasets[0].data = machineDuraklamaDataset.values;
+            duraklamaChart.update();
+        }
+    }
+
     function renderCharts() {
         const palette = getThemePalette();
         configureChartDefaults(palette);
         restoreChartContainers();
+        syncDuraklamaPanelText(selectedMachine);
+
+        const machineLabels = data.MakineLabels || [];
+        const machineValues = data.MakineUretimData || [];
+        const machineDuraklamaDataset = getMachineDuraklamaDataset(selectedMachine);
+        const machineStyles = buildMachineBarStyles(machineLabels, palette);
 
         createChart('pastaGrafigi', {
             type: 'doughnut',
@@ -185,23 +279,39 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(data.GunlukUretimSayilari), 'Uretim trend verisi bulunamadi.');
 
-        createChart('makineUretimGrafigi', {
+        machineProductionChart = createChart('makineUretimGrafigi', {
             type: 'bar',
             data: {
-                labels: data.MakineLabels || [],
+                labels: machineLabels,
                 datasets: [
                     {
                         label: 'Uretim Adedi',
-                        data: data.MakineUretimData || [],
-                        backgroundColor: palette.machineBar,
-                        borderColor: palette.machineBarBorder,
-                        borderWidth: 1,
+                        data: machineValues,
+                        backgroundColor: machineStyles.backgroundColor,
+                        borderColor: machineStyles.borderColor,
+                        borderWidth: machineStyles.borderWidth,
                         borderRadius: 10
                     }
                 ]
             },
             options: {
                 maintainAspectRatio: false,
+                onClick: function (_, elements, chart) {
+                    if (!elements.length) {
+                        return;
+                    }
+
+                    const clickedIndex = elements[0].index;
+                    const clickedMachine = chart.data.labels[clickedIndex];
+                    selectedMachine = selectedMachine === clickedMachine ? null : clickedMachine;
+                    updateMachineSelection(palette);
+                },
+                onHover: function (event, elements) {
+                    const target = event && event.native && event.native.target;
+                    if (target) {
+                        target.style.cursor = elements.length ? 'pointer' : 'default';
+                    }
+                },
                 scales: {
                     x: {
                         grid: {
@@ -216,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.MakineUretimData), 'Makine bazli uretim verisi bulunamadi.');
+        }, hasAnyData(machineValues), 'Makine bazli uretim verisi bulunamadi.');
 
         createChart('urunSureGrafigi', {
             type: 'bar',
@@ -261,13 +371,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(data.UrunHarcananSure), 'Sure dagilim verisi bulunamadi.');
 
-        createChart('duraklamaNedenGrafigi', {
+        duraklamaChart = createChart('duraklamaNedenGrafigi', {
             type: 'doughnut',
             data: {
-                labels: data.DuraklamaNedenLabels || [],
+                labels: machineDuraklamaDataset.labels,
                 datasets: [
                     {
-                        data: data.DuraklamaNedenData || [],
+                        data: machineDuraklamaDataset.values,
                         backgroundColor: palette.donutColors,
                         borderWidth: 0,
                         cutout: '58%'
@@ -276,13 +386,20 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 maintainAspectRatio: false,
+                cutout: '58%',
+                animation: {
+                    duration: 350,
+                    easing: 'easeOutCubic'
+                },
                 plugins: {
                     legend: {
                         position: 'top'
                     }
                 }
             }
-        }, hasAnyData(data.DuraklamaNedenData), 'Duraklama verisi bulunamadi.');
+        }, hasAnyData(machineDuraklamaDataset.values), selectedMachine
+            ? selectedMachine + ' icin duraklama verisi bulunamadi.'
+            : 'Duraklama verisi bulunamadi.');
 
     }
 

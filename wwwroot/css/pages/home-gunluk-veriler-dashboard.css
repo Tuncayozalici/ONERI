@@ -484,26 +484,37 @@ html[data-theme="dark"] .gunluk-empty-state {
 .gunluk-modal {
     border: 1px solid var(--gunluk-border);
     border-radius: 28px;
-    background: var(--gunluk-surface);
+    background: rgba(255, 255, 255, 0.98);
     color: var(--gunluk-text);
     box-shadow: var(--gunluk-shadow);
 }
 
+html[data-theme="dark"] .gunluk-modal {
+    background: linear-gradient(180deg, rgba(10, 18, 31, 0.985), rgba(8, 15, 27, 0.985));
+    border-color: rgba(43, 92, 168, 0.34);
+}
+
 .gunluk-modal__header {
-    padding: 1.4rem 1.4rem 0.8rem;
+    margin: 1rem 1rem 0;
+    padding: 1rem 1.1rem;
+    border-radius: 22px;
+    background: rgba(248, 250, 252, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .gunluk-modal__header .modal-title {
     color: var(--gunluk-text-strong);
     font-size: 1.3rem;
+    font-weight: 700;
 }
 
 .gunluk-modal__subtitle {
-    color: var(--gunluk-muted);
+    color: #4b5563;
+    font-weight: 500;
 }
 
 .gunluk-modal__body {
-    padding: 0 1.4rem 1.4rem;
+    padding: 1rem 1.4rem 1.4rem;
 }
 
 .gunluk-modal__summary {
@@ -517,12 +528,26 @@ html[data-theme="dark"] .gunluk-empty-state {
 .gunluk-duraklama-card {
     border: 1px solid var(--gunluk-border-soft);
     border-radius: 22px;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.92);
 }
 
 html[data-theme="dark"] .gunluk-modal__summary-card,
 html[data-theme="dark"] .gunluk-duraklama-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(16, 29, 48, 0.96);
+    border-color: rgba(56, 189, 248, 0.12);
+}
+
+html[data-theme="dark"] .gunluk-modal__header {
+    background: rgba(14, 26, 43, 0.98);
+    border-color: rgba(56, 189, 248, 0.16);
+}
+
+html[data-theme="dark"] .gunluk-modal__subtitle {
+    color: var(--gunluk-muted);
+}
+
+html[data-theme="dark"] .gunluk-duraklama-item__bar {
+    background: rgba(71, 85, 105, 0.42);
 }
 
 .gunluk-modal__summary-card {
@@ -613,7 +638,16 @@ html[data-theme="dark"] .gunluk-duraklama-card {
     height: 10px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(148, 163, 184, 0.16);
+    background: rgba(148, 163, 184, 0.28);
+}
+
+.gunluk-modal .btn-close {
+    opacity: 0.72;
+}
+
+.gunluk-modal .btn-close:hover,
+.gunluk-modal .btn-close:focus {
+    opacity: 1;
 }
 
 .gunluk-duraklama-item__bar span {
@@ -637,6 +671,10 @@ html[data-theme="dark"] .gunluk-duraklama-item__bar--uretim span {
 
 html[data-theme="dark"] .gunluk-duraklama-item__bar--hata span {
     background: linear-gradient(90deg, rgba(253, 164, 175, 0.88), rgba(251, 113, 133, 0.96));
+}
+
+html[data-theme="dark"] .gunluk-duraklama-item__bar {
+    background: rgba(148, 163, 184, 0.16);
 }
 
 @media (max-width: 1399.98px) {

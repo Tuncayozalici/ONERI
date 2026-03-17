@@ -1322,20 +1322,39 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.MesaiDurumuLabels = mesaiDurumuDagilimi.Select(x => x.Mesai).ToList();
         viewModel.MesaiDurumuData = mesaiDurumuDagilimi.Select(x => x.ToplamSure).ToList();
 
-        var duraklamaDagilimi = gununVerileriList
-            .SelectMany(x => new[]
-            {
-                new { Neden = x.DuraklamaNedeni1, Sure = x.DuraklamaSuresi1 },
-                new { Neden = x.DuraklamaNedeni2, Sure = x.DuraklamaSuresi2 },
-                new { Neden = x.DuraklamaNedeni3, Sure = x.DuraklamaSuresi3 }
-            })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Neden) && x.Sure > 0)
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
-            .Select(g => new { Neden = g.Key, ToplamSure = g.Sum(x => x.Sure) })
-            .OrderByDescending(x => x.ToplamSure)
-            .ToList();
+        static List<(string Neden, int ToplamSure)> BuildProfilDuraklamaDagilimi(IEnumerable<SatirModeli> rows)
+        {
+            return rows
+                .SelectMany(x => new[]
+                {
+                    new { Neden = x.DuraklamaNedeni1, Sure = x.DuraklamaSuresi1 },
+                    new { Neden = x.DuraklamaNedeni2, Sure = x.DuraklamaSuresi2 },
+                    new { Neden = x.DuraklamaNedeni3, Sure = x.DuraklamaSuresi3 }
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Neden) && x.Sure > 0)
+                .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
+                .Select(g => (Neden: g.Key, ToplamSure: g.Sum(x => x.Sure)))
+                .OrderByDescending(x => x.ToplamSure)
+                .ToList();
+        }
+
+        var duraklamaDagilimi = BuildProfilDuraklamaDagilimi(gununVerileriList);
         viewModel.DuraklamaNedenLabels = duraklamaDagilimi.Select(x => x.Neden).ToList();
         viewModel.DuraklamaNedenData = duraklamaDagilimi.Select(x => x.ToplamSure).ToList();
+        viewModel.MakineDuraklamaDagilimlari = makineBazliUretim
+            .Select(x =>
+            {
+                var makineDuraklamaDagilimi = BuildProfilDuraklamaDagilimi(
+                    gununVerileriList.Where(row => DashboardParsingHelper.NormalizeLabel(row.CalisilanMakine) == x.Makine));
+
+                return new MakineDuraklamaNedenDagilimModel
+                {
+                    Makine = x.Makine,
+                    DuraklamaNedenLabels = makineDuraklamaDagilimi.Select(y => y.Neden).ToList(),
+                    DuraklamaNedenData = makineDuraklamaDagilimi.Select(y => y.ToplamSure).ToList()
+                };
+            })
+            .ToList();
 
         DateTime trendBaslangic;
         DateTime trendBitis;

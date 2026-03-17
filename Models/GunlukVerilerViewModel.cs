@@ -31,6 +31,7 @@ namespace ONERI.Models
         public List<int> MesaiDurumuData { get; set; } = new List<int>();
         public List<string> DuraklamaNedenLabels { get; set; } = new List<string>();
         public List<int> DuraklamaNedenData { get; set; } = new List<int>();
+        public List<MakineDuraklamaNedenDagilimModel> MakineDuraklamaDagilimlari { get; set; } = new List<MakineDuraklamaNedenDagilimModel>();
 
         // Çizgi Grafik için
         public List<string> Son7GunTarihleri { get; set; }

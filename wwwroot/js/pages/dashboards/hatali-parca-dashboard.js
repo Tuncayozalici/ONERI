@@ -11,10 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'hataNedenGrafigi',
         'bolumGrafigi',
         'operatorGrafigi',
-        'kalinlikGrafigi',
-        'renkGrafigi',
-        'kesimDurumGrafigi',
-        'pvcDurumGrafigi'
+        'kalinlikGrafigi'
     ];
     const chartParents = new Map();
     const chartTemplates = new Map();
@@ -358,114 +355,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(data.KalinlikData), 'Kalınlık dağılımı için veri bulunamadı.');
 
-        createChart('renkGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.RenkLabels || [],
-                datasets: [
-                    {
-                        label: 'Hatalı Adet',
-                        data: data.RenkData || [],
-                        backgroundColor: palette.detailBarAlt,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.RenkData), 'Renk dağılımı için veri bulunamadı.');
-
-        createChart('kesimDurumGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.KesimDurumLabels || [],
-                datasets: [
-                    {
-                        label: 'Hatalı Adet',
-                        data: data.KesimDurumData || [],
-                        backgroundColor: palette.departmentBar,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.KesimDurumData), 'Kesim durumu dağılımı için veri bulunamadı.');
-
-        createChart('pvcDurumGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.PvcDurumLabels || [],
-                datasets: [
-                    {
-                        label: 'Hatalı Adet',
-                        data: data.PvcDurumData || [],
-                        backgroundColor: palette.operatorBar,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.PvcDurumData), 'PVC durumu dağılımı için veri bulunamadı.');
     }
 
     renderCharts();

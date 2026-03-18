@@ -6,8 +6,7 @@
     var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
     var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Bölüm Bazlı Personel (Toplam)";
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
-    var hataNedeniSayisi = Model.HataNedenLabels.Count;
-    var aktifBolumSayisi = Model.BolumUretimLabels.Count;
+    var seciliDonemOzeti = (string?)ViewBag.OzetRange ?? Model.RaporTarihi.ToString("dd.MM.yyyy");
     var enYuksekUretimBolumu = Model.UretimBolumDetaylari.FirstOrDefault();
     var enYuksekUretimMakinesi = Model.UretimBolumDetaylari
         .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
@@ -55,12 +54,12 @@
                 </p>
                 <div class="gunluk-hero__facts">
                     <div class="gunluk-fact">
-                        <span>Aktif bolum</span>
-                        <strong>@aktifBolumSayisi</strong>
+                        <span>Secili donem</span>
+                        <strong>@seciliDonemOzeti</strong>
                     </div>
                     <div class="gunluk-fact">
-                        <span>Hata nedeni</span>
-                        <strong>@hataNedeniSayisi</strong>
+                        <span>Panel kapsami</span>
+                        <strong>Uretim, OEE, hata ve duraklama</strong>
                     </div>
                 </div>
             </div>

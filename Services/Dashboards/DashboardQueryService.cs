@@ -42,6 +42,16 @@ public class DashboardQueryService : IDashboardQueryService
         return start <= end ? (start, end) : (end, start);
     }
 
+    private static DateTime? ResolveLastAvailableDateInRange(IEnumerable<DateTime> dates, DateTime startDate, DateTime endDate)
+    {
+        return dates
+            .Where(x => x != DateTime.MinValue)
+            .Select(x => x.Date)
+            .Where(x => x >= startDate.Date && x <= endDate.Date)
+            .DefaultIfEmpty()
+            .Max();
+    }
+
     public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
@@ -202,6 +212,11 @@ public class DashboardQueryService : IDashboardQueryService
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
         var isSingleDayRange = hasDateRange && rangeStart!.Value.Date == rangeEnd!.Value.Date;
+        var isWholeMonthRange = hasDateRange
+            && rangeStart!.Value.Year == rangeEnd!.Value.Year
+            && rangeStart.Value.Month == rangeEnd.Value.Month
+            && rangeStart.Value.Day == 1
+            && rangeEnd.Value.Day == DateTime.DaysInMonth(rangeEnd.Value.Year, rangeEnd.Value.Month);
 
         DateTime ozetStart;
         DateTime ozetEnd;
@@ -211,6 +226,17 @@ public class DashboardQueryService : IDashboardQueryService
         {
             ozetStart = rangeStart!.Value;
             ozetEnd = rangeEnd!.Value;
+
+            if (isWholeMonthRange)
+            {
+                var latestAvailableDate = ResolveLastAvailableDateInRange(allDates, ozetStart, ozetEnd);
+                if (latestAvailableDate.HasValue && latestAvailableDate.Value != DateTime.MinValue && latestAvailableDate.Value < ozetEnd)
+                {
+                    ozetEnd = latestAvailableDate.Value;
+                    bag["SelectedFilterPeriodText"] = $"{ozetStart:dd MMMM yyyy} - {ozetEnd:dd MMMM yyyy}";
+                }
+            }
+
             if (isSingleDayRange)
             {
                 // Tek gün seçiminde trendler seçilen gün + önceki 5 gün olarak gösterilir.
@@ -235,10 +261,19 @@ public class DashboardQueryService : IDashboardQueryService
             }
 
             ozetStart = new DateTime(yearToUse, ay.Value, 1);
-            ozetEnd = ozetStart.AddMonths(1).AddDays(-1);
+            var requestedMonthEnd = ozetStart.AddMonths(1).AddDays(-1);
+            var latestAvailableDate = ResolveLastAvailableDateInRange(allDates, ozetStart, requestedMonthEnd);
+            ozetEnd = latestAvailableDate.HasValue && latestAvailableDate.Value != DateTime.MinValue
+                ? latestAvailableDate.Value
+                : requestedMonthEnd;
             trendStart = ozetStart;
             trendEnd = ozetEnd;
             bag["OzetRange"] = $"{ozetStart:dd.MM.yyyy} - {ozetEnd:dd.MM.yyyy}";
+
+            if (ozetEnd < requestedMonthEnd)
+            {
+                bag["SelectedFilterPeriodText"] = $"{ozetStart:dd MMMM yyyy} - {ozetEnd:dd MMMM yyyy}";
+            }
         }
         else if (raporTarihi.HasValue)
         {
@@ -1214,15 +1249,41 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
+        var allRelevantDates = excelData.Select(x => x.Tarih).ToList();
+        DateTime? effectiveRangeEnd = null;
+
+        if (hasDateRange)
+        {
+            effectiveRangeEnd = ResolveLastAvailableDateInRange(allRelevantDates, rangeStart!.Value, rangeEnd!.Value);
+            if (effectiveRangeEnd.HasValue && effectiveRangeEnd.Value < rangeEnd.Value)
+            {
+                bag["SelectedFilterPeriodText"] = $"{rangeStart.Value:dd MMMM yyyy} - {effectiveRangeEnd.Value:dd MMMM yyyy}";
+            }
+        }
+        else if (ay.HasValue && yil.HasValue)
+        {
+            var monthStart = new DateTime(yil.Value, ay.Value, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            effectiveRangeEnd = ResolveLastAvailableDateInRange(allRelevantDates, monthStart, monthEnd);
+            if (effectiveRangeEnd.HasValue && effectiveRangeEnd.Value < monthEnd)
+            {
+                bag["SelectedFilterPeriodText"] = $"{monthStart:dd MMMM yyyy} - {effectiveRangeEnd.Value:dd MMMM yyyy}";
+            }
+        }
 
         var gununVerileri = excelData.AsQueryable();
         if (hasDateRange)
         {
-            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            var effectiveEnd = effectiveRangeEnd ?? rangeEnd!.Value;
+            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
+            viewModel.RaporTarihi = effectiveEnd;
         }
         else if (ay.HasValue && yil.HasValue)
         {
-            gununVerileri = gununVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            var monthStart = new DateTime(yil.Value, ay.Value, 1);
+            var effectiveEnd = effectiveRangeEnd ?? monthStart.AddMonths(1).AddDays(-1);
+            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
+            viewModel.RaporTarihi = effectiveEnd;
         }
         else
         {
@@ -1230,6 +1291,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var gununVerileriList = gununVerileri.ToList();
+        bag["KayitGunSayisi"] = gununVerileriList.Select(x => x.Tarih.Date).Distinct().Count();
 
         viewModel.GunlukToplamUretim = gununVerileriList.Sum(x => x.UretimAdedi);
         viewModel.GunlukToplamSure = gununVerileriList.Sum(x => x.CalismaSuresi);
@@ -1247,11 +1309,14 @@ public class DashboardQueryService : IDashboardQueryService
 
         if (hasDateRange)
         {
-            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
+            var effectiveEnd = effectiveRangeEnd ?? rangeEnd!.Value;
+            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
         }
         else if (ay.HasValue && yil.HasValue)
         {
-            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yil.Value);
+            var monthStart = new DateTime(yil.Value, ay.Value, 1);
+            var effectiveEnd = effectiveRangeEnd ?? monthStart.AddMonths(1).AddDays(-1);
+            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
         }
         else
         {
@@ -1361,13 +1426,13 @@ public class DashboardQueryService : IDashboardQueryService
         if (hasDateRange)
         {
             trendBaslangic = rangeStart!.Value;
-            trendBitis = rangeEnd!.Value;
+            trendBitis = effectiveRangeEnd ?? rangeEnd!.Value;
             bag["TrendTitle"] = "Seçili Tarih Aralığı Üretim Trendi";
         }
         else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
-            trendBitis = trendBaslangic.AddMonths(1).AddDays(-1);
+            trendBitis = effectiveRangeEnd ?? trendBaslangic.AddMonths(1).AddDays(-1);
             bag["TrendTitle"] = "Aylık Üretim Trendi";
         }
         else

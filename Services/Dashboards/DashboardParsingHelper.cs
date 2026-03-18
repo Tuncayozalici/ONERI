@@ -44,17 +44,17 @@ public static class DashboardParsingHelper
 
         var text = value.Trim().ToLowerInvariant();
         text = text.Replace("ı", "i")
-                   .Replace("ş", "s")
-                   .Replace("ğ", "g")
-                   .Replace("ü", "u")
-                   .Replace("ö", "o")
-                   .Replace("ç", "c")
-                   .Replace("İ", "i")
-                   .Replace("Ş", "s")
-                   .Replace("Ğ", "g")
-                   .Replace("Ü", "u")
-                   .Replace("Ö", "o")
-                   .Replace("Ç", "c");
+                    .Replace("ş", "s")
+                    .Replace("ğ", "g")
+                    .Replace("ü", "u")
+                    .Replace("ö", "o")
+                    .Replace("ç", "c")
+                    .Replace("İ", "i")
+                    .Replace("Ş", "s")
+                    .Replace("Ğ", "g")
+                    .Replace("Ü", "u")
+                    .Replace("Ö", "o")
+                    .Replace("Ç", "c");
 
         var chars = text.Where(char.IsLetterOrDigit).ToArray();
         return new string(chars);

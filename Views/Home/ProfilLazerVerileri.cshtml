@@ -3,7 +3,7 @@
     ViewData["Title"] = "Profil Lazer Verileri";
     var aktifProfilSayisi = Model.ProfilIsimleri.Count;
     var aktifMakineSayisi = Model.MakineLabels.Count;
-    var kayitGunSayisi = Model.Son7GunTarihleri.Count > 0 ? Model.Son7GunTarihleri.Count : 1;
+    var kayitGunSayisi = ViewBag.KayitGunSayisi is int count ? count : 0;
     var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
     var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydi yok";
     var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydi yok";

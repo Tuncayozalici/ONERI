@@ -2,6 +2,7 @@
 @using System.Globalization
 @{
     var trCulture = CultureInfo.GetCultureInfo("tr-TR");
+    var explicitDisplayText = ViewData["SelectedFilterPeriodText"]?.ToString();
 
     DateTime? ParseDate(string raw)
     {
@@ -50,7 +51,11 @@
     }
 
     string displayText;
-    if (start.HasValue && end.HasValue)
+    if (!string.IsNullOrWhiteSpace(explicitDisplayText))
+    {
+        displayText = explicitDisplayText;
+    }
+    else if (start.HasValue && end.HasValue)
     {
         var startDate = start.Value;
         var endDate = end.Value;

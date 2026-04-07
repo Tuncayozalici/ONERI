@@ -74,14 +74,18 @@
                     Kesim, plaka kullanımı, gönyelleme, duraklama ve OEE verilerini tek tasarım sistemi içinde izleyin.
                     Ana dashboard ve makine ekranları aynı bilgi mimarisiyle çalışır.
                 </p>
-                <div class="ebatlama-hero__facts">
+                <div class="ebatlama-hero__facts ebatlama-hero__facts--triple">
                     <div class="ebatlama-fact">
                         <span>Aktif makine</span>
                         <strong>@activeMachineCount</strong>
                     </div>
                     <div class="ebatlama-fact">
-                        <span>Seçim modu</span>
-                        <strong>@(!string.IsNullOrWhiteSpace(selectedMachine) ? "Makine görünümü" : "Tüm makineler")</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
+                    </div>
+                    <div class="ebatlama-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="ebatlama-fact ebatlama-fact--wide">
                         <span>Öne çıkan makine</span>

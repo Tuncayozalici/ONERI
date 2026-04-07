@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class EbatlamaDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
         public string? SeciliMakine { get; set; }
 
         public double ToplamKesimAdet { get; set; }

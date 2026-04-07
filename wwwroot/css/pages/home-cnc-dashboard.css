@@ -96,6 +96,10 @@ html[data-theme="dark"] .cnc-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.cnc-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .cnc-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--cnc-border-soft);
@@ -116,6 +120,10 @@ html[data-theme="dark"] .cnc-fact {
 
 .cnc-fact--wide {
     grid-column: span 2;
+}
+
+.cnc-hero__facts--triple .cnc-fact--wide {
+    grid-column: span 3;
 }
 
 .cnc-hero__panel,
@@ -491,6 +499,10 @@ html[data-theme="dark"] .cnc-empty-state {
     }
 
     .cnc-fact--wide {
+        grid-column: auto;
+    }
+
+    .cnc-hero__facts--triple .cnc-fact--wide {
         grid-column: auto;
     }
 

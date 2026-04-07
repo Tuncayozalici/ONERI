@@ -96,6 +96,10 @@ html[data-theme="dark"] .boya-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.boya-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .boya-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--boya-border-soft);
@@ -116,6 +120,10 @@ html[data-theme="dark"] .boya-fact {
 
 .boya-fact--wide {
     grid-column: span 2;
+}
+
+.boya-hero__facts--triple .boya-fact--wide {
+    grid-column: span 3;
 }
 
 .boya-hero__panel,
@@ -443,6 +451,10 @@ html[data-theme="dark"] .boya-empty-state {
     }
 
     .boya-fact--wide {
+        grid-column: auto;
+    }
+
+    .boya-hero__facts--triple .boya-fact--wide {
         grid-column: auto;
     }
 

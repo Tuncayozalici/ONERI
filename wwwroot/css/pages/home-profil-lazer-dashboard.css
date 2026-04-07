@@ -92,6 +92,10 @@ html[data-theme="dark"] .profile-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.profile-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .profile-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--profile-border-soft);
@@ -117,6 +121,10 @@ html[data-theme="dark"] .profile-fact {
 
 .profile-fact--wide {
     grid-column: span 2;
+}
+
+.profile-hero__facts--triple .profile-fact--wide {
+    grid-column: span 3;
 }
 
 .profile-hero__panel,
@@ -339,6 +347,10 @@ html[data-theme="dark"] .profile-empty-state {
     }
 
     .profile-fact--wide {
+        grid-column: auto;
+    }
+
+    .profile-hero__facts--triple .profile-fact--wide {
         grid-column: auto;
     }
 

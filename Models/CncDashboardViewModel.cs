@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class CncDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamUretim { get; set; }
         public double ToplamHataliParca { get; set; }

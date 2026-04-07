@@ -77,6 +77,78 @@ public class DashboardQueryService : IDashboardQueryService
         bag["UnavailableFilterMessage"] = $"Bu tarihte veri bulunmuyor. Lütfen {latestAvailableDate:dd.MM.yyyy} veya daha eski bir tarih seçin.";
     }
 
+    private static int CountDistinctWorkingDays(IEnumerable<DateTime> dates)
+    {
+        return dates
+            .Where(x => x != DateTime.MinValue)
+            .Select(x => x.Date)
+            .Distinct()
+            .Count();
+    }
+
+    private static List<(DateTime Tarih, string Bolum, int Personel)> NormalizePersonelRows(IEnumerable<PersonelYoklamaSatirModel> rows)
+    {
+        return rows
+            .Where(x => x.Tarih != DateTime.MinValue && !string.IsNullOrWhiteSpace(x.BolumAdi))
+            .Select(x => (
+                Tarih: x.Tarih.Date,
+                Bolum: DashboardParsingHelper.NormalizeLabel(x.BolumAdi),
+                Personel: Math.Max(0, x.PersonelSayisi)))
+            .ToList();
+    }
+
+    private static int RoundPersonnelAverage(double value)
+    {
+        return (int)Math.Round(value, MidpointRounding.AwayFromZero);
+    }
+
+    private static int CalculateRoundedAveragePersonnel(
+        IEnumerable<(DateTime Tarih, string Bolum, int Personel)> rows,
+        DateTime startDate,
+        DateTime endDate,
+        Func<string, bool>? bolumFilter = null)
+    {
+        var dailyTotals = rows
+            .Where(x => x.Tarih >= startDate.Date && x.Tarih <= endDate.Date && x.Personel > 0)
+            .Where(x => bolumFilter == null || bolumFilter(x.Bolum))
+            .GroupBy(x => x.Tarih)
+            .Select(g => g.Sum(x => x.Personel))
+            .ToList();
+
+        return dailyTotals.Count == 0
+            ? 0
+            : RoundPersonnelAverage(dailyTotals.Average());
+    }
+
+    private static bool IsProfilLazerDepartment(string bolum)
+    {
+        return bolum.Contains("metal", StringComparison.OrdinalIgnoreCase)
+            || bolum.Contains("profil", StringComparison.OrdinalIgnoreCase)
+            || bolum.Contains("lazer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBoyahaneDepartment(string bolum)
+    {
+        return bolum.Contains("boya", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsCncDepartment(string bolum)
+    {
+        return bolum.Contains("cnc", StringComparison.OrdinalIgnoreCase)
+            || bolum.Contains("delik", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPvcDepartment(string bolum)
+    {
+        return bolum.Contains("pvc", StringComparison.OrdinalIgnoreCase)
+            || bolum.Contains("bantlama", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsEbatlamaDepartment(string bolum)
+    {
+        return bolum.Contains("ebatlama", StringComparison.OrdinalIgnoreCase);
+    }
+
     public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
@@ -332,6 +404,8 @@ public class DashboardQueryService : IDashboardQueryService
         var ozetTarihleri = Enumerable.Range(0, (ozetEnd - ozetStart).Days + 1)
             .Select(offset => ozetStart.AddDays(offset))
             .ToList();
+        model.CalisilanIsGunu = CountDistinctWorkingDays(allDates.Where(x => x.Date >= ozetStart && x.Date <= ozetEnd));
+        model.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, ozetStart, ozetEnd);
 
         var trendTarihleri = Enumerable.Range(0, (trendEnd - trendStart).Days + 1)
             .Select(offset => trendStart.AddDays(offset))
@@ -1289,6 +1363,7 @@ public class DashboardQueryService : IDashboardQueryService
 
         var excelData = snapshot.ProfilRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
         var hataExcelData = snapshot.ProfilHataRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         if (!excelData.Any())
         {
@@ -1343,7 +1418,18 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var gununVerileriList = gununVerileri.ToList();
-        bag["KayitGunSayisi"] = gununVerileriList.Select(x => x.Tarih.Date).Distinct().Count();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(gununVerileriList.Select(x => x.Tarih));
+        var personelStart = hasDateRange
+            ? rangeStart!.Value
+            : ay.HasValue && yil.HasValue
+                ? new DateTime(yil.Value, ay.Value, 1)
+                : islenecekTarih.Date;
+        var personelEnd = hasDateRange
+            ? effectiveRangeEnd ?? rangeEnd!.Value
+            : ay.HasValue && yil.HasValue
+                ? effectiveRangeEnd ?? new DateTime(yil.Value, ay.Value, 1).AddMonths(1).AddDays(-1)
+                : islenecekTarih.Date;
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, personelStart, personelEnd, IsProfilLazerDepartment);
 
         viewModel.GunlukToplamUretim = gununVerileriList.Sum(x => x.UretimAdedi);
         viewModel.GunlukToplamSure = gununVerileriList.Sum(x => x.CalismaSuresi);
@@ -1533,6 +1619,7 @@ public class DashboardQueryService : IDashboardQueryService
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         static string NormalizeBoyaDuraklamaNedeni(string? neden)
         {
@@ -1671,6 +1758,19 @@ public class DashboardQueryService : IDashboardQueryService
 
         var seciliUretim = filtreliUretim.ToList();
         var seciliLegacyHata = filtreliLegacyHata.ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(
+            (seciliUretim.Any() ? seciliUretim.Select(x => x.Tarih) : seciliLegacyHata.Select(x => x.Tarih)));
+        var boyaPersonelStart = hasDateRange
+            ? rangeStart!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1)
+                : islenecekTarih.Date;
+        var boyaPersonelEnd = hasDateRange
+            ? rangeEnd!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1).AddMonths(1).AddDays(-1)
+                : islenecekTarih.Date;
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, boyaPersonelStart, boyaPersonelEnd, IsBoyahaneDepartment);
 
         viewModel.PanelBoyananParca = seciliUretim.Sum(x => x.PanelAdet);
         viewModel.DosemeBoyananParca = seciliUretim.Sum(x => x.DosemeAdet);
@@ -1875,6 +1975,7 @@ public class DashboardQueryService : IDashboardQueryService
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         static string NormalizePvcDuraklamaNedeni(string? neden)
         {
@@ -1979,6 +2080,18 @@ public class DashboardQueryService : IDashboardQueryService
 
         var filtreliVeri = periodVeriQuery.ToList();
         var periodVeriAllMachinesList = periodVeriTumMakineler.ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
+        var pvcPersonelStart = hasDateRange
+            ? rangeStart!.Value
+            : ay.HasValue && yil.HasValue
+                ? new DateTime(yil.Value, ay.Value, 1)
+                : islenecekTarih.Date;
+        var pvcPersonelEnd = hasDateRange
+            ? rangeEnd!.Value
+            : ay.HasValue && yil.HasValue
+                ? new DateTime(yil.Value, ay.Value, 1).AddMonths(1).AddDays(-1)
+                : islenecekTarih.Date;
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, pvcPersonelStart, pvcPersonelEnd, IsPvcDepartment);
 
         viewModel.ToplamUretimMetraj = filtreliVeri.Sum(x => x.UretimMetraj);
         viewModel.ToplamParcaSayisi = filtreliVeri.Sum(x => x.ParcaSayisi);
@@ -2117,6 +2230,7 @@ public class DashboardQueryService : IDashboardQueryService
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         var viewModel = new CncDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var masterRows = snapshot.MasterwoodRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
@@ -2188,6 +2302,11 @@ public class DashboardQueryService : IDashboardQueryService
         var masterPeriod = masterRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
         var skipperPeriod = skipperRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
         var roverPeriod = roverRows.Where(x => x.Tarih.Date >= periodStart && x.Tarih.Date <= periodEnd).ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(
+            masterPeriod.Select(x => x.Tarih)
+                .Concat(skipperPeriod.Select(x => x.Tarih))
+                .Concat(roverPeriod.Select(x => x.Tarih)));
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, periodStart, periodEnd, IsCncDepartment);
 
         viewModel.Masterwood = new CncMachineSummary
         {
@@ -2376,10 +2495,12 @@ public class DashboardQueryService : IDashboardQueryService
             bag["MasterwoodOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
         viewModel.ToplamDelik = filtreliVeri.Sum(x => x.DelikSayisi);
         viewModel.ToplamDelikFreeze = filtreliVeri.Sum(x => x.DelikFreezeSayisi);
         viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
+        viewModel.OrtalamaCalisanPersonel = RoundPersonnelAverage(viewModel.OrtalamaKisiSayisi);
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
         viewModel.OrtalamaKullanilabilirlik = filtreliVeri.Select(x => x.Kullanilabilirlik).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -2517,9 +2638,11 @@ public class DashboardQueryService : IDashboardQueryService
             bag["SkipperOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
         viewModel.ToplamDelik = filtreliVeri.Sum(x => x.DelikSayisi);
         viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
+        viewModel.OrtalamaCalisanPersonel = RoundPersonnelAverage(viewModel.OrtalamaKisiSayisi);
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3);
         viewModel.OrtalamaFiiliCalismaOrani = filtreliVeri.Any() ? filtreliVeri.Average(x => x.FiiliCalismaOrani) : 0;
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -2642,10 +2765,12 @@ public class DashboardQueryService : IDashboardQueryService
             bag["RoverBOeeTitle"] = "OEE Skoru Trendi (Son 7 Gün)";
         }
 
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
         viewModel.ToplamDelikFreeze = filtreliVeri.Sum(x => x.DelikFreezeSayisi);
         viewModel.ToplamDelikFreezePvc = filtreliVeri.Sum(x => x.DelikFreezePvcSayisi);
         viewModel.ToplamHataliParca = filtreliVeri.Sum(x => x.HataliParca);
         viewModel.OrtalamaKisiSayisi = filtreliVeri.Any() ? filtreliVeri.Average(x => x.KisiSayisi) : 0;
+        viewModel.OrtalamaCalisanPersonel = RoundPersonnelAverage(viewModel.OrtalamaKisiSayisi);
         viewModel.ToplamDuraklamaDakika = filtreliVeri.Sum(x => x.Duraklama1 + x.Duraklama2 + x.Duraklama3 + x.Duraklama4);
         viewModel.OrtalamaPerformans = filtreliVeri.Select(x => x.Performans).Where(x => x > 0).DefaultIfEmpty(0).Average();
         viewModel.OrtalamaKullanilabilirlik = filtreliVeri.Select(x => x.Kullanilabilirlik).Where(x => x > 0).DefaultIfEmpty(0).Average();
@@ -2783,6 +2908,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var seciliVeri = filtreliVeri.ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(seciliVeri.Select(x => x.Tarih));
         var aktifKisiSayilari = seciliVeri.Select(x => x.KisiSayisi).Where(x => x > 0).ToList();
         var oeeDegerleri = seciliVeri.Select(x => x.Oee).Where(x => x > 0).ToList();
         var verimliCalismaDegerleri = seciliVeri.Select(x => x.Kullanilabilirlik).Where(x => x > 0).ToList();
@@ -2792,6 +2918,7 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.ToplamKayipSureDakika = seciliVeri.Sum(x => x.ToplamKayipSureDakika);
         viewModel.ToplamNetSureDakika = seciliVeri.Sum(x => x.NetCalismaSureDakika);
         viewModel.OrtalamaKisiSayisi = aktifKisiSayilari.Any() ? aktifKisiSayilari.Average() : 0;
+        viewModel.OrtalamaCalisanPersonel = RoundPersonnelAverage(viewModel.OrtalamaKisiSayisi);
         viewModel.OrtalamaVerimliCalismaOrani = verimliCalismaDegerleri.Any() ? verimliCalismaDegerleri.Average() : 0;
         viewModel.OrtalamaOee = oeeDegerleri.Any() ? oeeDegerleri.Average() : 0;
         viewModel.OrtalamaSaatlikUretim = viewModel.ToplamNetSureDakika > 0
@@ -2916,6 +3043,7 @@ public class DashboardQueryService : IDashboardQueryService
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
         const double macmazzaOtoDuraklamaDakika = 540d;
         const string macmazzaOtoDuraklamaNedeni = "Makine çalışmadı";
 
@@ -3022,6 +3150,18 @@ public class DashboardQueryService : IDashboardQueryService
 
         var filtreliVeri = filtreliVeriQuery.ToList();
         var periodVeriAllMachinesList = periodVeriTumMakineler.ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
+        var ebatlamaPersonelStart = hasDateRange
+            ? rangeStart!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1)
+                : (isSingleDayRange ? rangeStart!.Value.Date : islenecekTarih.Date);
+        var ebatlamaPersonelEnd = hasDateRange
+            ? rangeEnd!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1).AddMonths(1).AddDays(-1)
+                : (isSingleDayRange ? rangeEnd!.Value.Date : islenecekTarih.Date);
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, ebatlamaPersonelStart, ebatlamaPersonelEnd, IsEbatlamaDepartment);
 
         var seciliMakineMacmazza = IsMacmazzaMachine(seciliMakine);
         var macmazzaKaydiVarTumMakineler = periodVeriAllMachinesList.Any(x => IsMacmazzaMachine(x.Makine));
@@ -3198,6 +3338,7 @@ public class DashboardQueryService : IDashboardQueryService
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
         var bag = new Dictionary<string, object?>();
+        var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         var viewModel = new HataliParcaDashboardViewModel { RaporTarihi = secilenTarih ?? DateTime.Today };
         var excelData = snapshot.HataliParcaRows
@@ -3294,6 +3435,18 @@ public class DashboardQueryService : IDashboardQueryService
             bag["HataliM2Title"] = "Hatalı m² Trendi (Son 7 Gün)";
         }
 
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filtreliVeri.Select(x => x.Tarih));
+        var hataliPersonelStart = hasDateRange
+            ? rangeStart!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1)
+                : islenecekTarih.Date;
+        var hataliPersonelEnd = hasDateRange
+            ? rangeEnd!.Value
+            : ay.HasValue
+                ? new DateTime(yearToUse ?? yil ?? islenecekTarih.Year, ay.Value, 1).AddMonths(1).AddDays(-1)
+                : islenecekTarih.Date;
+        viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, hataliPersonelStart, hataliPersonelEnd);
         viewModel.ToplamHataAdet = filtreliVeri.Sum(x => x.Adet);
         viewModel.ToplamHataM2 = filtreliVeri.Sum(x => x.ToplamM2);
 

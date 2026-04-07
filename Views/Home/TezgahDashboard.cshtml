@@ -25,14 +25,18 @@
                     Ürün, kişi, süre, kayıp süre ve OEE kayıtlarını tek ekranda izleyin.
                     KPI kartları ve grafikler seçilen döneme göre otomatik yeniden hesaplanır.
                 </p>
-                <div class="tezgah-hero__facts">
+                <div class="tezgah-hero__facts tezgah-hero__facts--triple">
                     <div class="tezgah-fact">
-                        <span>Kayıt</span>
-                        <strong>@Model.KayitSayisi</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
                     </div>
                     <div class="tezgah-fact">
                         <span>Aktif ürün</span>
                         <strong>@Model.AktifUrunSayisi</strong>
+                    </div>
+                    <div class="tezgah-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="tezgah-fact tezgah-fact--wide">
                         <span>Öne çıkan ürün</span>
@@ -88,9 +92,9 @@
                 <small class="tezgah-kpi__meta">Net süreye göre parça/saat</small>
             </article>
             <article class="tezgah-kpi tezgah-kpi--stone">
-                <span class="tezgah-kpi__label">Ortalama Kişi</span>
-                <strong class="tezgah-kpi__value">@Model.OrtalamaKisiSayisi.ToString("N1")</strong>
-                <small class="tezgah-kpi__meta">Pozitif kişi kayıtlarının ortalaması</small>
+                <span class="tezgah-kpi__label">Ortalama Çalışan Personel</span>
+                <strong class="tezgah-kpi__value">@Model.OrtalamaCalisanPersonel</strong>
+                <small class="tezgah-kpi__meta">Pozitif kişi kayıtlarının yuvarlanmış ortalaması</small>
             </article>
         </section>
 

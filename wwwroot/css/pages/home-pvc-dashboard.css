@@ -113,6 +113,10 @@ html[data-theme="dark"] .pvc-hero__tag {
     margin-top: 1.5rem;
 }
 
+.pvc-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .pvc-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--pvc-border-soft);
@@ -133,6 +137,10 @@ html[data-theme="dark"] .pvc-fact {
 
 .pvc-fact--wide {
     grid-column: span 2;
+}
+
+.pvc-hero__facts--triple .pvc-fact--wide {
+    grid-column: span 3;
 }
 
 .pvc-hero__panel,
@@ -523,6 +531,10 @@ html[data-theme="dark"] .pvc-empty-state {
     }
 
     .pvc-fact--wide {
+        grid-column: auto;
+    }
+
+    .pvc-hero__facts--triple .pvc-fact--wide {
         grid-column: auto;
     }
 

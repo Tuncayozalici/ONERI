@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class MasterwoodDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamDelik { get; set; }
         public double ToplamDelikFreeze { get; set; }

@@ -50,5 +50,7 @@ namespace ONERI.Models
 
         // Raporun hangi tarihe ait olduğunu tutmak için
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
     }
 }

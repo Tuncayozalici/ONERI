@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
             gaugePrimaryStrong: isDarkTheme ? '#22c55e' : '#059669',
             gaugeMuted: isDarkTheme ? 'rgba(71, 85, 105, 0.42)' : 'rgba(148, 163, 184, 0.38)',
             gaugeTarget: isDarkTheme ? '#fbbf24' : '#d97706',
-            gaugeTargetZone: isDarkTheme ? 'rgba(251, 191, 36, 0.22)' : 'rgba(245, 158, 11, 0.24)',
+            gaugeTargetZone: isDarkTheme ? 'rgba(248, 113, 113, 0.42)' : 'rgba(239, 68, 68, 0.28)',
             oeeBar: isDarkTheme ? 'rgba(59, 130, 246, 0.78)' : 'rgba(37, 99, 235, 0.7)',
             oeeBarBorder: isDarkTheme ? 'rgba(96, 165, 250, 1)' : 'rgba(29, 78, 216, 0.96)',
             componentBars: [
@@ -104,6 +104,19 @@ document.addEventListener('DOMContentLoaded', function () {
     function clampPercent(value) {
         const number = Number(value) || 0;
         return Math.max(0, Math.min(100, number));
+    }
+
+    function getPercentAxisMax(values) {
+        const numericValues = Array.isArray(values)
+            ? values.map(clampPercent).filter(function (value) { return value > 0; })
+            : [];
+
+        if (numericValues.length === 0) {
+            return 100;
+        }
+
+        const maxValue = Math.max.apply(null, numericValues);
+        return Math.min(100, Math.max(10, Math.ceil(maxValue / 10) * 10));
     }
 
     function hasAnyData(values) {
@@ -238,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 ctx.font = '500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                 ctx.fillText('Genel OEE', centerX, centerY + 24);
                 ctx.fillStyle = palette.gaugeTarget;
-                ctx.font = '600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.font = '700 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                 ctx.fillText('Hedef: ' + target.toFixed(0) + ' %', centerX, centerY + 46);
                 ctx.restore();
             }
@@ -391,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
         const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
+        const machineAxisMax = getPercentAxisMax(machineValues);
         const machinePalette = createRankGradientColors(machineValues.length);
         createChart('makineOeeGrafigi', {
             type: 'bar',
@@ -414,8 +428,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 scales: {
                     x: {
                         beginAtZero: true,
-                        suggestedMax: 100,
+                        max: machineAxisMax,
                         ticks: {
+                            stepSize: 10,
                             callback: function (value) {
                                 return value + '%';
                             }
@@ -465,8 +480,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 scales: {
                     x: {
                         beginAtZero: true,
-                        suggestedMax: 100,
+                        max: getPercentAxisMax([
+                            data.OrtalamaPerformans,
+                            data.OrtalamaKullanilabilirlik,
+                            data.OrtalamaKalite
+                        ]),
                         ticks: {
+                            stepSize: 10,
                             callback: function (value) {
                                 return value + '%';
                             }
@@ -487,6 +507,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const bolumOeeLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
         const bolumOeeValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
+        const bolumOeeAxisMax = getPercentAxisMax(bolumOeeValues);
         createChart('bolumOeeGrafigi', {
             type: 'bar',
             data: {
@@ -508,8 +529,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 scales: {
                     x: {
                         beginAtZero: true,
-                        suggestedMax: 100,
+                        max: bolumOeeAxisMax,
                         ticks: {
+                            stepSize: 10,
                             callback: function (value) {
                                 return value + '%';
                             }
@@ -614,6 +636,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const planUyumLabels = Array.isArray(data.PlanUyumBolumLabels) ? data.PlanUyumBolumLabels : [];
         const planUyumValues = (Array.isArray(data.PlanUyumBolumData) ? data.PlanUyumBolumData : []).map(clampPercent);
+        const planUyumAxisMax = getPercentAxisMax(planUyumValues);
         createChart('planUyumBolumGrafigi', {
             type: 'bar',
             data: {
@@ -635,8 +658,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 scales: {
                     x: {
                         beginAtZero: true,
-                        suggestedMax: 100,
+                        max: planUyumAxisMax,
                         ticks: {
+                            stepSize: 10,
                             callback: function (value) {
                                 return value + '%';
                             }

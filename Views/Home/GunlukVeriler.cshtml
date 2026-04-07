@@ -52,14 +52,18 @@
                     Tum bolumlerden gelen gunluk uretim, OEE, hata ve duraklama verilerini tek akista izleyin.
                     Ozet kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
                 </p>
-                <div class="gunluk-hero__facts">
+                <div class="gunluk-hero__facts gunluk-hero__facts--triple">
                     <div class="gunluk-fact">
                         <span>Secili donem</span>
                         <strong>@seciliDonemOzeti</strong>
                     </div>
                     <div class="gunluk-fact">
-                        <span>Panel kapsami</span>
-                        <strong>Uretim, OEE, hata ve duraklama</strong>
+                        <span>Calisilan is gunu</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
+                    </div>
+                    <div class="gunluk-fact">
+                        <span>Ortalama calisan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                 </div>
             </div>
@@ -152,27 +156,7 @@
                     </div>
                 </div>
 
-                <div class="gunluk-kpi-stack">
-                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
-                        <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
-                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
-                        <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
-                    </article>
-                </div>
-            </section>
-
-            <section class="gunluk-grid">
-                <div class="gunluk-panel">
+                <div class="gunluk-panel h-100">
                     <div class="gunluk-panel__header">
                         <div>
                             <h2>OEE Bilesenleri</h2>
@@ -181,6 +165,20 @@
                     </div>
                     <div class="gunluk-panel__body gunluk-panel__body--chart">
                         <canvas id="genelBilesenGrafigi"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gunluk-grid">
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Bolum Bazli Plana Uyum</h2>
+                            <p>Secilen donemde plana uyum oraninin bolumlere gore dagilimi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="planUyumBolumGrafigi"></canvas>
                     </div>
                 </div>
 
@@ -199,18 +197,6 @@
                 <div class="gunluk-panel">
                     <div class="gunluk-panel__header">
                         <div>
-                            <h2>Bolum Bazli Hata</h2>
-                            <p>Toplam hata adedinin bolumlere gore dagilimi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="bolumHataGrafigi"></canvas>
-                    </div>
-                </div>
-
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
                             <h2>@personelBolumTitle</h2>
                             <p>Bolumlere gore toplam personel yuk dagilimi.</p>
                         </div>
@@ -220,6 +206,20 @@
                     </div>
                 </div>
 
+                <div class="gunluk-panel">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2>Duraklama Trendi</h2>
+                            <p>Gun bazli kayip sure hareketi.</p>
+                        </div>
+                    </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="duraklamaTrendGrafigi"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gunluk-grid gunluk-grid--insights">
                 <div class="gunluk-panel">
                     <div class="gunluk-panel__header">
                         <div>
@@ -235,12 +235,12 @@
                 <div class="gunluk-panel">
                     <div class="gunluk-panel__header">
                         <div>
-                            <h2>Duraklama Trendi</h2>
-                            <p>Gun bazli kayip sure hareketi.</p>
+                            <h2>Bolum Bazli Hata</h2>
+                            <p>Toplam hata adedinin bolumlere gore dagilimi.</p>
                         </div>
                     </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="duraklamaTrendGrafigi"></canvas>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
+                        <canvas id="bolumHataGrafigi"></canvas>
                     </div>
                 </div>
 
@@ -251,21 +251,27 @@
                             <p>Gun bazli hatali adet degisimini izleyin.</p>
                         </div>
                     </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                    <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
                         <canvas id="genelHataTrend"></canvas>
                     </div>
                 </div>
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Bolum Bazli Plana Uyum</h2>
-                            <p>Secilen donemde plana uyum oraninin bolumlere gore dagilimi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="planUyumBolumGrafigi"></canvas>
-                    </div>
+                <div class="gunluk-kpi-stack gunluk-kpi-stack--summary">
+                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
+                        <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
+                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
+                    </article>
+                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
+                        <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
+                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
+                        <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
+                    </article>
                 </div>
             </section>
         </div>

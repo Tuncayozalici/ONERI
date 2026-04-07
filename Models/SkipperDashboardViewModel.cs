@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class SkipperDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamDelik { get; set; }
         public double ToplamHataliParca { get; set; }

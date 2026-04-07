@@ -30,14 +30,18 @@
                     Hatalı adet, neden, bölüm, operatör ve süreç kırılımlarını tek analiz akışında izleyin.
                     Seçilen döneme göre trendler ve dağılımlar otomatik olarak yeniden hesaplanır.
                 </p>
-                <div class="hatali-hero__facts">
+                <div class="hatali-hero__facts hatali-hero__facts--triple">
                     <div class="hatali-fact">
                         <span>Hata nedeni</span>
                         <strong>@hataNedeniSayisi</strong>
                     </div>
                     <div class="hatali-fact">
-                        <span>Etkilenen bölüm</span>
-                        <strong>@bolumSayisi</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
+                    </div>
+                    <div class="hatali-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="hatali-fact hatali-fact--wide">
                         <span>Öne çıkan neden</span>

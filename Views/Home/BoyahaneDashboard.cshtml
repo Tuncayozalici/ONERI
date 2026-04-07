@@ -34,14 +34,18 @@
                     Üretim, performans hedefi, kalite ve OEE sinyallerini tek akışta izleyin.
                     KPI kartları ve grafikler seçilen döneme göre otomatik olarak yeniden hesaplanır.
                 </p>
-                <div class="boya-hero__facts">
+                <div class="boya-hero__facts boya-hero__facts--triple">
                     <div class="boya-fact">
-                        <span>Kayıt</span>
-                        <strong>@Model.ToplamKayitSayisi.ToString("N0")</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu.ToString("N0")</strong>
                     </div>
                     <div class="boya-fact">
                         <span>Aktif hat</span>
                         <strong>@aktifHatSayisi</strong>
+                    </div>
+                    <div class="boya-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="boya-fact boya-fact--wide">
                         <span>Öne çıkan hat</span>

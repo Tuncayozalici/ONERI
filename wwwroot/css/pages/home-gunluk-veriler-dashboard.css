@@ -95,6 +95,10 @@ html[data-theme="dark"] .gunluk-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.gunluk-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .gunluk-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--gunluk-border-soft);
@@ -199,7 +203,7 @@ html[data-theme="dark"] .gunluk-hero__note {
 
 .gunluk-top-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 260px);
+    grid-template-columns: minmax(220px, 260px) minmax(0, 0.92fr) minmax(0, 0.92fr) minmax(360px, 0.9fr);
     gap: 1rem;
     align-items: stretch;
 }
@@ -357,6 +361,10 @@ html[data-theme="dark"] .gunluk-kpi--slate .gunluk-kpi__value {
     min-height: 420px;
 }
 
+.gunluk-panel__body--chart-tall {
+    min-height: 420px;
+}
+
 .gunluk-summary-list {
     display: grid;
     gap: 0.9rem;
@@ -387,10 +395,12 @@ html[data-theme="dark"] .gunluk-summary-item {
     gap: 1rem;
 }
 
-.gunluk-grid > .gunluk-panel:nth-child(5),
-.gunluk-grid > .gunluk-panel:nth-child(6),
-.gunluk-grid > .gunluk-panel:nth-child(7) {
-    grid-column: span 1;
+.gunluk-grid--insights {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 260px);
+}
+
+.gunluk-grid--insights > .gunluk-kpi-stack--summary {
+    min-height: 100%;
 }
 
 .gunluk-section-links {
@@ -682,13 +692,15 @@ html[data-theme="dark"] .gunluk-duraklama-item__bar {
         grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(0, 1fr);
     }
 
-    .gunluk-top-layout > .gunluk-kpi-stack:last-child {
+    .gunluk-top-layout > .gunluk-panel:last-child {
         grid-column: 1 / -1;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        grid-template-rows: none;
     }
 
     .gunluk-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gunluk-grid--insights {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -712,10 +724,16 @@ html[data-theme="dark"] .gunluk-duraklama-item__bar {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .gunluk-kpi-stack,
-    .gunluk-top-layout > .gunluk-kpi-stack:last-child {
+    .gunluk-kpi-stack {
         grid-template-columns: 1fr;
         grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+
+    .gunluk-grid--insights {
+        grid-template-columns: 1fr;
+    }
+
+    .gunluk-top-layout > .gunluk-panel:last-child {
         grid-column: auto;
     }
 }

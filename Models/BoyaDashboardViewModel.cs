@@ -26,6 +26,8 @@ namespace ONERI.Models
         }
 
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamBoyananParca { get; set; }
         public double PanelBoyananParca { get; set; }

@@ -59,14 +59,18 @@
                     Masterwood, Skipper ve Rover-B makinelerinin üretim, hata, duraklama ve OEE sinyallerini
                     tek panel düzeni içinde izleyin. Alt makine ekranları aynı tasarım sistemi ile bağlı çalışır.
                 </p>
-                <div class="cnc-hero__facts">
+                <div class="cnc-hero__facts cnc-hero__facts--triple">
                     <div class="cnc-fact">
                         <span>Aktif makine</span>
                         <strong>@activeMachineCount</strong>
                     </div>
                     <div class="cnc-fact">
-                        <span>Makine sayısı</span>
-                        <strong>@machineCards.Length</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
+                    </div>
+                    <div class="cnc-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="cnc-fact cnc-fact--wide">
                         <span>Öne çıkan makine</span>

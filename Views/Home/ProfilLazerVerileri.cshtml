@@ -3,7 +3,6 @@
     ViewData["Title"] = "Metal Verileri";
     var aktifProfilSayisi = Model.ProfilIsimleri.Count;
     var aktifMakineSayisi = Model.MakineLabels.Count;
-    var kayitGunSayisi = ViewBag.KayitGunSayisi is int count ? count : 0;
     var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
     var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydi yok";
     var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydi yok";
@@ -35,14 +34,18 @@ else
                         KPI kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
                     </p>
 
-                    <div class="profile-hero__facts">
+                    <div class="profile-hero__facts profile-hero__facts--triple">
                         <div class="profile-fact">
-                            <span>Kayit gunu</span>
-                            <strong>@kayitGunSayisi</strong>
+                            <span>Calisilan is gunu</span>
+                            <strong>@Model.CalisilanIsGunu</strong>
                         </div>
                         <div class="profile-fact">
                             <span>Aktif makine</span>
                             <strong>@aktifMakineSayisi</strong>
+                        </div>
+                        <div class="profile-fact">
+                            <span>Ortalama calisan personel</span>
+                            <strong>@Model.OrtalamaCalisanPersonel</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
                             <span>One cikan profil</span>

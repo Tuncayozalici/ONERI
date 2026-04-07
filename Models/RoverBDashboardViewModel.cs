@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class RoverBDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamDelikFreeze { get; set; }
         public double ToplamDelikFreezePvc { get; set; }

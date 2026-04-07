@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class TezgahDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamParcaAdeti { get; set; }
         public double ToplamSureDakika { get; set; }

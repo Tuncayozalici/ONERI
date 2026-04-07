@@ -6,6 +6,8 @@ namespace ONERI.Models
     public class HataliParcaDashboardViewModel
     {
         public DateTime RaporTarihi { get; set; }
+        public int CalisilanIsGunu { get; set; }
+        public int OrtalamaCalisanPersonel { get; set; }
 
         public double ToplamHataAdet { get; set; }
         public double ToplamHataM2 { get; set; }

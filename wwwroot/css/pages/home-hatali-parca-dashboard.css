@@ -93,6 +93,10 @@ html[data-theme="dark"] .hatali-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.hatali-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .hatali-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--hatali-border-soft);
@@ -113,6 +117,10 @@ html[data-theme="dark"] .hatali-fact {
 
 .hatali-fact--wide {
     grid-column: span 2;
+}
+
+.hatali-hero__facts--triple .hatali-fact--wide {
+    grid-column: span 3;
 }
 
 .hatali-hero__panel,
@@ -348,6 +356,10 @@ html[data-theme="dark"] .hatali-empty-state {
     }
 
     .hatali-fact--wide {
+        grid-column: auto;
+    }
+
+    .hatali-hero__facts--triple .hatali-fact--wide {
         grid-column: auto;
     }
 

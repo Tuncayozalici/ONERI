@@ -71,14 +71,18 @@
                     PVC hatlarının üretim, kalite, duraklama ve OEE verilerini tek mimaride izleyin.
                     Ana dashboard ve makine drilldown ekranları aynı tasarım dilini ve aynı veri mantığını paylaşır.
                 </p>
-                <div class="pvc-hero__facts">
+                <div class="pvc-hero__facts pvc-hero__facts--triple">
                     <div class="pvc-fact">
                         <span>Aktif hat</span>
                         <strong>@activeMachineCount</strong>
                     </div>
                     <div class="pvc-fact">
-                        <span>Seçim modu</span>
-                        <strong>@(!string.IsNullOrWhiteSpace(selectedMachine) ? "Makine görünümü" : "Tüm hatlar")</strong>
+                        <span>Çalışılan iş günü</span>
+                        <strong>@Model.CalisilanIsGunu</strong>
+                    </div>
+                    <div class="pvc-fact">
+                        <span>Ortalama çalışan personel</span>
+                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="pvc-fact pvc-fact--wide">
                         <span>Öne çıkan makine</span>

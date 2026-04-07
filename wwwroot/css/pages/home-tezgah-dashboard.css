@@ -96,6 +96,10 @@ html[data-theme="dark"] .tezgah-hero__eyebrow {
     margin-top: 1.5rem;
 }
 
+.tezgah-hero__facts--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .tezgah-fact {
     padding: 1rem 1.1rem;
     border: 1px solid var(--tezgah-border-soft);
@@ -116,6 +120,10 @@ html[data-theme="dark"] .tezgah-fact {
 
 .tezgah-fact--wide {
     grid-column: span 2;
+}
+
+.tezgah-hero__facts--triple .tezgah-fact--wide {
+    grid-column: span 3;
 }
 
 .tezgah-hero__panel,
@@ -369,6 +377,10 @@ html[data-theme="dark"] .tezgah-empty-state {
     }
 
     .tezgah-fact--wide {
+        grid-column: auto;
+    }
+
+    .tezgah-hero__facts--triple .tezgah-fact--wide {
         grid-column: auto;
     }
 

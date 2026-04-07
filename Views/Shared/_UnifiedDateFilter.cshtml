@@ -17,6 +17,9 @@
 
     var startDate = ToIso("startDate");
     var endDate = ToIso("endDate");
+    var availableFilterDates = ViewData["AvailableFilterDates"]?.ToString() ?? string.Empty;
+    var unavailableFilterMessage = ViewData["UnavailableFilterMessage"]?.ToString()
+        ?? "Bu tarihte veri bulunmuyor. Lütfen daha eski bir tarih seçin.";
 
     if (string.IsNullOrWhiteSpace(startDate) && string.IsNullOrWhiteSpace(endDate))
     {
@@ -29,7 +32,9 @@
     }
 }
 
-<div class="unified-date-filter js-unified-date-filter">
+<div class="unified-date-filter js-unified-date-filter"
+     data-available-dates="@availableFilterDates"
+     data-unavailable-message="@unavailableFilterMessage">
     <button type="button" class="btn btn-outline-secondary unified-date-filter__trigger js-udf-trigger">
         <i class="bi bi-calendar3 me-2"></i>
         <span class="js-udf-display">Tarih Seç</span>
@@ -77,3 +82,4 @@
     <input type="hidden" name="startDate" class="js-udf-start" value="@startDate" />
     <input type="hidden" name="endDate" class="js-udf-end" value="@endDate" />
 </div>
+<div class="alert alert-warning mt-3 mb-0 d-none js-udf-validation-message" role="alert" aria-live="polite"></div>

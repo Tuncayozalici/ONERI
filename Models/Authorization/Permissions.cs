@@ -60,7 +60,7 @@ namespace ONERI.Models.Authorization
         public static readonly IReadOnlyList<PermissionDefinition> All = new List<PermissionDefinition>
         {
             new(Dashboards.GunlukVeriler, "Günlük Veriler (Özet)", "Dashboards"),
-            new(Dashboards.ProfilLazer, "Profil Lazer Bölümü", "Dashboards"),
+            new(Dashboards.ProfilLazer, "Metal Bölümü", "Dashboards"),
             new(Dashboards.Boyahane, "Boyahane Bölümü", "Dashboards"),
             new(Dashboards.Pvc, "PVC Bölümü", "Dashboards"),
             new(Dashboards.Cnc, "CNC Bölümü", "Dashboards"),

@@ -12,6 +12,12 @@ public class DashboardIngestionService : IDashboardIngestionService
 {
     private const string CacheKey = "dashboard_data_snapshot_v1";
     private const string DbRecordKey = "dashboard_data_snapshot_v1";
+    private static readonly string[] GunlukCalismaDosyaAdaylari =
+    {
+        "Günlük Çalışma Verileri.xlsx",
+        "Günlük Çalışma Verileri 1.xlsx",
+        "Günlük Çalışma Verileri 1.xlsx"
+    };
 
     private readonly IMemoryCache _cache;
     private readonly FabrikaContext _context;
@@ -171,6 +177,7 @@ public class DashboardIngestionService : IDashboardIngestionService
             TezgahRows = ParseTezgahRows(excelRoot),
             EbatlamaRows = ParseEbatlamaRows(excelRoot),
             PersonelRows = ParsePersonelRows(excelRoot),
+            GunlukCalismaRows = ParseGunlukCalismaRows(excelRoot),
             HataliParcaRows = ParseHataliParcaRows(excelRoot)
         };
 
@@ -1303,6 +1310,79 @@ public class DashboardIngestionService : IDashboardIngestionService
         return result
             .Where(x => x.Tarih != DateTime.MinValue && !string.IsNullOrWhiteSpace(x.BolumAdi))
             .ToList();
+    }
+
+    private List<GunlukCalismaSatirModel> ParseGunlukCalismaRows(string excelRoot)
+    {
+        var result = new List<GunlukCalismaSatirModel>();
+        var filePath = GunlukCalismaDosyaAdaylari
+            .Select(name => Path.Combine(excelRoot, name))
+            .FirstOrDefault(File.Exists);
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return result;
+        }
+
+        using var package = new ExcelPackage(new FileInfo(filePath));
+        var worksheet = FindWorksheetByHeader(package, "Sayfa2", "Veriler");
+        if (worksheet?.Dimension == null)
+        {
+            return result;
+        }
+
+        static string? NormalizeGunlukCalismaBolumu(string? bolumAdi)
+        {
+            var normalized = DashboardParsingHelper.NormalizeHeaderForMatch(bolumAdi ?? string.Empty);
+            return normalized switch
+            {
+                "kesim" => "Kesim",
+                "pvc" => "PVC",
+                "boya" => "Boyahane",
+                "metal" => "Metal",
+                "cnc" => "CNC",
+                "keson" => "Keson",
+                "montaj" => "Montaj",
+                "saclazer" => "Sac Lazer",
+                _ => string.IsNullOrWhiteSpace(bolumAdi) ? null : bolumAdi.Trim()
+            };
+        }
+
+        int colBolum = DashboardParsingHelper.FindColumn(worksheet, "BÖLÜM", "BOLUM", "BÖLÜM ADI", "BOLUM ADI");
+        int colPlanUyum = DashboardParsingHelper.FindColumn(worksheet, "PLANA UYUM ORANI", "PLAN UYUM ORANI", "PLANA UYUM");
+        int colTarih = DashboardParsingHelper.FindColumn(worksheet, "TARİH", "TARIH");
+
+        for (int row = 2; row <= worksheet.Dimension.Rows; row++)
+        {
+            try
+            {
+                var bolumCell = worksheet.Cells[row, colBolum > 0 ? colBolum : 2];
+                var tarihCell = worksheet.Cells[row, colTarih > 0 ? colTarih : 9];
+                var planUyumCell = worksheet.Cells[row, colPlanUyum > 0 ? colPlanUyum : 6];
+
+                var bolumAdi = NormalizeGunlukCalismaBolumu(bolumCell.Value?.ToString());
+                var tarih = DashboardParsingHelper.ParseDateCell(tarihCell.Value, tarihCell.Text);
+                var planUyum = DashboardParsingHelper.NormalizePercentValue(
+                    DashboardParsingHelper.ParsePercentCell(planUyumCell.Value ?? planUyumCell.Text));
+
+                if (tarih == DateTime.MinValue || string.IsNullOrWhiteSpace(bolumAdi) || planUyum <= 0)
+                {
+                    continue;
+                }
+
+                result.Add(new GunlukCalismaSatirModel
+                {
+                    Tarih = tarih.Date,
+                    BolumAdi = bolumAdi,
+                    PlanUyumOrani = planUyum
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Günlük çalışma satırı parse edilemedi. Satır: {Row}", row);
+            }
+        }
+
+        return result;
     }
 
     private List<HataliParcaSatirModel> ParseHataliParcaRows(string excelRoot)

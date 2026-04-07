@@ -1,6 +1,6 @@
 @model ONERI.Models.GunlukVerilerViewModel
 @{
-    ViewData["Title"] = "Profil Lazer Verileri";
+    ViewData["Title"] = "Metal Verileri";
     var aktifProfilSayisi = Model.ProfilIsimleri.Count;
     var aktifMakineSayisi = Model.MakineLabels.Count;
     var kayitGunSayisi = ViewBag.KayitGunSayisi is int count ? count : 0;
@@ -29,7 +29,7 @@ else
                         <i class="bi bi-layers"></i>
                         OPERASYON RAPORU
                     </div>
-                    <h1>Profil Lazer Operasyon Panosu</h1>
+                    <h1>Metal Operasyon Panosu</h1>
                     <p>
                         Uretim, sure, hatali urun ve hurda sinyallerini tek panel yapisinda izleyin.
                         KPI kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
@@ -70,7 +70,7 @@ else
 
                     <div class="profile-hero__note">
                         <p>
-                            <strong>Toplam sure</strong> secilen donemde profil lazer operasyonu icin kaydedilen toplam calisma suresidir.
+                            <strong>Toplam sure</strong> secilen donemde metal operasyonu icin kaydedilen toplam calisma suresidir.
                             <strong>Ortalama sure</strong> toplam sure / toplam uretim uzerinden okunur.
                         </p>
                         <p class="mb-0">

@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'bolumOeeGrafigi',
         'bolumHataGrafigi',
         'personelBolumGrafigi',
+        'planUyumBolumGrafigi',
         'hataNedenGenelGrafigi',
         'duraklamaTrendGrafigi',
         'genelHataTrend'
@@ -63,7 +64,10 @@ document.addEventListener('DOMContentLoaded', function () {
             strongTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
             gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
             gaugePrimary: isDarkTheme ? '#34d399' : '#10b981',
+            gaugePrimaryStrong: isDarkTheme ? '#22c55e' : '#059669',
             gaugeMuted: isDarkTheme ? 'rgba(71, 85, 105, 0.42)' : 'rgba(148, 163, 184, 0.38)',
+            gaugeTarget: isDarkTheme ? '#fbbf24' : '#d97706',
+            gaugeTargetZone: isDarkTheme ? 'rgba(251, 191, 36, 0.22)' : 'rgba(245, 158, 11, 0.24)',
             oeeBar: isDarkTheme ? 'rgba(59, 130, 246, 0.78)' : 'rgba(37, 99, 235, 0.7)',
             oeeBarBorder: isDarkTheme ? 'rgba(96, 165, 250, 1)' : 'rgba(29, 78, 216, 0.96)',
             componentBars: [
@@ -213,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    function createGaugeCenterPlugin(value, palette) {
+    function createGaugeCenterPlugin(value, target, palette) {
         return {
             id: 'gunlukGaugeCenterText',
             afterDraw(chart) {
@@ -233,8 +237,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 ctx.fillStyle = palette.textColor;
                 ctx.font = '500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                 ctx.fillText('Genel OEE', centerX, centerY + 24);
+                ctx.fillStyle = palette.gaugeTarget;
+                ctx.font = '600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText('Hedef: ' + target.toFixed(0) + ' %', centerX, centerY + 46);
                 ctx.restore();
             }
+        };
+    }
+
+    function buildGaugeDataset(value, target, palette) {
+        const normalizedValue = clampPercent(value);
+        const normalizedTarget = clampPercent(target);
+
+        if (normalizedValue <= normalizedTarget) {
+            return {
+                values: [
+                    normalizedValue,
+                    normalizedTarget - normalizedValue,
+                    100 - normalizedTarget
+                ],
+                colors: [
+                    palette.gaugePrimary,
+                    palette.gaugeTargetZone,
+                    palette.gaugeMuted
+                ],
+                labels: ['Gerceklesen OEE', 'Hedefe kalan alan', 'Hedef sonrasi alan']
+            };
+        }
+
+        return {
+            values: [
+                normalizedTarget,
+                normalizedValue - normalizedTarget,
+                100 - normalizedValue
+            ],
+            colors: [
+                palette.gaugePrimary,
+                palette.gaugePrimaryStrong,
+                palette.gaugeMuted
+            ],
+            labels: ['Hedefe kadar OEE', 'Hedef ustu OEE', 'Kalan alan']
         };
     }
 
@@ -307,14 +349,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const trendHasData = trendLabels.length > 0;
 
         const oeeValue = clampPercent(data.OrtalamaOee);
+        const oeeTarget = 60;
+        const gaugeDataset = buildGaugeDataset(oeeValue, oeeTarget, palette);
         createChart('genelOeeGaugeGrafigi', {
             type: 'doughnut',
             data: {
-                labels: ['OEE', 'Kalan'],
+                labels: gaugeDataset.labels,
                 datasets: [
                     {
-                        data: [oeeValue, 100 - oeeValue],
-                        backgroundColor: [palette.gaugePrimary, palette.gaugeMuted],
+                        data: gaugeDataset.values,
+                        backgroundColor: gaugeDataset.colors,
+                        borderRadius: 8,
                         borderWidth: 0,
                         hoverOffset: 0
                     }
@@ -339,7 +384,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: [createGaugeCenterPlugin(oeeValue, palette)]
+            plugins: [
+                createGaugeCenterPlugin(oeeValue, oeeTarget, palette)
+            ]
         }, true, '');
 
         const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
@@ -564,6 +611,54 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             plugins: [horizontalValueLabelPlugin]
         }, hasAnyData(personelValues), 'Bolum bazli personel verisi bulunamadi.');
+
+        const planUyumLabels = Array.isArray(data.PlanUyumBolumLabels) ? data.PlanUyumBolumLabels : [];
+        const planUyumValues = (Array.isArray(data.PlanUyumBolumData) ? data.PlanUyumBolumData : []).map(clampPercent);
+        createChart('planUyumBolumGrafigi', {
+            type: 'bar',
+            data: {
+                labels: planUyumLabels,
+                datasets: [
+                    {
+                        label: 'Plana Uyum (%)',
+                        data: planUyumValues,
+                        backgroundColor: palette.componentBars[1],
+                        borderColor: palette.componentBorders[1],
+                        borderWidth: 1,
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            },
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, hasAnyData(planUyumValues), 'Plana uyum verisi bulunamadi.');
 
         const hataNedenLabels = Array.isArray(data.HataNedenLabels) ? data.HataNedenLabels : [];
         const hataNedenValues = Array.isArray(data.HataNedenData) ? data.HataNedenData : [];

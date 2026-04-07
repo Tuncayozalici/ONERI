@@ -65,6 +65,14 @@ document.addEventListener("DOMContentLoaded", function () {
         const hiddenEnd = root.querySelector(".js-udf-end");
         const applyButton = form.querySelector(".js-unified-filter-apply");
         const clearButton = form.querySelector(".js-unified-filter-clear");
+        const validationMessage = form.querySelector(".js-udf-validation-message");
+        const availableDateKeys = (root.dataset.availableDates || "")
+            .split(",")
+            .map(function (value) { return value.trim(); })
+            .filter(Boolean)
+            .sort();
+        const availableDateSet = new Set(availableDateKeys);
+        const unavailableMessageText = root.dataset.unavailableMessage || "Bu tarihte veri bulunmuyor. Lütfen daha eski bir tarih seçin.";
 
         if (!trigger || !display || !popover || !modeSelect || !singlePanel || !rangePanel || !monthPanel ||
             !singleInput || !rangeStartInput || !rangeEndInput || !prevYearButton || !nextYearButton ||
@@ -87,6 +95,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         modeSelect.value = state.mode;
         render();
+
+        if (hasSelection() && !hasDataInSelection()) {
+            clearStoredFilter();
+            refreshDashboardLinks(null);
+        }
 
         trigger.addEventListener("click", function () {
             popover.classList.toggle("d-none");
@@ -147,6 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
         form.addEventListener("submit", function (event) {
             if (!isValid()) {
                 event.preventDefault();
+                renderValidationMessage();
                 return;
             }
 
@@ -180,6 +194,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             syncHiddenDates();
             display.textContent = getDisplayValue();
+            renderValidationMessage();
             applyButton.disabled = !isValid();
             clearButton.disabled = !(state.startDate && state.endDate);
 
@@ -236,7 +251,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         function isValid() {
-            if (!state.startDate || !state.endDate) {
+            if (!hasSelection()) {
                 return false;
             }
 
@@ -245,17 +260,54 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (state.mode === "single_day") {
-                return state.startDate.getTime() === state.endDate.getTime();
+                return state.startDate.getTime() === state.endDate.getTime() &&
+                    hasDataInSelection();
             }
 
             if (state.mode === "month") {
                 return state.startDate.getDate() === 1 &&
                     state.startDate.getFullYear() === state.endDate.getFullYear() &&
                     state.startDate.getMonth() === state.endDate.getMonth() &&
-                    state.endDate.getDate() === new Date(state.endDate.getFullYear(), state.endDate.getMonth() + 1, 0).getDate();
+                    state.endDate.getDate() === new Date(state.endDate.getFullYear(), state.endDate.getMonth() + 1, 0).getDate() &&
+                    hasDataInSelection();
             }
 
-            return true;
+            return hasDataInSelection();
+        }
+
+        function hasSelection() {
+            return !!(state.startDate && state.endDate);
+        }
+
+        function hasDataInSelection() {
+            if (!hasSelection()) {
+                return false;
+            }
+
+            if (!availableDateKeys.length) {
+                return true;
+            }
+
+            const startKey = toIsoDate(state.startDate);
+            const endKey = toIsoDate(state.endDate);
+
+            if (state.mode === "single_day") {
+                return availableDateSet.has(startKey);
+            }
+
+            return availableDateKeys.some(function (dateKey) {
+                return dateKey >= startKey && dateKey <= endKey;
+            });
+        }
+
+        function renderValidationMessage() {
+            if (!validationMessage) {
+                return;
+            }
+
+            const shouldShow = hasSelection() && !hasDataInSelection();
+            validationMessage.classList.toggle("d-none", !shouldShow);
+            validationMessage.textContent = shouldShow ? unavailableMessageText : "";
         }
 
         function getDisplayValue() {

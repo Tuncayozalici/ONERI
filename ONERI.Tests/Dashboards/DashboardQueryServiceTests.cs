@@ -98,7 +98,44 @@ public class DashboardQueryServiceTests
             cancellationToken: CancellationToken.None);
 
         Assert.Equal(60d, result.Model.ToplamDuraklamaDakika);
-        Assert.Contains("Boya - Konveyör Hattı", result.Model.MakineOeeLabels);
+        Assert.Contains("Konveyör Hattı", result.Model.MakineOeeLabels);
+    }
+
+    [Fact]
+    public async Task GetGunlukVerilerAsync_BuildsPlanUyumChartFromGunlukCalismaRows()
+    {
+        var selectedDate = new DateTime(2026, 4, 2);
+        var snapshot = new DashboardDataSnapshot
+        {
+            GunlukCalismaRows = new List<GunlukCalismaSatirModel>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    BolumAdi = "PVC",
+                    PlanUyumOrani = 84
+                },
+                new()
+                {
+                    Tarih = selectedDate,
+                    BolumAdi = "Kesim",
+                    PlanUyumOrani = 92
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetGunlukVerilerAsync(
+            raporTarihi: null,
+            baslangicTarihi: selectedDate,
+            bitisTarihi: selectedDate,
+            ay: null,
+            yil: null,
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(new[] { "Kesim", "PVC" }, result.Model.PlanUyumBolumLabels);
+        Assert.Equal(new[] { 92d, 84d }, result.Model.PlanUyumBolumData);
     }
 
     private sealed class StubDashboardIngestionService : IDashboardIngestionService

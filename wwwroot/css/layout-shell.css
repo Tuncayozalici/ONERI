@@ -24,6 +24,8 @@ html[data-theme="dark"] {
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     box-shadow: var(--shell-navbar-shadow) !important;
+    position: relative;
+    z-index: 1200;
 }
 
 .app-shell-navbar .container {
@@ -101,4 +103,5 @@ html[data-theme="dark"] {
 .navbar-nav .dropdown-menu {
     position: absolute;
     margin-top: 0.5rem;
+    z-index: 1210;
 }

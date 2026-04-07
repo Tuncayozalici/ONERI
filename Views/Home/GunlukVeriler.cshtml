@@ -259,37 +259,12 @@
                 <div class="gunluk-panel">
                     <div class="gunluk-panel__header">
                         <div>
-                            <h2>Donem Ozeti</h2>
-                            <p>Secilen aralik icin hizli okuma karti.</p>
+                            <h2>Bolum Bazli Plana Uyum</h2>
+                            <p>Secilen donemde plana uyum oraninin bolumlere gore dagilimi.</p>
                         </div>
                     </div>
-                    <div class="gunluk-panel__body">
-                        <div class="gunluk-summary-list">
-                            <div class="gunluk-summary-item">
-                                <span>Secili aralik</span>
-                                <strong>@ViewBag.OzetRange</strong>
-                            </div>
-                            <div class="gunluk-summary-item">
-                                <span>En cok hata nedeni</span>
-                                <strong>@Model.EnCokHataNedeni</strong>
-                            </div>
-                            <div class="gunluk-summary-item">
-                                <span>En cok hata bolumu</span>
-                                <strong>@Model.EnCokHataBolum</strong>
-                            </div>
-                            <div class="gunluk-summary-item">
-                                <span>En cok hata operatoru</span>
-                                <strong>@Model.EnCokHataOperator</strong>
-                            </div>
-                            <div class="gunluk-summary-item">
-                                <span>Ortalama performans</span>
-                                <strong>@Model.OrtalamaPerformans.ToString("N2")%</strong>
-                            </div>
-                            <div class="gunluk-summary-item">
-                                <span>Ortalama fiili calisma</span>
-                                <strong>@Model.OrtalamaFiiliCalisma.ToString("N2")%</strong>
-                            </div>
-                        </div>
+                    <div class="gunluk-panel__body gunluk-panel__body--chart">
+                        <canvas id="planUyumBolumGrafigi"></canvas>
                     </div>
                 </div>
             </section>
@@ -307,7 +282,7 @@
                     <div id="sectionNavGrid" class="gunluk-nav-grid">
                         <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="gunluk-nav-card">
                             <div class="gunluk-nav-card__icon"><i class="bi bi-speedometer2"></i></div>
-                            <h3>Profil Lazer</h3>
+                            <h3>Metal</h3>
                             <p>Gunluk uretim, verimlilik ve trend analizleri.</p>
                         </a>
                         <a href="@Url.Action("BoyahaneDashboard", "Home")" class="gunluk-nav-card">
@@ -396,7 +371,7 @@
                                         var oranStyle = $"width:{oran.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
                                         <div class="gunluk-duraklama-item">
                                             <div class="gunluk-duraklama-item__row">
-                                                <span>@makine.Makine</span>
+                                                <span>@(string.Equals(makine.Makine, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase) ? "Makineden bagimsiz hatalar" : makine.Makine)</span>
                                                 <strong>@formatCount(makine.Deger)</strong>
                                             </div>
                                             <div class="gunluk-duraklama-item__bar gunluk-duraklama-item__bar--uretim">
@@ -449,11 +424,13 @@
                     <div class="gunluk-duraklama-grid">
                         @foreach (var bolum in Model.HataBolumDetaylari)
                         {
+                            var sadeceMakinedenBagimsizHata = bolum.MakineDetaylari.Count == 1
+                                && string.Equals(bolum.MakineDetaylari[0].Makine, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase);
                             <section class="gunluk-duraklama-card">
                                 <div class="gunluk-duraklama-card__header">
                                     <div>
                                         <h6>@bolum.Bolum</h6>
-                                        <p class="mb-0">@bolum.MakineDetaylari.Count makine kaydi</p>
+                                        <p class="mb-0">@(sadeceMakinedenBagimsizHata ? "Makineden bagimsiz hatalar" : $"{bolum.MakineDetaylari.Count} makine kaydi")</p>
                                     </div>
                                     <strong>@formatCount(bolum.ToplamDeger)</strong>
                                 </div>
@@ -467,7 +444,7 @@
                                         var oranStyle = $"width:{oran.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
                                         <div class="gunluk-duraklama-item">
                                             <div class="gunluk-duraklama-item__row">
-                                                <span>@makine.Makine</span>
+                                                <span>@(string.Equals(makine.Makine, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase) ? "Makineden bagimsiz hatalar" : makine.Makine)</span>
                                                 <strong>@formatCount(makine.Deger)</strong>
                                             </div>
                                             <div class="gunluk-duraklama-item__bar gunluk-duraklama-item__bar--hata">

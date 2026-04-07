@@ -6,6 +6,9 @@ namespace ONERI.Models
     public class VeriYukleViewModel
     {
         public List<IFormFile> Dosyalar { get; set; } = new List<IFormFile>();
+        public IFormFile? YemekListesiPdf { get; set; }
+        public string? YemekListesiPdfUrl { get; set; }
+        public bool HasYemekListesiPdf { get; set; }
 
         public List<VeriYukleResult> Results { get; set; } = new List<VeriYukleResult>();
     }

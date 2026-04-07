@@ -44,12 +44,37 @@ public class DashboardQueryService : IDashboardQueryService
 
     private static DateTime? ResolveLastAvailableDateInRange(IEnumerable<DateTime> dates, DateTime startDate, DateTime endDate)
     {
-        return dates
+        var availableDatesInRange = dates
             .Where(x => x != DateTime.MinValue)
             .Select(x => x.Date)
             .Where(x => x >= startDate.Date && x <= endDate.Date)
-            .DefaultIfEmpty()
-            .Max();
+            .Distinct()
+            .ToList();
+
+        return availableDatesInRange.Count == 0
+            ? null
+            : availableDatesInRange.Max();
+    }
+
+    private static void AddFilterAvailabilityMetadata(Dictionary<string, object?> bag, IEnumerable<DateTime> dates)
+    {
+        var availableDates = dates
+            .Where(x => x != DateTime.MinValue)
+            .Select(x => x.Date)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        if (availableDates.Count == 0)
+        {
+            bag["AvailableFilterDates"] = string.Empty;
+            bag["UnavailableFilterMessage"] = "Bu tarihte veri bulunmuyor. Lütfen daha eski bir tarih seçin.";
+            return;
+        }
+
+        var latestAvailableDate = availableDates[^1];
+        bag["AvailableFilterDates"] = string.Join(",", availableDates.Select(x => x.ToString("yyyy-MM-dd")));
+        bag["UnavailableFilterMessage"] = $"Bu tarihte veri bulunmuyor. Lütfen {latestAvailableDate:dd.MM.yyyy} veya daha eski bir tarih seçin.";
     }
 
     public async Task<DashboardPageResult<GenelFabrikaOzetViewModel>> GetGunlukVerilerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
@@ -177,6 +202,15 @@ public class DashboardQueryService : IDashboardQueryService
                 Personel: Math.Max(0, x.PersonelSayisi)))
             .ToList();
 
+        var gunlukCalismaRows = snapshot.GunlukCalismaRows
+            .Where(x => x.Tarih != DateTime.MinValue && !string.IsNullOrWhiteSpace(x.BolumAdi))
+            .Select(x => (
+                Tarih: x.Tarih.Date,
+                Bolum: x.BolumAdi!.Trim(),
+                PlanUyumOrani: DashboardParsingHelper.NormalizePercentValue(x.PlanUyumOrani)))
+            .Where(x => x.PlanUyumOrani > 0)
+            .ToList();
+
         var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
 
         hataliRows.AddRange(snapshot.HataliParcaRows
@@ -205,8 +239,10 @@ public class DashboardQueryService : IDashboardQueryService
             .Concat(tezgahRows.Select(x => x.Tarih.Date))
             .Concat(ebatlamaRows.Select(x => x.Tarih.Date))
             .Concat(personelRows.Select(x => x.Tarih.Date))
+            .Concat(gunlukCalismaRows.Select(x => x.Tarih))
             .Concat(hataliRows.Select(x => x.Tarih.Date))
             .ToList();
+        AddFilterAvailabilityMetadata(bag, allDates);
 
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
@@ -1196,6 +1232,21 @@ public class DashboardQueryService : IDashboardQueryService
         model.PersonelBolumLabels = personelBolumList.Select(x => x.Key).ToList();
         model.PersonelBolumData = personelBolumList.Select(x => x.Value).ToList();
 
+        var planUyumBolumList = gunlukCalismaRows
+            .Where(x => x.Tarih >= ozetStart && x.Tarih <= ozetEnd)
+            .GroupBy(x => x.Bolum)
+            .Select(g => new
+            {
+                Key = g.Key,
+                Value = g.Average(x => x.PlanUyumOrani)
+            })
+            .Where(x => x.Value > 0)
+            .OrderByDescending(x => x.Value)
+            .ToList();
+
+        model.PlanUyumBolumLabels = planUyumBolumList.Select(x => x.Key).ToList();
+        model.PlanUyumBolumData = planUyumBolumList.Select(x => Math.Round(x.Value, 2)).ToList();
+
         var hataNedenList = filteredHatali
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
@@ -1250,6 +1301,7 @@ public class DashboardQueryService : IDashboardQueryService
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
         var allRelevantDates = excelData.Select(x => x.Tarih).ToList();
+        AddFilterAvailabilityMetadata(bag, allRelevantDates);
         DateTime? effectiveRangeEnd = null;
 
         if (hasDateRange)
@@ -1561,6 +1613,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(x => x.Tarih)
             .Concat(legacyHataListesi.Select(x => x.Tarih))
             .ToList();
+        AddFilterAvailabilityMetadata(bag, tarihKaynaklari);
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynaklari, DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
 
@@ -1874,6 +1927,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var tarihKaynak = string.IsNullOrWhiteSpace(seciliMakine) ? excelData : seciliMakineSatirlari;
+        AddFilterAvailabilityMetadata(bag, tarihKaynak.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         viewModel.SeciliMakine = seciliMakine;
@@ -2079,6 +2133,7 @@ public class DashboardQueryService : IDashboardQueryService
             .Concat(skipperRows.Select(x => x.Tarih.Date))
             .Concat(roverRows.Select(x => x.Tarih.Date))
             .ToList();
+        AddFilterAvailabilityMetadata(bag, allDates);
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(allDates, DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var maxDate = allDates.Any() ? allDates.Max() : DateTime.Today;
@@ -2289,6 +2344,7 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<MasterwoodDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
+        AddFilterAvailabilityMetadata(bag, excelData.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
@@ -2429,6 +2485,7 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<SkipperDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
+        AddFilterAvailabilityMetadata(bag, excelData.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
@@ -2556,6 +2613,7 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<RoverBDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
+        AddFilterAvailabilityMetadata(bag, excelData.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
@@ -2687,6 +2745,7 @@ public class DashboardQueryService : IDashboardQueryService
             return new DashboardPageResult<TezgahDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
+        AddFilterAvailabilityMetadata(bag, excelData.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
@@ -2894,6 +2953,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         var tarihKaynak = string.IsNullOrWhiteSpace(seciliMakine) ? excelData : seciliMakineSatirlari;
+        AddFilterAvailabilityMetadata(bag, tarihKaynak.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         viewModel.SeciliMakine = seciliMakine;
@@ -3200,6 +3260,7 @@ public class DashboardQueryService : IDashboardQueryService
         var analizVerisi = excelData.Where(x => !IsMakineHatasi(x.HataNedeni)).ToList();
         var tarihKaynak = analizVerisi.Any() ? analizVerisi : excelData;
 
+        AddFilterAvailabilityMetadata(bag, tarihKaynak.Select(x => x.Tarih));
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(tarihKaynak.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);

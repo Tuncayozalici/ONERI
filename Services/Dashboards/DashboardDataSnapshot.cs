@@ -19,6 +19,7 @@ public class DashboardDataSnapshot
     public List<TezgahSatirModel> TezgahRows { get; set; } = new();
     public List<EbatlamaSatirModel> EbatlamaRows { get; set; } = new();
     public List<PersonelYoklamaSatirModel> PersonelRows { get; set; } = new();
+    public List<GunlukCalismaSatirModel> GunlukCalismaRows { get; set; } = new();
 
     public List<HataliParcaSatirModel> HataliParcaRows { get; set; } = new();
 }

@@ -1,5 +1,7 @@
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment HostingEnvironment
 @{
     ViewData["Title"] = "Portal Ana Sayfa";
+    var yemekListesiPdfExists = System.IO.File.Exists(System.IO.Path.Combine(HostingEnvironment.WebRootPath, "documents", "yemek-listesi.pdf"));
 
     var moduleCards = new[]
     {
@@ -34,9 +36,9 @@
 
     var usefulLinks = new[]
     {
-        new { Icon = "bi-globe2", Label = "Şirket Web Sitesi", Href = "https://marwood.com.tr" },
-        new { Icon = "bi-linkedin", Label = "LinkedIn Sayfası", Href = "https://tr.linkedin.com/company/marwood-office-furniture" },
-        new { Icon = "bi-file-earmark-pdf", Label = "Yemek Listesi (PDF)", Href = "#" }
+        new { Icon = "bi-globe2", Label = "Şirket Web Sitesi", Href = "https://marwood.com.tr", OpenInNewTab = true, IsAvailable = true },
+        new { Icon = "bi-linkedin", Label = "LinkedIn Sayfası", Href = "https://tr.linkedin.com/company/marwood-office-furniture", OpenInNewTab = true, IsAvailable = true },
+        new { Icon = "bi-file-earmark-pdf", Label = "Yemek Listesi (PDF)", Href = yemekListesiPdfExists ? (Url.Content("~/documents/yemek-listesi.pdf") ?? "#") : "#", OpenInNewTab = yemekListesiPdfExists, IsAvailable = yemekListesiPdfExists }
     };
 }
 
@@ -118,7 +120,13 @@
                     <div class="portal-home__link-list">
                         @foreach (var link in usefulLinks)
                         {
-                            <a href="@link.Href" class="portal-home__link-item">
+                            var isClickable = link.IsAvailable && !string.IsNullOrWhiteSpace(link.Href) && link.Href != "#";
+                            <a href="@link.Href"
+                               class="portal-home__link-item"
+                               target="@(link.OpenInNewTab ? "_blank" : null)"
+                               rel="@(link.OpenInNewTab ? "noopener noreferrer" : null)"
+                               aria-disabled="@(!isClickable)"
+                               tabindex="@(isClickable ? "0" : "-1")">
                                 <span class="portal-home__link-icon">
                                     <i class="bi @link.Icon"></i>
                                 </span>

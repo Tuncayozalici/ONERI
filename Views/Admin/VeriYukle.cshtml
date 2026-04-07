@@ -31,6 +31,20 @@
                 </div>
 
                 <div class="col-12">
+                    <label class="form-label fw-semibold">Yemek Listesi PDF</label>
+                    <input asp-for="YemekListesiPdf" class="form-control" type="file" accept="application/pdf,.pdf" />
+                    <small class="text-muted">Yüklenen dosya `Yemek Listesi (PDF)` bağlantısından yeni sekmede açılır.</small>
+                    @if (Model.HasYemekListesiPdf && !string.IsNullOrWhiteSpace(Model.YemekListesiPdfUrl))
+                    {
+                        <div class="mt-2">
+                            <a href="@Model.YemekListesiPdfUrl" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Güncel PDF'yi Aç
+                            </a>
+                        </div>
+                    }
+                </div>
+
+                <div class="col-12">
                     <div class="alert alert-info mb-0">
                         <strong>Beklenen dosya adları:</strong>
                         <ul class="mb-0">
@@ -47,6 +61,7 @@
                             <li>HATALI PARÇA VERİ GİRİŞİ.xlsm</li>
                             <li>Günlük Personel Sayısı.xlsm (veya Günlük Personel Sayısı (1).xlsm)</li>
                             <li>Günlük Çalışma Verileri 1.xlsx</li>
+                            <li>Yemek listesi için herhangi bir `.pdf` dosyası</li>
                         </ul>
                     </div>
                 </div>

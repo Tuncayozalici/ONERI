@@ -297,7 +297,7 @@ namespace ONERI.Controllers
         [Authorize(Policy = Permissions.VeriYukle.Create)]
         public IActionResult VeriYukle()
         {
-            return View(new VeriYukleViewModel());
+            return View(CreateVeriYukleViewModel());
         }
 
         [HttpPost]
@@ -309,7 +309,9 @@ namespace ONERI.Controllers
 
             string rootPath = _hostingEnvironment.WebRootPath;
             string excelPath = Path.Combine(rootPath, "EXCELS");
+            string documentsPath = Path.Combine(rootPath, "documents");
             Directory.CreateDirectory(excelPath);
+            Directory.CreateDirectory(documentsPath);
 
             var fileMap = new Dictionary<string, (string TargetPath, string SheetName)>(StringComparer.OrdinalIgnoreCase)
             {
@@ -379,6 +381,12 @@ namespace ONERI.Controllers
                 HandleUpload(file, info.TargetPath, info.SheetName, results);
             }
 
+            HandlePdfUpload(
+                model.YemekListesiPdf,
+                Path.Combine(documentsPath, "yemek-listesi.pdf"),
+                "Yemek Listesi (PDF)",
+                results);
+
             try
             {
                 await _dashboardIngestionService.RefreshAsync();
@@ -388,8 +396,10 @@ namespace ONERI.Controllers
                 _logger.LogWarning(ex, "Upload sonrası dashboard ingest yenilemesi başarısız oldu.");
             }
 
-            model.Results = results;
-            return View(model);
+            var responseModel = CreateVeriYukleViewModel();
+            responseModel.Results = results;
+            responseModel.Dosyalar = model.Dosyalar ?? new List<IFormFile>();
+            return View(responseModel);
         }
 
         private void HandleUpload(IFormFile? file, string targetPath, string sheetName, List<VeriYukleResult> results)
@@ -449,6 +459,68 @@ namespace ONERI.Controllers
                     Mesaj = "Dosya yüklenemedi."
                 });
             }
+        }
+
+        private void HandlePdfUpload(IFormFile? file, string targetPath, string displayName, List<VeriYukleResult> results)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return;
+            }
+
+            var extension = Path.GetExtension(file.FileName);
+            if (!string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(new VeriYukleResult
+                {
+                    DosyaAdi = file.FileName,
+                    SayfaAdi = "-",
+                    SatirSayisi = null,
+                    Mesaj = "Sadece PDF dosyası yüklenebilir."
+                });
+                return;
+            }
+
+            try
+            {
+                using (var stream = new FileStream(targetPath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+
+                results.Add(new VeriYukleResult
+                {
+                    DosyaAdi = displayName,
+                    SayfaAdi = "-",
+                    SatirSayisi = null,
+                    Mesaj = "PDF yüklendi"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Yemek listesi PDF yükleme hatası.");
+                results.Add(new VeriYukleResult
+                {
+                    DosyaAdi = displayName,
+                    SayfaAdi = "-",
+                    SatirSayisi = null,
+                    Mesaj = "PDF yüklenemedi."
+                });
+            }
+        }
+
+        private VeriYukleViewModel CreateVeriYukleViewModel()
+        {
+            var yemekListesiPath = Path.Combine(_hostingEnvironment.WebRootPath, "documents", "yemek-listesi.pdf");
+            var hasYemekListesiPdf = System.IO.File.Exists(yemekListesiPath);
+
+            return new VeriYukleViewModel
+            {
+                HasYemekListesiPdf = hasYemekListesiPdf,
+                YemekListesiPdfUrl = hasYemekListesiPdf
+                    ? Url.Content("~/documents/yemek-listesi.pdf")
+                    : null
+            };
         }
 
         private string? ResolveGunlukCalismaDosyaYolu()

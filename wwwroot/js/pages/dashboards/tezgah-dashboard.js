@@ -252,7 +252,6 @@ document.addEventListener('DOMContentLoaded', function () {
         'uretimSureGrafigi',
         'oeeKayipGrafigi',
         'urunGrafigi',
-        'verimlilikGrafigi',
         'kayipNedenGrafigi',
         'calismaKosuluGrafigi'
     ];
@@ -280,12 +279,18 @@ document.addEventListener('DOMContentLoaded', function () {
             textColor: isDarkTheme ? '#9aa8bd' : '#475569',
             gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.32)',
             productionBar: isDarkTheme ? 'rgba(34, 197, 94, 0.72)' : 'rgba(22, 163, 74, 0.66)',
-            durationLine: isDarkTheme ? '#2dd4bf' : '#0f766e',
-            durationFill: isDarkTheme ? 'rgba(45, 212, 191, 0.16)' : 'rgba(15, 118, 110, 0.12)',
+            kayipLine: isDarkTheme ? '#fb7185' : '#e11d48',
+            kayipFill: isDarkTheme ? 'rgba(251, 113, 133, 0.16)' : 'rgba(225, 29, 72, 0.12)',
             oeeLine: isDarkTheme ? '#fbbf24' : '#d97706',
             oeeFill: isDarkTheme ? 'rgba(251, 191, 36, 0.14)' : 'rgba(217, 119, 6, 0.12)',
+            performansLine: isDarkTheme ? '#818cf8' : '#4f46e5',
+            performansFill: isDarkTheme ? 'rgba(129, 140, 248, 0.14)' : 'rgba(79, 70, 229, 0.12)',
+            kullanLine: isDarkTheme ? '#2dd4bf' : '#0f766e',
+            kullanFill: isDarkTheme ? 'rgba(45, 212, 191, 0.14)' : 'rgba(15, 118, 110, 0.12)',
+            kaliteLine: isDarkTheme ? '#f97316' : '#ea580c',
+            kaliteFill: isDarkTheme ? 'rgba(249, 115, 22, 0.14)' : 'rgba(234, 88, 12, 0.12)',
             kayipBar: isDarkTheme ? 'rgba(251, 113, 133, 0.68)' : 'rgba(225, 29, 72, 0.62)',
-            verimBar: isDarkTheme ? 'rgba(129, 140, 248, 0.78)' : 'rgba(79, 70, 229, 0.72)',
+            secondBar: isDarkTheme ? 'rgba(129, 140, 248, 0.78)' : 'rgba(79, 70, 229, 0.72)',
             kosulBar: isDarkTheme ? 'rgba(148, 163, 184, 0.7)' : 'rgba(71, 85, 105, 0.65)',
             kosulLine: isDarkTheme ? '#fbbf24' : '#ca8a04',
             kosulFill: isDarkTheme ? 'rgba(251, 191, 36, 0.14)' : 'rgba(202, 138, 4, 0.12)'
@@ -368,10 +373,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     {
                         type: 'line',
-                        label: 'Süre (dk)',
-                        data: data.GunlukSureTrendData,
-                        borderColor: palette.durationLine,
-                        backgroundColor: palette.durationFill,
+                        label: 'Kayıp süre (dk)',
+                        data: data.GunlukKayipSureTrendData,
+                        borderColor: palette.kayipLine,
+                        backgroundColor: palette.kayipFill,
                         tension: 0.28,
                         fill: true,
                         yAxisID: 'y1'
@@ -411,10 +416,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.GunlukParcaTrendData) || hasAnyData(data.GunlukSureTrendData), 'Seçilen dönem için günlük üretim veya süre verisi bulunamadı.');
+        }, hasAnyData(data.GunlukParcaTrendData) || hasAnyData(data.GunlukKayipSureTrendData), 'Seçilen dönem için günlük parça veya kayıp süre verisi bulunamadı.');
 
         createChart('oeeKayipGrafigi', {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: data.TrendLabels,
                 datasets: [
@@ -426,15 +431,41 @@ document.addEventListener('DOMContentLoaded', function () {
                         backgroundColor: palette.oeeFill,
                         tension: 0.28,
                         fill: true,
-                        yAxisID: 'y'
+                        yAxisID: 'y',
+                        pointRadius: 3
                     },
                     {
-                        type: 'bar',
-                        label: 'Kayıp süre (dk)',
-                        data: data.KayipSureTrendData,
-                        backgroundColor: palette.kayipBar,
-                        borderRadius: 10,
-                        yAxisID: 'y1'
+                        type: 'line',
+                        label: 'Performans (%)',
+                        data: data.PerformansTrendData,
+                        borderColor: palette.performansLine,
+                        backgroundColor: palette.performansFill,
+                        tension: 0.28,
+                        fill: false,
+                        yAxisID: 'y',
+                        pointRadius: 3
+                    },
+                    {
+                        type: 'line',
+                        label: 'Kullanılabilirlik (%)',
+                        data: data.KullanilabilirlikTrendData,
+                        borderColor: palette.kullanLine,
+                        backgroundColor: palette.kullanFill,
+                        tension: 0.28,
+                        fill: false,
+                        yAxisID: 'y',
+                        pointRadius: 3
+                    },
+                    {
+                        type: 'line',
+                        label: 'Kalite (%)',
+                        data: data.KaliteTrendData,
+                        borderColor: palette.kaliteLine,
+                        backgroundColor: palette.kaliteFill,
+                        tension: 0.28,
+                        fill: false,
+                        yAxisID: 'y',
+                        pointRadius: 3
                     }
                 ]
             },
@@ -455,21 +486,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         suggestedMax: 100,
                         grid: {
                             color: palette.gridColor
-                        }
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false
                         },
-                        ticks: {
-                            precision: 0
-                        }
+                        max: 100
                     }
                 }
             }
-        }, hasAnyData(data.OeeTrendData) || hasAnyData(data.KayipSureTrendData), 'OEE veya kayıp süre trendi oluşturmak için yeterli veri bulunamadı.');
+        }, hasAnyData(data.OeeTrendData) || hasAnyData(data.PerformansTrendData) || hasAnyData(data.KullanilabilirlikTrendData) || hasAnyData(data.KaliteTrendData), 'OEE trendi oluşturmak için yeterli veri bulunamadı.');
 
         createChart('urunGrafigi', {
             type: 'bar',
@@ -479,16 +501,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'Toplam parça',
                         data: data.UrunParcaData,
-                        backgroundColor: [
-                            '#166534',
-                            '#0f766e',
-                            '#0284c7',
-                            '#7c3aed',
-                            '#d97706',
-                            '#dc2626',
-                            '#475569',
-                            '#ca8a04'
-                        ],
+                        backgroundColor: palette.productionBar,
+                        borderRadius: 10
+                    },
+                    {
+                        label: 'Kayıp süre (dk)',
+                        data: data.UrunKayipSureData,
+                        backgroundColor: palette.kayipBar,
                         borderRadius: 10
                     }
                 ]
@@ -518,44 +537,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.UrunParcaData), 'Ürün bazlı üretim verisi bulunamadı.');
-
-        createChart('verimlilikGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.UrunLabels,
-                datasets: [
-                    {
-                        label: 'Parça / kişi-saat',
-                        data: data.UrunSaatlikVerimData,
-                        backgroundColor: palette.verimBar,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.UrunSaatlikVerimData), 'Saatlik verim grafiği için net süre verisi bulunamadı.');
+        }, hasAnyData(data.UrunParcaData) || hasAnyData(data.UrunKayipSureData), 'Ürün bazlı üretim verisi bulunamadı.');
 
         createChart('kayipNedenGrafigi', {
             type: 'bar',
@@ -604,20 +586,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [
                     {
                         type: 'bar',
-                        label: 'Süre (dk)',
-                        data: data.CalismaKosuluSureData,
+                        label: 'Kayıp süre (dk)',
+                        data: data.CalismaKosuluKayipSureData,
                         backgroundColor: palette.kosulBar,
                         borderRadius: 10,
+                        maxBarThickness: 56,
                         yAxisID: 'y'
                     },
                     {
-                        type: 'line',
+                        type: 'bar',
                         label: 'Parça adedi',
                         data: data.CalismaKosuluParcaData,
-                        borderColor: palette.kosulLine,
-                        backgroundColor: palette.kosulFill,
-                        tension: 0.28,
-                        fill: true,
+                        backgroundColor: palette.secondBar,
+                        borderRadius: 10,
+                        maxBarThickness: 56,
                         yAxisID: 'y1'
                     }
                 ]
@@ -649,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.CalismaKosuluSureData) || hasAnyData(data.CalismaKosuluParcaData), 'Çalışma koşulu kırılımı için veri bulunamadı.');
+        }, hasAnyData(data.CalismaKosuluKayipSureData) || hasAnyData(data.CalismaKosuluParcaData), 'Çalışma koşulu kırılımı için veri bulunamadı.');
     }
 
     renderCharts();

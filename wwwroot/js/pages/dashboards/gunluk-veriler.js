@@ -704,17 +704,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, hasAnyData(hataNedenValues), 'Hata nedeni dagilimi icin veri bulunamadi.');
 
-        const duraklamaValues = Array.isArray(data.DuraklamaTrendData) ? data.DuraklamaTrendData : [];
+        const modulTrendValues = Array.isArray(data.ModulTrendData) ? data.ModulTrendData : [];
         createChart('duraklamaTrendGrafigi', {
             type: 'line',
             data: {
                 labels: trendLabels,
                 datasets: [
                     {
-                        label: 'Duraklama (dk)',
-                        data: duraklamaValues,
-                        borderColor: palette.trendPurple,
-                        backgroundColor: palette.trendPurpleFill,
+                        label: 'Toplam Modul',
+                        data: modulTrendValues,
+                        borderColor: palette.personnelBarBorder,
+                        backgroundColor: palette.personnelBar,
                         tension: 0.28,
                         fill: true
                     }
@@ -740,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, trendHasData && hasAnyData(duraklamaValues), 'Duraklama trend verisi bulunamadi.');
+        }, trendHasData && hasAnyData(modulTrendValues), 'Modul trend verisi bulunamadi.');
 
         const hataTrendValues = Array.isArray(data.HataTrendData) ? data.HataTrendData : [];
         createChart('genelHataTrend', {

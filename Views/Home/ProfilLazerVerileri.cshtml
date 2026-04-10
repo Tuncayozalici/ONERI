@@ -6,6 +6,7 @@
     var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
     var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydi yok";
     var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydi yok";
+    var baskinHataNedeni = Model.HataNedenleri.FirstOrDefault() ?? "Hata nedeni kaydi yok";
 }
 
 @section Styles {
@@ -54,6 +55,10 @@ else
                         <div class="profile-fact profile-fact--wide">
                             <span>Baskin duraklama</span>
                             <strong>@baskinDuraklama</strong>
+                        </div>
+                        <div class="profile-fact profile-fact--wide">
+                            <span>Baskin hata nedeni</span>
+                            <strong>@baskinHataNedeni</strong>
                         </div>
                     </div>
                 </div>
@@ -165,6 +170,20 @@ else
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart-pie">
                             <canvas id="duraklamaNedenGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Hata Nedenleri Dagilimi</h2>
+                                <p>Hatali urun kayitlarinin hangi nedenlerde toplandigini adet bazli izleyin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="hataNedenGrafigi"></canvas>
                         </div>
                     </div>
                 </div>

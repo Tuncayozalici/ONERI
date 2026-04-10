@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'pastaGrafigi',
         'cizgiGrafigi',
         'makineUretimGrafigi',
+        'hataNedenGrafigi',
         'urunSureGrafigi',
         'duraklamaNedenGrafigi'
     ];
@@ -59,6 +60,8 @@ document.addEventListener('DOMContentLoaded', function () {
             productionFill: isDarkTheme ? 'rgba(103, 232, 249, 0.18)' : 'rgba(8, 145, 178, 0.12)',
             machineBar: isDarkTheme ? 'rgba(34, 197, 94, 0.8)' : 'rgba(22, 163, 74, 0.72)',
             machineBarBorder: isDarkTheme ? 'rgba(134, 239, 172, 1)' : 'rgba(21, 128, 61, 1)',
+            errorBar: isDarkTheme ? 'rgba(251, 113, 133, 0.82)' : 'rgba(225, 29, 72, 0.72)',
+            errorBarBorder: isDarkTheme ? 'rgba(253, 164, 175, 1)' : 'rgba(190, 24, 93, 1)',
             durationBar: isDarkTheme ? 'rgba(196, 181, 253, 0.82)' : 'rgba(124, 58, 237, 0.72)',
             durationBarBorder: isDarkTheme ? 'rgba(221, 214, 254, 1)' : 'rgba(109, 40, 217, 1)',
             donutColors: [
@@ -327,6 +330,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         }, hasAnyData(machineValues), 'Makine bazli uretim verisi bulunamadi.');
+
+        createChart('hataNedenGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.HataNedenleri || [],
+                datasets: [
+                    {
+                        label: 'Hata adedi',
+                        data: data.HataNedenAdetleri || [],
+                        backgroundColor: palette.errorBar,
+                        borderColor: palette.errorBarBorder,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        maxBarThickness: 42
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        },
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.HataNedenAdetleri), 'Secili donemde hata nedeni verisi bulunamadi.');
 
         createChart('urunSureGrafigi', {
             type: 'bar',

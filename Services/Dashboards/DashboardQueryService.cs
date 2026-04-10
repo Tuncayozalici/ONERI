@@ -157,7 +157,11 @@ public class DashboardQueryService : IDashboardQueryService
 
         var profilRows = snapshot.ProfilRows
             .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, Uretim: (double)x.UretimAdedi))
+            .Select(x => (
+                x.Tarih,
+                Makine: x.CalisilanMakine,
+                Uretim: (double)x.UretimAdedi,
+                Duraklama: (double)(x.DuraklamaSuresi1 + x.DuraklamaSuresi2 + x.DuraklamaSuresi3)))
             .ToList();
 
         var boyaRows = snapshot.BoyaUretimRows
@@ -279,8 +283,8 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(x => (
                 Tarih: x.Tarih.Date,
                 Bolum: x.BolumAdi!.Trim(),
-                PlanUyumOrani: DashboardParsingHelper.NormalizePercentValue(x.PlanUyumOrani)))
-            .Where(x => x.PlanUyumOrani > 0)
+                PlanUyumOrani: DashboardParsingHelper.NormalizePercentValue(x.PlanUyumOrani),
+                ToplamModulSayisi: Math.Max(0, x.ToplamModulSayisi)))
             .ToList();
 
         var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
@@ -406,6 +410,9 @@ public class DashboardQueryService : IDashboardQueryService
             .ToList();
         model.CalisilanIsGunu = CountDistinctWorkingDays(allDates.Where(x => x.Date >= ozetStart && x.Date <= ozetEnd));
         model.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, ozetStart, ozetEnd);
+        model.ToplamModulSayisi = gunlukCalismaRows
+            .Where(x => x.Tarih >= ozetStart && x.Tarih <= ozetEnd)
+            .Sum(x => x.ToplamModulSayisi);
 
         var trendTarihleri = Enumerable.Range(0, (trendEnd - trendStart).Days + 1)
             .Select(offset => trendStart.AddDays(offset))
@@ -414,6 +421,7 @@ public class DashboardQueryService : IDashboardQueryService
         var uretimGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
         var hataGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
         var duraklamaGunluk = ozetTarihleri.ToDictionary(t => t, _ => 0d);
+        var modulTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var uretimTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var hataTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
         var duraklamaTrendGunluk = trendTarihleri.ToDictionary(t => t, _ => 0d);
@@ -441,6 +449,11 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 dict[key] = value;
             }
+        }
+
+        foreach (var row in gunlukCalismaRows.Where(x => x.Tarih >= trendStart && x.Tarih <= trendEnd && x.ToplamModulSayisi > 0))
+        {
+            AddDaily(modulTrendGunluk, row.Tarih, row.ToplamModulSayisi);
         }
 
         static void AddDuraklamaDetay(Dictionary<string, Dictionary<string, double>> dict, string bolum, string makine, double dakika)
@@ -680,11 +693,18 @@ public class DashboardQueryService : IDashboardQueryService
         foreach (var row in profilRows)
         {
             AddDaily(uretimTrendGunluk, row.Tarih, row.Uretim);
+            AddDaily(duraklamaTrendGunluk, row.Tarih, row.Duraklama);
             if (row.Tarih.Date >= ozetStart && row.Tarih.Date <= ozetEnd)
             {
                 AddDaily(uretimGunluk, row.Tarih, row.Uretim);
+                AddDaily(duraklamaGunluk, row.Tarih, row.Duraklama);
                 AddDept(bolumKatki, "Profil Lazer", row.Uretim);
                 AddKpiDetay(uretimDetayMap, "Profil Lazer", "Profil Lazer", row.Uretim);
+                AddDuraklamaDetay(
+                    duraklamaDetayMap,
+                    "Profil Lazer",
+                    string.IsNullOrWhiteSpace(row.Makine) ? "Bilinmeyen Makine" : DashboardParsingHelper.NormalizeLabel(row.Makine),
+                    row.Duraklama);
             }
         }
 
@@ -1098,7 +1118,12 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(x => x.Oee)
             .Where(x => x > 0)
             .ToList();
-        model.OrtalamaOee = oeeValues.Any() ? oeeValues.Average() : 0;
+        model.OrtalamaOee = model.OrtalamaPerformans > 0
+            && model.OrtalamaKullanilabilirlik > 0
+            && model.OrtalamaKalite > 0
+                ? DashboardParsingHelper.NormalizePercentValue(
+                    model.OrtalamaPerformans * model.OrtalamaKullanilabilirlik * model.OrtalamaKalite / 10000d)
+                : (oeeValues.Any() ? oeeValues.Average() : 0);
 
         var machineOeeRows = new List<(string Machine, double Oee)>();
         machineOeeRows.AddRange(boyaRows
@@ -1264,6 +1289,7 @@ public class DashboardQueryService : IDashboardQueryService
         }
 
         model.TrendLabels = trendTarihleri.Select(t => t.ToString("dd.MM")).ToList();
+        model.ModulTrendData = trendTarihleri.Select(t => modulTrendGunluk[t]).ToList();
         model.UretimTrendData = trendTarihleri.Select(t => uretimTrendGunluk[t]).ToList();
         model.HataTrendData = trendTarihleri.Select(t => hataTrendGunluk[t]).ToList();
         model.DuraklamaTrendData = trendTarihleri.Select(t => duraklamaTrendGunluk[t]).ToList();
@@ -1308,6 +1334,7 @@ public class DashboardQueryService : IDashboardQueryService
 
         var planUyumBolumList = gunlukCalismaRows
             .Where(x => x.Tarih >= ozetStart && x.Tarih <= ozetEnd)
+            .Where(x => x.PlanUyumOrani > 0)
             .GroupBy(x => x.Bolum)
             .Select(g => new
             {
@@ -1375,6 +1402,7 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.RaporTarihi = islenecekTarih;
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
+        var isSingleDayRange = hasDateRange && rangeStart!.Value.Date == rangeEnd!.Value.Date;
         var allRelevantDates = excelData.Select(x => x.Tarih).ToList();
         AddFilterAvailabilityMetadata(bag, allRelevantDates);
         DateTime? effectiveRangeEnd = null;
@@ -1563,9 +1591,13 @@ public class DashboardQueryService : IDashboardQueryService
         DateTime trendBitis;
         if (hasDateRange)
         {
-            trendBaslangic = rangeStart!.Value;
             trendBitis = effectiveRangeEnd ?? rangeEnd!.Value;
-            bag["TrendTitle"] = "Seçili Tarih Aralığı Üretim Trendi";
+            trendBaslangic = isSingleDayRange
+                ? trendBitis.AddDays(-5)
+                : rangeStart!.Value;
+            bag["TrendTitle"] = isSingleDayRange
+                ? "Seçili Tarih ve Önceki 5 Gün Üretim Trendi"
+                : "Seçili Tarih Aralığı Üretim Trendi";
         }
         else if (ay.HasValue && yil.HasValue)
         {
@@ -2881,9 +2913,9 @@ public class DashboardQueryService : IDashboardQueryService
         if (hasDateRange)
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= rangeEnd!.Value);
-            bag["TezgahTrendTitle"] = "Üretim ve Süre Trendi (Tarih Aralığı)";
-            bag["TezgahOeeTitle"] = "OEE ve Kayıp Süre Trendi (Tarih Aralığı)";
-            bag["TezgahKosulTitle"] = "Çalışma Koşulu Dağılımı (Tarih Aralığı)";
+            bag["TezgahTrendTitle"] = "Parça ve Kayıp Süre Trendi (Tarih Aralığı)";
+            bag["TezgahOeeTitle"] = "OEE, Performans ve Kalite Trendi (Tarih Aralığı)";
+            bag["TezgahKosulTitle"] = "Çalışma Koşulu Kırılımı (Tarih Aralığı)";
         }
         else if (ay.HasValue)
         {
@@ -2895,34 +2927,70 @@ public class DashboardQueryService : IDashboardQueryService
             }
 
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Month == ay.Value && x.Tarih.Year == yearToUse.Value);
-            bag["TezgahTrendTitle"] = "Üretim ve Süre Trendi (Aylık)";
-            bag["TezgahOeeTitle"] = "OEE ve Kayıp Süre Trendi (Aylık)";
-            bag["TezgahKosulTitle"] = "Çalışma Koşulu Dağılımı (Aylık)";
+            bag["TezgahTrendTitle"] = "Parça ve Kayıp Süre Trendi (Aylık)";
+            bag["TezgahOeeTitle"] = "OEE, Performans ve Kalite Trendi (Aylık)";
+            bag["TezgahKosulTitle"] = "Çalışma Koşulu Kırılımı (Aylık)";
         }
         else
         {
             filtreliVeri = filtreliVeri.Where(x => x.Tarih.Date == islenecekTarih.Date);
-            bag["TezgahTrendTitle"] = "Üretim ve Süre Trendi (Son 7 Gün)";
-            bag["TezgahOeeTitle"] = "OEE ve Kayıp Süre Trendi (Son 7 Gün)";
-            bag["TezgahKosulTitle"] = $"Çalışma Koşulu Dağılımı ({islenecekTarih:dd.MM.yyyy})";
+            bag["TezgahTrendTitle"] = "Parça ve Kayıp Süre Trendi (Son 7 Gün)";
+            bag["TezgahOeeTitle"] = "OEE, Performans ve Kalite Trendi (Son 7 Gün)";
+            bag["TezgahKosulTitle"] = $"Çalışma Koşulu Kırılımı ({islenecekTarih:dd.MM.yyyy})";
         }
 
         var seciliVeri = filtreliVeri.ToList();
-        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(seciliVeri.Select(x => x.Tarih));
-        var aktifKisiSayilari = seciliVeri.Select(x => x.KisiSayisi).Where(x => x > 0).ToList();
-        var oeeDegerleri = seciliVeri.Select(x => x.Oee).Where(x => x > 0).ToList();
-        var verimliCalismaDegerleri = seciliVeri.Select(x => x.Kullanilabilirlik).Where(x => x > 0).ToList();
+        static double AveragePositive(IEnumerable<double> values)
+        {
+            var filtered = values.Where(x => x > 0).ToList();
+            return filtered.Any() ? filtered.Average() : 0;
+        }
 
-        viewModel.ToplamParcaAdeti = seciliVeri.Sum(x => x.ParcaAdeti);
-        viewModel.ToplamSureDakika = seciliVeri.Sum(x => x.SureDakika);
-        viewModel.ToplamKayipSureDakika = seciliVeri.Sum(x => x.ToplamKayipSureDakika);
-        viewModel.ToplamNetSureDakika = seciliVeri.Sum(x => x.NetCalismaSureDakika);
-        viewModel.OrtalamaKisiSayisi = aktifKisiSayilari.Any() ? aktifKisiSayilari.Average() : 0;
+        static double MaxPositive(IEnumerable<double> values)
+        {
+            var filtered = values.Where(x => x > 0).ToList();
+            return filtered.Any() ? filtered.Max() : 0;
+        }
+
+        var gunlukOzetler = seciliVeri
+            .GroupBy(x => x.Tarih.Date)
+            .Select(g => new
+            {
+                Tarih = g.Key,
+                ToplamParcaAdeti = g.Sum(x => x.ParcaAdeti),
+                ToplamKayipSureDakika = g.Sum(x => x.KayipSureDakika),
+                ToplamHataliParcaSayisi = g.Sum(x => x.HataliParcaSayisi),
+                ToplamYapilmasiGerekenSure = g.Sum(x => x.YapilmasiGerekenSure > 0 ? x.YapilmasiGerekenSure : x.SureDakika),
+                ToplamAdamSaat = MaxPositive(g.Select(x => x.ToplamAdamSaat)),
+                ToplamKalanAdamSaat = g.Sum(x => x.KalanAdamSaat),
+                GunlukKapasite = MaxPositive(g.Select(x => x.GunlukKapasite)),
+                BugunCalisanToplamKisiSayisi = MaxPositive(g.Select(x => x.BugunCalisanToplamKisiSayisi > 0 ? x.BugunCalisanToplamKisiSayisi : x.KisiSayisi)),
+                Performans = AveragePositive(g.Select(x => x.Performans)),
+                Kullanilabilirlik = AveragePositive(g.Select(x => x.Kullanilabilirlik)),
+                Kalite = AveragePositive(g.Select(x => x.Kalite)),
+                Oee = AveragePositive(g.Select(x => x.Oee))
+            })
+            .OrderBy(x => x.Tarih)
+            .ToList();
+
+        viewModel.CalisilanIsGunu = gunlukOzetler.Count;
+        viewModel.ToplamParcaAdeti = gunlukOzetler.Sum(x => x.ToplamParcaAdeti);
+        viewModel.ToplamSureDakika = gunlukOzetler.Sum(x => x.ToplamYapilmasiGerekenSure);
+        viewModel.ToplamKayipSureDakika = gunlukOzetler.Sum(x => x.ToplamKayipSureDakika);
+        viewModel.ToplamNetSureDakika = Math.Max(0, viewModel.ToplamSureDakika - viewModel.ToplamKayipSureDakika);
+        viewModel.ToplamHataliParcaSayisi = gunlukOzetler.Sum(x => x.ToplamHataliParcaSayisi);
+        viewModel.ToplamAdamSaat = gunlukOzetler.Sum(x => x.ToplamAdamSaat);
+        viewModel.ToplamKalanAdamSaat = gunlukOzetler.Sum(x => x.ToplamKalanAdamSaat);
+        viewModel.OrtalamaGunlukKapasite = AveragePositive(gunlukOzetler.Select(x => x.GunlukKapasite));
+        viewModel.OrtalamaKisiSayisi = AveragePositive(gunlukOzetler.Select(x => x.BugunCalisanToplamKisiSayisi));
         viewModel.OrtalamaCalisanPersonel = RoundPersonnelAverage(viewModel.OrtalamaKisiSayisi);
-        viewModel.OrtalamaVerimliCalismaOrani = verimliCalismaDegerleri.Any() ? verimliCalismaDegerleri.Average() : 0;
-        viewModel.OrtalamaOee = oeeDegerleri.Any() ? oeeDegerleri.Average() : 0;
-        viewModel.OrtalamaSaatlikUretim = viewModel.ToplamNetSureDakika > 0
-            ? viewModel.ToplamParcaAdeti / (viewModel.ToplamNetSureDakika / 60d)
+        viewModel.OrtalamaPerformans = AveragePositive(gunlukOzetler.Select(x => x.Performans));
+        viewModel.OrtalamaKullanilabilirlik = AveragePositive(gunlukOzetler.Select(x => x.Kullanilabilirlik));
+        viewModel.OrtalamaKalite = AveragePositive(gunlukOzetler.Select(x => x.Kalite));
+        viewModel.OrtalamaVerimliCalismaOrani = viewModel.OrtalamaKullanilabilirlik;
+        viewModel.OrtalamaOee = AveragePositive(gunlukOzetler.Select(x => x.Oee));
+        viewModel.OrtalamaSaatlikUretim = viewModel.ToplamSureDakika > 0
+            ? viewModel.ToplamParcaAdeti / (viewModel.ToplamSureDakika / 60d)
             : 0;
         viewModel.AktifUrunSayisi = seciliVeri
             .Where(x => !string.IsNullOrWhiteSpace(x.TezgahUrunleri))
@@ -2957,28 +3025,27 @@ public class DashboardQueryService : IDashboardQueryService
 
         var trendVerisi = excelData.Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date).ToList();
 
-        var parcaGunluk = trendVerisi
+        var trendGunluk = trendVerisi
             .GroupBy(x => x.Tarih.Date)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.ParcaAdeti));
-        var sureGunluk = trendVerisi
-            .GroupBy(x => x.Tarih.Date)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.SureDakika));
-        var kayipGunluk = trendVerisi
-            .GroupBy(x => x.Tarih.Date)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.ToplamKayipSureDakika));
-        var oeeGunluk = trendVerisi
-            .GroupBy(x => x.Tarih.Date)
-            .ToDictionary(g => g.Key, g =>
-            {
-                var values = g.Select(x => x.Oee).Where(x => x > 0).ToList();
-                return values.Any() ? values.Average() : 0;
-            });
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    ToplamParcaAdeti = g.Sum(x => x.ParcaAdeti),
+                    ToplamKayipSureDakika = g.Sum(x => x.KayipSureDakika),
+                    Performans = AveragePositive(g.Select(x => x.Performans)),
+                    Kullanilabilirlik = AveragePositive(g.Select(x => x.Kullanilabilirlik)),
+                    Kalite = AveragePositive(g.Select(x => x.Kalite)),
+                    Oee = AveragePositive(g.Select(x => x.Oee))
+                });
 
         viewModel.TrendLabels = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        viewModel.GunlukParcaTrendData = tumTarihler.Select(t => parcaGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
-        viewModel.GunlukSureTrendData = tumTarihler.Select(t => sureGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
-        viewModel.OeeTrendData = tumTarihler.Select(t => oeeGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
-        viewModel.KayipSureTrendData = tumTarihler.Select(t => kayipGunluk.TryGetValue(t, out var v) ? v : 0).ToList();
+        viewModel.GunlukParcaTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.ToplamParcaAdeti : 0).ToList();
+        viewModel.GunlukKayipSureTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.ToplamKayipSureDakika : 0).ToList();
+        viewModel.OeeTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.Oee : 0).ToList();
+        viewModel.PerformansTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.Performans : 0).ToList();
+        viewModel.KullanilabilirlikTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.Kullanilabilirlik : 0).ToList();
+        viewModel.KaliteTrendData = tumTarihler.Select(t => trendGunluk.TryGetValue(t, out var v) ? v.Kalite : 0).ToList();
 
         var kayipNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in seciliVeri)
@@ -3001,9 +3068,7 @@ public class DashboardQueryService : IDashboardQueryService
             {
                 Urun = g.First(x => !string.IsNullOrWhiteSpace(x.TezgahUrunleri)).TezgahUrunleri!.Trim(),
                 ToplamParca = g.Sum(x => x.ParcaAdeti),
-                ToplamKisiSaat = g.Sum(x => x.KisiSayisi > 0 && x.SureDakika > 0
-                    ? x.KisiSayisi * (x.SureDakika / 60d)
-                    : 0)
+                ToplamKayipSure = g.Sum(x => x.KayipSureDakika)
             })
             .OrderByDescending(x => x.ToplamParca)
             .Take(8)
@@ -3011,9 +3076,7 @@ public class DashboardQueryService : IDashboardQueryService
 
         viewModel.UrunLabels = urunler.Select(x => x.Urun).ToList();
         viewModel.UrunParcaData = urunler.Select(x => x.ToplamParca).ToList();
-        viewModel.UrunSaatlikVerimData = urunler
-            .Select(x => x.ToplamKisiSaat > 0 ? x.ToplamParca / x.ToplamKisiSaat : 0)
-            .ToList();
+        viewModel.UrunKayipSureData = urunler.Select(x => x.ToplamKayipSure).ToList();
         viewModel.OneCikanUrun = urunler.FirstOrDefault()?.Urun ?? "Ürün kaydı yok";
 
         var kosullar = seciliVeri
@@ -3021,14 +3084,14 @@ public class DashboardQueryService : IDashboardQueryService
             .Select(g => new
             {
                 Kosul = g.Select(x => x.CalismaKosulu?.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "Belirtilmedi",
-                ToplamSure = g.Sum(x => x.SureDakika),
+                ToplamKayipSure = g.Sum(x => x.KayipSureDakika),
                 ToplamParca = g.Sum(x => x.ParcaAdeti)
             })
-            .OrderByDescending(x => x.ToplamSure)
+            .OrderByDescending(x => x.ToplamKayipSure)
             .ToList();
 
         viewModel.CalismaKosuluLabels = kosullar.Select(x => x.Kosul).ToList();
-        viewModel.CalismaKosuluSureData = kosullar.Select(x => x.ToplamSure).ToList();
+        viewModel.CalismaKosuluKayipSureData = kosullar.Select(x => x.ToplamKayipSure).ToList();
         viewModel.CalismaKosuluParcaData = kosullar.Select(x => x.ToplamParca).ToList();
 
         return new DashboardPageResult<TezgahDashboardViewModel>

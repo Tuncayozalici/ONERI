@@ -8,6 +8,7 @@ namespace ONERI.Models
         public DateTime RaporTarihi { get; set; }
         public int CalisilanIsGunu { get; set; }
         public int OrtalamaCalisanPersonel { get; set; }
+        public int ToplamModulSayisi { get; set; }
 
         public double ToplamUretim { get; set; }
         public double ToplamHataAdet { get; set; }
@@ -24,6 +25,7 @@ namespace ONERI.Models
         public string EnCokHataOperator { get; set; } = "-";
 
         public List<string> TrendLabels { get; set; } = new List<string>();
+        public List<double> ModulTrendData { get; set; } = new List<double>();
         public List<double> UretimTrendData { get; set; } = new List<double>();
         public List<double> HataTrendData { get; set; } = new List<double>();
         public List<double> DuraklamaTrendData { get; set; } = new List<double>();

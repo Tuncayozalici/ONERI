@@ -18,12 +18,12 @@
             <div class="tezgah-hero__content">
                 <div class="tezgah-hero__eyebrow">
                     <i class="bi bi-grid-1x2-fill"></i>
-                    GİRDİ RAPORU
+                    VERİ KAYIT
                 </div>
                 <h1>Tezgah Bölümü Performans Ekranı</h1>
                 <p>
-                    Ürün, kişi, süre, kayıp süre ve OEE kayıtlarını tek ekranda izleyin.
-                    KPI kartları ve grafikler seçilen döneme göre otomatik yeniden hesaplanır.
+                    <strong>keson 2026</strong> dosyasındaki ürün, kayıp süre, hatalı parça, performans ve OEE kayıtlarını tek ekranda izleyin.
+                    Tüm KPI kartları ve grafikler seçilen döneme göre günlük olarak yeniden toplanır.
                 </p>
                 <div class="tezgah-hero__facts tezgah-hero__facts--triple">
                     <div class="tezgah-fact">
@@ -37,6 +37,10 @@
                     <div class="tezgah-fact">
                         <span>Ortalama çalışan personel</span>
                         <strong>@Model.OrtalamaCalisanPersonel</strong>
+                    </div>
+                    <div class="tezgah-fact">
+                        <span>Ort. günlük kapasite</span>
+                        <strong>@Model.OrtalamaGunlukKapasite.ToString("N2")</strong>
                     </div>
                     <div class="tezgah-fact tezgah-fact--wide">
                         <span>Öne çıkan ürün</span>
@@ -64,12 +68,12 @@
 
                 <div class="tezgah-hero__note">
                     <p>
-                        <strong>Net süre</strong> toplam çalışma süresinden kayıtlı kayıp sürelerin düşülmüş halidir.
-                        <strong>Verimli çalışma oranı</strong> net süre / toplam süre hesabıyla üretilir.
+                        <strong>Performans, kullanılabilirlik, kalite ve OEE</strong> değerleri artık doğrudan
+                        <strong>VERİ KAYIT</strong> sayfasındaki kolonlardan okunur.
                     </p>
                     <p class="mb-0">
-                        <strong>Ürün bazlı saatlik verim</strong> ise her ürün için toplam parça / toplam kişi-saat formülüyle hesaplanır.
-                        Kişi-saat değeri, ilgili üründeki satırlar için <strong>Kişi Sayısı x Süre(DK) / 60</strong> toplamıdır.
+                        Gün içinde tekrarlanan satırlar aynı tarihte birleştirilir; günlük özet satırlarında tek kez girilen
+                        kişi ve OEE değerleri de bu nedenle gün bazında normalize edilerek grafiklere yansıtılır.
                     </p>
                 </div>
             </div>
@@ -82,19 +86,19 @@
                 <small class="tezgah-kpi__meta">Seçilen dönem üretim hacmi</small>
             </article>
             <article class="tezgah-kpi tezgah-kpi--cyan">
-                <span class="tezgah-kpi__label">Net Üretim Süresi</span>
-                <strong class="tezgah-kpi__value">@Model.ToplamNetSureDakika.ToString("N0") dk</strong>
-                <small class="tezgah-kpi__meta">Kayıp sonrası kalan süre</small>
+                <span class="tezgah-kpi__label">Toplam Kayıp Süre</span>
+                <strong class="tezgah-kpi__value">@Model.ToplamKayipSureDakika.ToString("N0") dk</strong>
+                <small class="tezgah-kpi__meta">Kayıtlı duruş nedenlerinin toplamı</small>
             </article>
             <article class="tezgah-kpi tezgah-kpi--violet">
-                <span class="tezgah-kpi__label">Saatlik Üretim</span>
-                <strong class="tezgah-kpi__value">@Model.OrtalamaSaatlikUretim.ToString("N1")</strong>
-                <small class="tezgah-kpi__meta">Net süreye göre parça/saat</small>
+                <span class="tezgah-kpi__label">Toplam Hatalı Parça</span>
+                <strong class="tezgah-kpi__value">@Model.ToplamHataliParcaSayisi.ToString("N0")</strong>
+                <small class="tezgah-kpi__meta">Seçilen dönemde girilen hatalı parça sayısı</small>
             </article>
             <article class="tezgah-kpi tezgah-kpi--stone">
-                <span class="tezgah-kpi__label">Ortalama Çalışan Personel</span>
-                <strong class="tezgah-kpi__value">@Model.OrtalamaCalisanPersonel</strong>
-                <small class="tezgah-kpi__meta">Pozitif kişi kayıtlarının yuvarlanmış ortalaması</small>
+                <span class="tezgah-kpi__label">Ortalama OEE</span>
+                <strong class="tezgah-kpi__value">@Model.OrtalamaOee.ToString("N1")%</strong>
+                <small class="tezgah-kpi__meta">Pozitif günlük OEE kayıtlarının ortalaması</small>
             </article>
         </section>
 
@@ -103,8 +107,8 @@
                 <div class="tezgah-panel h-100">
                     <div class="tezgah-panel__header">
                         <div>
-                            <h2>@(ViewBag.TezgahTrendTitle ?? "Üretim ve Süre Trendi")</h2>
-                            <p>Günlük üretim miktarı ile harcanan süreyi birlikte izleyin.</p>
+                            <h2>@(ViewBag.TezgahTrendTitle ?? "Parça ve Kayıp Süre Trendi")</h2>
+                            <p>Günlük parça adedi ile kayıp süre hareketini birlikte izleyin.</p>
                         </div>
                     </div>
                     <div class="tezgah-panel__body tezgah-panel__body--chart-lg">
@@ -136,10 +140,8 @@
                                 <strong>@Model.BaskinKayipNedeni</strong>
                             </div>
                             <div class="tezgah-summary-item">
-                                <span>Kayıp payı</span>
-                                <strong>
-                                    @((Model.ToplamSureDakika > 0 ? (Model.ToplamKayipSureDakika / Model.ToplamSureDakika) * 100d : 0).ToString("N1"))%
-                                </strong>
+                                <span>Ortalama kalite</span>
+                                <strong>@Model.OrtalamaKalite.ToString("N1")%</strong>
                             </div>
                         </div>
                     </div>
@@ -150,12 +152,12 @@
                 <div class="tezgah-panel h-100">
                     <div class="tezgah-panel__header">
                         <div>
-                            <h2>Ürün Bazlı Üretim</h2>
-                            <p>Seçilen dönemde en yüksek parçayı çıkaran ürünler.</p>
+                            <h2>@(ViewBag.TezgahOeeTitle ?? "OEE, Performans ve Kalite Trendi")</h2>
+                            <p>Günlük OEE, performans, kullanılabilirlik ve kalite seviyelerini karşılaştırın.</p>
                         </div>
                     </div>
                     <div class="tezgah-panel__body tezgah-panel__body--chart">
-                        <canvas id="urunGrafigi"></canvas>
+                        <canvas id="oeeKayipGrafigi"></canvas>
                     </div>
                 </div>
             </div>
@@ -164,16 +166,41 @@
                 <div class="tezgah-panel h-100">
                     <div class="tezgah-panel__header">
                         <div>
-                            <h2>Ürün Bazlı Saatlik Verim</h2>
-                            <p>Ürün başına toplam parça / toplam kişi-saat karşılaştırması.</p>
+                            <h2>Ürün Bazlı Üretim</h2>
+                            <p>Seçilen dönemde en yüksek üretim ve kayıp süre oluşturan ürünler.</p>
                         </div>
                     </div>
                     <div class="tezgah-panel__body tezgah-panel__body--chart">
-                        <canvas id="verimlilikGrafigi"></canvas>
+                        <canvas id="urunGrafigi"></canvas>
                     </div>
                 </div>
             </div>
-
+            <div class="col-12 col-xl-6">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>Kayıp Süre Nedenleri</h2>
+                            <p>Seçilen dönemde en fazla dakikayı oluşturan nedenler.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body tezgah-panel__body--chart">
+                        <canvas id="kayipNedenGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="tezgah-panel h-100">
+                    <div class="tezgah-panel__header">
+                        <div>
+                            <h2>@(ViewBag.TezgahKosulTitle ?? "Çalışma Koşulu Kırılımı")</h2>
+                            <p>Çalışma koşullarına göre parça adedi ve kayıp süre yoğunluğunu izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="tezgah-panel__body tezgah-panel__body--chart">
+                        <canvas id="calismaKosuluGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 </div>

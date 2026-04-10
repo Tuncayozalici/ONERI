@@ -12,6 +12,12 @@ namespace ONERI.Models
         public double ParcaAdeti { get; set; }
         public double SureDakika { get; set; }
         public string? CalismaKosulu { get; set; }
+        public double GunlukKapasite { get; set; }
+        public double YapilmasiGerekenSure { get; set; }
+        public double ToplamAdamSaat { get; set; }
+        public double KalanAdamSaat { get; set; }
+        public double HataliParcaSayisi { get; set; }
+        public double BugunCalisanToplamKisiSayisi { get; set; }
         public string? KayipSureNedeni1 { get; set; }
         public double KayipSureDakika1 { get; set; }
         public string? KayipSureNedeni2 { get; set; }
@@ -19,7 +25,9 @@ namespace ONERI.Models
         public string? KayipSureNedeni3 { get; set; }
         public double KayipSureDakika3 { get; set; }
         public string? Aciklama { get; set; }
+        public double Performans { get; set; }
         public double Kullanilabilirlik { get; set; }
+        public double Kalite { get; set; }
         public double Oee { get; set; }
 
         public string? KayipSureNedeni => GetKayipSureKalemleri()

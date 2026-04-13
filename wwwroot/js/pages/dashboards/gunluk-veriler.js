@@ -315,8 +315,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupUltraToggle() {
         const summaryCard = document.getElementById('summaryCard');
         const summaryToggle = document.getElementById('summaryUltraToggle');
-        const sectionNavGrid = document.getElementById('sectionNavGrid');
-        const sectionLinksSection = document.getElementById('sectionLinksSection');
+        const hero = document.getElementById('gunlukHero');
+        const page = document.getElementById('gunlukPage');
         if (!summaryCard || !summaryToggle) {
             return;
         }
@@ -324,24 +324,68 @@ document.addEventListener('DOMContentLoaded', function () {
         const saved = localStorage.getItem('summary_ultra');
         const enabled = saved === '1';
         summaryCard.classList.toggle('summary-ultra', enabled);
-        if (sectionLinksSection) {
-            sectionLinksSection.classList.toggle('section-links-ultra', enabled);
+        if (hero) {
+            hero.classList.toggle('hero-ultra', enabled);
         }
-        if (sectionNavGrid) {
-            sectionNavGrid.classList.toggle('section-nav-grid-ultra', enabled);
+        if (page) {
+            page.classList.toggle('page-ultra', enabled);
         }
         summaryToggle.checked = enabled;
 
         summaryToggle.addEventListener('change', function () {
             summaryCard.classList.toggle('summary-ultra', summaryToggle.checked);
-            if (sectionLinksSection) {
-                sectionLinksSection.classList.toggle('section-links-ultra', summaryToggle.checked);
+            if (hero) {
+                hero.classList.toggle('hero-ultra', summaryToggle.checked);
             }
-            if (sectionNavGrid) {
-                sectionNavGrid.classList.toggle('section-nav-grid-ultra', summaryToggle.checked);
+            if (page) {
+                page.classList.toggle('page-ultra', summaryToggle.checked);
             }
             localStorage.setItem('summary_ultra', summaryToggle.checked ? '1' : '0');
         });
+    }
+
+    function setupSectionPicker() {
+        const options = Array.from(document.querySelectorAll('.js-section-option'));
+        const cta = document.getElementById('sectionPickerCta');
+        const ctaLabel = document.getElementById('sectionPickerCtaLabel');
+        if (options.length === 0 || !cta || !ctaLabel) {
+            return;
+        }
+
+        function applySelection(option) {
+            if (!option) {
+                return;
+            }
+
+            options.forEach(function (item) {
+                const isSelected = item === option;
+                item.classList.toggle('is-selected', isSelected);
+                item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+
+            const title = option.dataset.sectionTitle || 'Bolum';
+            const url = option.dataset.sectionUrl || '#';
+            const key = option.dataset.sectionKey || title;
+
+            cta.setAttribute('href', url);
+            ctaLabel.textContent = title + ' ekranina git';
+            localStorage.setItem('gunluk_selected_section', key);
+        }
+
+        const savedKey = localStorage.getItem('gunluk_selected_section');
+        const initialOption = options.find(function (item) {
+            return item.dataset.sectionKey === savedKey;
+        }) || options.find(function (item) {
+            return item.classList.contains('is-selected');
+        }) || options[0];
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                applySelection(option);
+            });
+        });
+
+        applySelection(initialOption);
     }
 
     function renderCharts() {
@@ -782,6 +826,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     setupUltraToggle();
+    setupSectionPicker();
     renderCharts();
 
     let activeTheme = getThemeName();

@@ -17,6 +17,66 @@
         .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Dakika = m.DuraklamaDakika }))
         .OrderByDescending(x => x.Dakika)
         .FirstOrDefault();
+    var bolumNavigasyonlari = new[]
+    {
+        new
+        {
+            Key = "metal",
+            Title = "Metal",
+            Description = "Gunluk uretim, verimlilik ve trend analizleri.",
+            Icon = "bi-speedometer2",
+            Url = Url.Action("ProfilLazerVerileri", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "boyahane",
+            Title = "Boyahane",
+            Description = "Gunluk boyama, fire ve hata analizleri.",
+            Icon = "bi-paint-bucket",
+            Url = Url.Action("BoyahaneDashboard", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "pvc",
+            Title = "PVC",
+            Description = "Uretim metraji, duraklama ve verimlilik analizleri.",
+            Icon = "bi-bounding-box",
+            Url = Url.Action("PvcDashboard", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "tezgah",
+            Title = "Tezgah",
+            Description = "Parca, kisi, kayip sure ve kullanilabilirlik.",
+            Icon = "bi-gear",
+            Url = Url.Action("TezgahDashboard", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "ebatlama",
+            Title = "Ebatlama",
+            Description = "Kesim, plaka, duraklama ve mesai analizleri.",
+            Icon = "bi-tools",
+            Url = Url.Action("EbatlamaDashboard", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "cnc",
+            Title = "CNC",
+            Description = "Masterwood, Skipper ve Rover-B makineleri.",
+            Icon = "bi-cpu",
+            Url = Url.Action("CncDashboard", "Home") ?? "#"
+        },
+        new
+        {
+            Key = "hatali-parca",
+            Title = "Hatali Parca Analizi",
+            Description = "Hata nedenleri, bolumler ve operator trendleri.",
+            Icon = "bi-bug",
+            Url = Url.Action("HataliParcaDashboard", "Home") ?? "#"
+        }
+    };
+    var varsayilanBolum = bolumNavigasyonlari[0];
     Func<double, string> formatDuration = totalMinutes =>
     {
         var roundedMinutes = (int)Math.Round(totalMinutes, MidpointRounding.AwayFromZero);
@@ -34,65 +94,105 @@
     <link rel="stylesheet" href="~/css/pages/home-gunluk-veriler-dashboard.css" asp-append-version="true" />
 }
 
-<div class="gunluk-page">
+<div id="gunlukPage" class="gunluk-page">
     <div class="container py-4 py-lg-5">
-        <section class="gunluk-hero mb-4">
-            <div class="gunluk-hero__content">
-                <div class="gunluk-hero__eyebrow">
-                    <i class="bi bi-activity"></i>
-                    FABRIKA OZETI
-                </div>
-                <h1>Gunluk Veriler Panosu</h1>
-                <p>
-                    Tum bolumlerden gelen gunluk uretim, OEE, hata ve duraklama verilerini tek akista izleyin.
-                    Ozet kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
-                </p>
-                <div class="gunluk-hero__facts gunluk-hero__facts--triple">
-                    <div class="gunluk-fact">
-                        <span>Secili donem</span>
-                        <strong>@seciliDonemOzeti</strong>
+        <section id="gunlukHero" class="gunluk-hero mb-4">
+            <div class="gunluk-hero__main">
+                <div class="gunluk-hero__content">
+                    <div class="gunluk-hero__eyebrow">
+                        <i class="bi bi-activity"></i>
+                        FABRIKA OZETI
                     </div>
-                    <div class="gunluk-fact">
-                        <span>Calisilan is gunu</span>
-                        <strong>@Model.CalisilanIsGunu</strong>
-                    </div>
-                    <div class="gunluk-fact">
-                        <span>Ortalama calisan personel</span>
-                        <strong>@Model.OrtalamaCalisanPersonel</strong>
-                    </div>
-                </div>
-            </div>
-
-            <div class="gunluk-hero__panel">
-                <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="gunluk-filter-form js-unified-date-filter-form">
-                    @await Html.PartialAsync("_UnifiedDateFilter")
-                    <div class="gunluk-filter-form__controls">
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="summaryUltraToggle">
-                            <label class="form-check-label" for="summaryUltraToggle">Ultrawide</label>
-                        </div>
-                        <div class="gunluk-filter-form__actions">
-                            <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
-                            <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
-                        </div>
-                    </div>
-                </form>
-
-                <div class="gunluk-period">
-                    @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
-                </div>
-
-                <div class="gunluk-hero__note">
+                    <h1>Gunluk Veriler Panosu</h1>
                     <p>
-                        <strong>Genel OEE</strong> tum bolumlerden gelen ortalama verim skorudur.
-                        <strong>Makine bazli OEE</strong> ve <strong>bolum bazli OEE</strong> panelleri, genel ortalama ile lokal dagilim farkini birlikte gosterir.
+                        Tum bolumlerden gelen gunluk uretim, OEE, hata ve duraklama verilerini tek akista izleyin.
+                        Ozet kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
                     </p>
-                    <p class="mb-0">
-                        Ultrawide modu ozellikle genis ekranlarda panel yogunlugunu azaltmak icin korunur.
-                        Alt bolum kartlari ilgili dashboardlara hizli gecis sunar.
-                    </p>
+                    <div class="gunluk-hero__facts gunluk-hero__facts--triple">
+                        <div class="gunluk-fact">
+                            <span>Secili donem</span>
+                            <strong>@seciliDonemOzeti</strong>
+                        </div>
+                        <div class="gunluk-fact">
+                            <span>Calisilan is gunu</span>
+                            <strong>@Model.CalisilanIsGunu</strong>
+                        </div>
+                        <div class="gunluk-fact">
+                            <span>Ortalama calisan personel</span>
+                            <strong>@Model.OrtalamaCalisanPersonel</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gunluk-hero__panel">
+                    <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="gunluk-filter-form js-unified-date-filter-form">
+                        @await Html.PartialAsync("_UnifiedDateFilter")
+                        <div class="gunluk-filter-form__controls">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="summaryUltraToggle">
+                                <label class="form-check-label" for="summaryUltraToggle">Ultrawide</label>
+                            </div>
+                            <div class="gunluk-filter-form__actions">
+                                <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
+                                <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="gunluk-period">
+                        @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
+                    </div>
+
+                    <div class="gunluk-hero__note">
+                        <p>
+                            <strong>Genel OEE</strong> tum bolumlerden gelen ortalama verim skorudur.
+                            <strong>Makine bazli OEE</strong> ve <strong>bolum bazli OEE</strong> panelleri, genel ortalama ile lokal dagilim farkini birlikte gosterir.
+                        </p>
+                        <p class="mb-0">
+                            Ultrawide modu ozellikle genis ekranlarda panel yogunlugunu azaltmak icin korunur.
+                            Sagdaki bolum listesinden operasyon ekranina dogrudan gecebilirsiniz.
+                        </p>
+                    </div>
                 </div>
             </div>
+
+            <aside class="gunluk-panel gunluk-section-picker" aria-labelledby="sectionPickerTitle">
+                <div class="gunluk-panel__header">
+                    <div>
+                        <h2 id="sectionPickerTitle">Bolum Ekranlari</h2>
+                        <p>Operasyon dashboardlarindan bir bolum secin ve ilgili sayfaya gecin.</p>
+                    </div>
+                </div>
+                <div class="gunluk-panel__body">
+                    <div class="gunluk-section-picker__list" role="listbox" aria-label="Bolum secimi">
+                        @foreach (var bolum in bolumNavigasyonlari)
+                        {
+                            var isSelected = bolum.Key == varsayilanBolum.Key;
+                            <button type="button"
+                                    class="gunluk-section-option js-section-option@(isSelected ? " is-selected" : string.Empty)"
+                                    data-section-key="@bolum.Key"
+                                    data-section-title="@bolum.Title"
+                                    data-section-url="@bolum.Url"
+                                    role="option"
+                                    aria-selected="@(isSelected ? "true" : "false")">
+                                <span class="gunluk-section-option__icon" aria-hidden="true">
+                                    <i class="bi @bolum.Icon"></i>
+                                </span>
+                                <span class="gunluk-section-option__content">
+                                    <strong>@bolum.Title</strong>
+                                    <small>@bolum.Description</small>
+                                </span>
+                            </button>
+                        }
+                    </div>
+
+                    <a id="sectionPickerCta"
+                       href="@varsayilanBolum.Url"
+                       class="btn btn-dark gunluk-section-picker__cta">
+                        <span id="sectionPickerCtaLabel">@($"{varsayilanBolum.Title} ekranina git")</span>
+                    </a>
+                </div>
+            </aside>
         </section>
 
         <div id="summaryCard" class="gunluk-board mb-4">
@@ -267,55 +367,6 @@
             </section>
         </div>
 
-        <section id="sectionLinksSection" class="gunluk-section-links">
-            <div class="gunluk-panel">
-                <div class="gunluk-panel__header">
-                    <div>
-                        <h2>Bolum Ekranlari</h2>
-                        <p>Fabrika panosundan ilgili operasyon dashboardlarina hizli gecis.</p>
-                    </div>
-                </div>
-                <div class="gunluk-panel__body">
-                    <div id="sectionNavGrid" class="gunluk-nav-grid">
-                        <a href="@Url.Action("ProfilLazerVerileri", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-speedometer2"></i></div>
-                            <h3>Metal</h3>
-                            <p>Gunluk uretim, verimlilik ve trend analizleri.</p>
-                        </a>
-                        <a href="@Url.Action("BoyahaneDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-paint-bucket"></i></div>
-                            <h3>Boyahane</h3>
-                            <p>Gunluk boyama, fire ve hata analizleri.</p>
-                        </a>
-                        <a href="@Url.Action("PvcDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-bounding-box"></i></div>
-                            <h3>PVC</h3>
-                            <p>Uretim metraji, duraklama ve verimlilik analizleri.</p>
-                        </a>
-                        <a href="@Url.Action("TezgahDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-gear"></i></div>
-                            <h3>Tezgah</h3>
-                            <p>Parca, kisi, kayip sure ve kullanilabilirlik.</p>
-                        </a>
-                        <a href="@Url.Action("EbatlamaDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-tools"></i></div>
-                            <h3>Ebatlama</h3>
-                            <p>Kesim, plaka, duraklama ve mesai analizleri.</p>
-                        </a>
-                        <a href="@Url.Action("CncDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-cpu"></i></div>
-                            <h3>CNC</h3>
-                            <p>Masterwood, Skipper ve Rover-B makineleri.</p>
-                        </a>
-                        <a href="@Url.Action("HataliParcaDashboard", "Home")" class="gunluk-nav-card">
-                            <div class="gunluk-nav-card__icon"><i class="bi bi-bug"></i></div>
-                            <h3>Hatali Parca Analizi</h3>
-                            <p>Hata nedenleri, bolumler ve operator trendleri.</p>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
     </div>
 </div>
 

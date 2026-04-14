@@ -98,6 +98,62 @@ namespace ONERI.Data
                 }
             }
 
+            // Geriye donuk uyumluluk:
+            // Gunluk Veriler sayfasina erisimi olan mevcut rol ve kullanicilar,
+            // yeni kart bazli izinler nedeniyle bos dashboard gormesin.
+            var gunlukWidgetPermissions = Permissions.GunlukVerilerWidgets.All;
+
+            foreach (var role in roleManager.Roles)
+            {
+                var existingClaims = await roleManager.GetClaimsAsync(role);
+                var hasGunlukDashboardAccess = existingClaims.Any(c =>
+                    c.Type == Permissions.ClaimType &&
+                    string.Equals(c.Value, Permissions.Dashboards.GunlukVeriler, StringComparison.Ordinal));
+
+                if (!hasGunlukDashboardAccess)
+                {
+                    continue;
+                }
+
+                foreach (var widgetPermission in gunlukWidgetPermissions)
+                {
+                    var alreadyHasWidgetPermission = existingClaims.Any(c =>
+                        c.Type == Permissions.ClaimType &&
+                        string.Equals(c.Value, widgetPermission, StringComparison.Ordinal));
+
+                    if (!alreadyHasWidgetPermission)
+                    {
+                        await roleManager.AddClaimAsync(role, new Claim(Permissions.ClaimType, widgetPermission));
+                    }
+                }
+            }
+
+            var users = await userManager.Users.ToListAsync();
+            foreach (var user in users)
+            {
+                var existingClaims = await userManager.GetClaimsAsync(user);
+                var hasDirectGunlukDashboardAccess = existingClaims.Any(c =>
+                    c.Type == Permissions.ClaimType &&
+                    string.Equals(c.Value, Permissions.Dashboards.GunlukVeriler, StringComparison.Ordinal));
+
+                if (!hasDirectGunlukDashboardAccess)
+                {
+                    continue;
+                }
+
+                foreach (var widgetPermission in gunlukWidgetPermissions)
+                {
+                    var alreadyHasWidgetPermission = existingClaims.Any(c =>
+                        c.Type == Permissions.ClaimType &&
+                        string.Equals(c.Value, widgetPermission, StringComparison.Ordinal));
+
+                    if (!alreadyHasWidgetPermission)
+                    {
+                        await userManager.AddClaimAsync(user, new Claim(Permissions.ClaimType, widgetPermission));
+                    }
+                }
+            }
+
             // Bölüm Yöneticileri
             var context = services.GetRequiredService<FabrikaContext>();
             if (!await context.BolumYoneticileri.AnyAsync())

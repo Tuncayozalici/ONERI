@@ -24,6 +24,46 @@ namespace ONERI.Models.Authorization
             public const string HataliParca = "dashboard.hataliparca.view";
         }
 
+        public static class GunlukVerilerWidgets
+        {
+            public const string ToplamModulSayisi = "dashboard.gunluk.widget.toplammodul.view";
+            public const string HataliAdet = "dashboard.gunluk.widget.hataliadet.view";
+            public const string ToplamDuraklama = "dashboard.gunluk.widget.toplamduraklama.view";
+            public const string GenelOeeSkoru = "dashboard.gunluk.widget.geneloee.view";
+            public const string MakineBazliOee = "dashboard.gunluk.widget.makineoee.view";
+            public const string OeeBilesenleri = "dashboard.gunluk.widget.oeebilesenleri.view";
+            public const string BolumBazliPlanaUyum = "dashboard.gunluk.widget.planauyum.view";
+            public const string BolumBazliOee = "dashboard.gunluk.widget.bolumoee.view";
+            public const string BolumBazliPersonel = "dashboard.gunluk.widget.personel.view";
+            public const string ModulTrendi = "dashboard.gunluk.widget.modultrendi.view";
+            public const string HataNedenleri = "dashboard.gunluk.widget.hatanedenleri.view";
+            public const string BolumBazliHata = "dashboard.gunluk.widget.bolumhata.view";
+            public const string HataTrendi = "dashboard.gunluk.widget.hatatrendi.view";
+            public const string EnCokHataNedeni = "dashboard.gunluk.widget.encokhatanedeni.view";
+            public const string EnCokHataOperatoru = "dashboard.gunluk.widget.encokhataoperatoru.view";
+            public const string EnCokHataBolumu = "dashboard.gunluk.widget.encokhatabolumu.view";
+
+            public static readonly IReadOnlyList<string> All = new List<string>
+            {
+                ToplamModulSayisi,
+                HataliAdet,
+                ToplamDuraklama,
+                GenelOeeSkoru,
+                MakineBazliOee,
+                OeeBilesenleri,
+                BolumBazliPlanaUyum,
+                BolumBazliOee,
+                BolumBazliPersonel,
+                ModulTrendi,
+                HataNedenleri,
+                BolumBazliHata,
+                HataTrendi,
+                EnCokHataNedeni,
+                EnCokHataOperatoru,
+                EnCokHataBolumu
+            };
+        }
+
         public static class Oneri
         {
             public const string Create = "oneri.create";
@@ -70,6 +110,23 @@ namespace ONERI.Models.Authorization
             new(Dashboards.Tezgah, "Tezgah Bölümü", "Dashboards"),
             new(Dashboards.Ebatlama, "Ebatlama Bölümü", "Dashboards"),
             new(Dashboards.HataliParca, "Hatalı Parça Analizi", "Dashboards"),
+
+            new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Toplam Modül Sayısı", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.HataliAdet, "Günlük Veriler: Hatalı Adet", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.ToplamDuraklama, "Günlük Veriler: Toplam Duraklama", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.GenelOeeSkoru, "Günlük Veriler: Genel OEE Skoru", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.MakineBazliOee, "Günlük Veriler: Makine Bazlı OEE", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.OeeBilesenleri, "Günlük Veriler: OEE Bileşenleri", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliPlanaUyum, "Günlük Veriler: Bölüm Bazlı Plana Uyum", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliOee, "Günlük Veriler: Bölüm Bazlı OEE", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliPersonel, "Günlük Veriler: Bölüm Bazlı Personel", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.ModulTrendi, "Günlük Veriler: Modül Trendi", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.HataNedenleri, "Günlük Veriler: Hata Nedenleri", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliHata, "Günlük Veriler: Bölüm Bazlı Hata", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.HataTrendi, "Günlük Veriler: Hata Trendi", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.EnCokHataNedeni, "Günlük Veriler: En Çok Hata Nedeni", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.EnCokHataOperatoru, "Günlük Veriler: En Çok Hata Operatörü", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.EnCokHataBolumu, "Günlük Veriler: En Çok Hata Bölümü", "Günlük Veriler Kartları"),
 
             new(FikirAtolyesi.View, "Fikir Atölyesi", "Öneri Sistemi"),
             new(Oneri.Create, "Yeni Öneri Oluştur", "Öneri Sistemi"),

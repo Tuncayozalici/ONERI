@@ -1,6 +1,14 @@
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 @model ONERI.Models.GenelFabrikaOzetViewModel
 @{
     ViewData["Title"] = "Günlük Veriler Panosu";
+
+    async Task<bool> CanViewWidgetAsync(string permissionKey)
+    {
+        return User.IsInRole(Permissions.SuperAdminRole)
+            || (await AuthorizationService.AuthorizeAsync(User, null, permissionKey)).Succeeded;
+    }
+
     var toplamDuraklamaDakika = (int)Math.Round(Model.ToplamDuraklamaDakika, MidpointRounding.AwayFromZero);
     var toplamDuraklamaSaat = toplamDuraklamaDakika / 60;
     var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
@@ -88,6 +96,115 @@
     {
         return Math.Round(total, MidpointRounding.AwayFromZero).ToString("N0");
     };
+
+    var showToplamModulSayisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamModulSayisi);
+    var showHataliAdet = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataliAdet);
+    var showToplamDuraklama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamDuraklama);
+    var showGenelOeeSkoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.GenelOeeSkoru);
+    var showMakineBazliOee = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MakineBazliOee);
+    var showOeeBilesenleri = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.OeeBilesenleri);
+    var showBolumBazliPlanaUyum = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliPlanaUyum);
+    var showBolumBazliOee = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliOee);
+    var showBolumBazliPersonel = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliPersonel);
+    var showModulTrendi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ModulTrendi);
+    var showHataNedenleri = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataNedenleri);
+    var showBolumBazliHata = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliHata);
+    var showHataTrendi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataTrendi);
+    var showEnCokHataNedeni = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataNedeni);
+    var showEnCokHataOperatoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataOperatoru);
+    var showEnCokHataBolumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataBolumu);
+
+    var topKpiRowCount = (showToplamModulSayisi ? 1 : 0)
+        + (showHataliAdet ? 1 : 0)
+        + (showToplamDuraklama ? 1 : 0);
+    var hasTopKpiStack = topKpiRowCount > 0;
+    var topLayoutItemCount = (hasTopKpiStack ? 1 : 0)
+        + (showGenelOeeSkoru ? 1 : 0)
+        + (showMakineBazliOee ? 1 : 0)
+        + (showOeeBilesenleri ? 1 : 0);
+    var midLayoutItemCount = (showBolumBazliPlanaUyum ? 1 : 0)
+        + (showBolumBazliOee ? 1 : 0)
+        + (showBolumBazliPersonel ? 1 : 0)
+        + (showModulTrendi ? 1 : 0);
+    var insightKpiRowCount = (showEnCokHataNedeni ? 1 : 0)
+        + (showEnCokHataOperatoru ? 1 : 0)
+        + (showEnCokHataBolumu ? 1 : 0);
+    var hasInsightKpiStack = insightKpiRowCount > 0;
+    var insightLayoutItemCount = (showHataNedenleri ? 1 : 0)
+        + (showBolumBazliHata ? 1 : 0)
+        + (showHataTrendi ? 1 : 0)
+        + (hasInsightKpiStack ? 1 : 0);
+    var visibleDashboardCardCount = topLayoutItemCount + midLayoutItemCount + insightLayoutItemCount;
+    var topLayoutClass = $"gunluk-top-layout gunluk-top-layout--items-{Math.Max(1, topLayoutItemCount)} mb-4";
+    var midLayoutClass = $"gunluk-grid gunluk-grid--items-{Math.Max(1, midLayoutItemCount)}";
+    var insightLayoutClass = $"gunluk-grid gunluk-grid--insights gunluk-grid--items-{Math.Max(1, insightLayoutItemCount)}";
+    var topKpiStyle = $"--gunluk-kpi-row-count:{Math.Max(1, topKpiRowCount)};";
+    var insightKpiStyle = $"--gunluk-kpi-row-count:{Math.Max(1, insightKpiRowCount)};";
+
+    var chartPayload = new Dictionary<string, object?>();
+
+    if (showGenelOeeSkoru)
+    {
+        chartPayload["OrtalamaOee"] = Model.OrtalamaOee;
+    }
+
+    if (showMakineBazliOee)
+    {
+        chartPayload["MakineOeeLabels"] = Model.MakineOeeLabels;
+        chartPayload["MakineOeeData"] = Model.MakineOeeData;
+    }
+
+    if (showOeeBilesenleri)
+    {
+        chartPayload["OrtalamaPerformans"] = Model.OrtalamaPerformans;
+        chartPayload["OrtalamaKullanilabilirlik"] = Model.OrtalamaKullanilabilirlik;
+        chartPayload["OrtalamaKalite"] = Model.OrtalamaKalite;
+    }
+
+    if (showBolumBazliPlanaUyum)
+    {
+        chartPayload["PlanUyumBolumLabels"] = Model.PlanUyumBolumLabels;
+        chartPayload["PlanUyumBolumData"] = Model.PlanUyumBolumData;
+    }
+
+    if (showBolumBazliOee)
+    {
+        chartPayload["BolumOeeLabels"] = Model.BolumOeeLabels;
+        chartPayload["BolumOeeData"] = Model.BolumOeeData;
+    }
+
+    if (showBolumBazliPersonel)
+    {
+        chartPayload["PersonelBolumLabels"] = Model.PersonelBolumLabels;
+        chartPayload["PersonelBolumData"] = Model.PersonelBolumData;
+    }
+
+    if (showHataNedenleri)
+    {
+        chartPayload["HataNedenLabels"] = Model.HataNedenLabels;
+        chartPayload["HataNedenData"] = Model.HataNedenData;
+    }
+
+    if (showBolumBazliHata)
+    {
+        chartPayload["BolumHataLabels"] = Model.BolumHataLabels;
+        chartPayload["BolumHataData"] = Model.BolumHataData;
+    }
+
+    if (showModulTrendi || showHataTrendi)
+    {
+        chartPayload["TrendLabels"] = Model.TrendLabels;
+    }
+
+    if (showModulTrendi)
+    {
+        chartPayload["ModulTrendData"] = Model.ModulTrendData;
+    }
+
+    if (showHataTrendi)
+    {
+        chartPayload["HataTrendData"] = Model.HataTrendData;
+    }
 }
 
 @section Styles {
@@ -195,181 +312,257 @@
             </aside>
         </section>
 
-        <div id="summaryCard" class="gunluk-board mb-4">
-            <section class="gunluk-top-layout mb-4">
-                <div class="gunluk-kpi-stack">
-                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">Toplam Modul Sayisi</span>
-                        <strong class="gunluk-kpi__value">@Model.ToplamModulSayisi.ToString("N0")</strong>
-                        <small class="gunluk-kpi__meta">Günlük Çalışma Verileri, Veriler sayfası O sütunu toplamı.</small>
-                    </article>
-                    <button type="button"
-                            class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked gunluk-kpi--interactive"
-                            data-bs-toggle="modal"
-                            data-bs-target="#hataDetayModal"
-                            aria-label="Hatali adet detaylarini ac">
-                        <span class="gunluk-kpi__label">Hatali Adet</span>
-                        <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
-                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata. Detay icin tiklayin.</small>
-                    </button>
-                    <button type="button"
-                            class="gunluk-kpi gunluk-kpi--amber gunluk-kpi--stacked gunluk-kpi--interactive"
-                            data-bs-toggle="modal"
-                            data-bs-target="#duraklamaDetayModal"
-                            aria-label="Toplam duraklama detaylarini ac">
-                        <span class="gunluk-kpi__label">Toplam Duraklama</span>
-                        <strong class="gunluk-kpi__value">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</strong>
-                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure. Detay icin tiklayin.</small>
-                    </button>
-                </div>
+        @if (visibleDashboardCardCount > 0)
+        {
+            <div id="summaryCard" class="gunluk-board mb-4">
+                @if (topLayoutItemCount > 0)
+                {
+                    <section class="@topLayoutClass">
+                        @if (hasTopKpiStack)
+                        {
+                            <div class="gunluk-kpi-stack" style="@topKpiStyle">
+                                @if (showToplamModulSayisi)
+                                {
+                                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked">
+                                        <span class="gunluk-kpi__label">Toplam Modul Sayisi</span>
+                                        <strong class="gunluk-kpi__value">@Model.ToplamModulSayisi.ToString("N0")</strong>
+                                        <small class="gunluk-kpi__meta">Günlük Çalışma Verileri, Veriler sayfası O sütunu toplamı.</small>
+                                    </article>
+                                }
+                                @if (showHataliAdet)
+                                {
+                                    <button type="button"
+                                            class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked gunluk-kpi--interactive"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#hataDetayModal"
+                                            aria-label="Hatali adet detaylarini ac">
+                                        <span class="gunluk-kpi__label">Hatali Adet</span>
+                                        <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
+                                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata. Detay icin tiklayin.</small>
+                                    </button>
+                                }
+                                @if (showToplamDuraklama)
+                                {
+                                    <button type="button"
+                                            class="gunluk-kpi gunluk-kpi--amber gunluk-kpi--stacked gunluk-kpi--interactive"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#duraklamaDetayModal"
+                                            aria-label="Toplam duraklama detaylarini ac">
+                                        <span class="gunluk-kpi__label">Toplam Duraklama</span>
+                                        <strong class="gunluk-kpi__value">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</strong>
+                                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure. Detay icin tiklayin.</small>
+                                    </button>
+                                }
+                            </div>
+                        }
 
-                <div class="gunluk-panel h-100 gunluk-panel--gauge">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Genel OEE Skoru</h2>
-                            <p>Fabrika ortalamasinin tek bakista okunan gostergesi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--gauge">
-                        <canvas id="genelOeeGaugeGrafigi"></canvas>
-                    </div>
-                </div>
+                        @if (showGenelOeeSkoru)
+                        {
+                            <div class="gunluk-panel h-100 gunluk-panel--gauge">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Genel OEE Skoru</h2>
+                                        <p>Fabrika ortalamasinin tek bakista okunan gostergesi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--gauge">
+                                    <canvas id="genelOeeGaugeGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel h-100">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Makine Bazli OEE</h2>
-                            <p>Tum makinelerin genel ortalama verim siralamasi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="makineOeeGrafigi"></canvas>
-                    </div>
-                </div>
+                        @if (showMakineBazliOee)
+                        {
+                            <div class="gunluk-panel h-100">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Makine Bazli OEE</h2>
+                                        <p>Tum makinelerin genel ortalama verim siralamasi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="makineOeeGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel h-100">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>OEE Bilesenleri</h2>
-                            <p>Performans, kullanilabilirlik ve kalite ortalamalari.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="genelBilesenGrafigi"></canvas>
-                    </div>
-                </div>
-            </section>
+                        @if (showOeeBilesenleri)
+                        {
+                            <div class="gunluk-panel h-100">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>OEE Bilesenleri</h2>
+                                        <p>Performans, kullanilabilirlik ve kalite ortalamalari.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="genelBilesenGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
 
-            <section class="gunluk-grid">
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Bolum Bazli Plana Uyum</h2>
-                            <p>Secilen donemde plana uyum oraninin bolumlere gore dagilimi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="planUyumBolumGrafigi"></canvas>
-                    </div>
-                </div>
+                @if (midLayoutItemCount > 0)
+                {
+                    <section class="@midLayoutClass">
+                        @if (showBolumBazliPlanaUyum)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Bolum Bazli Plana Uyum</h2>
+                                        <p>Secilen donemde plana uyum oraninin bolumlere gore dagilimi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="planUyumBolumGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Bolum Bazli OEE</h2>
-                            <p>Bolumler arasinda verim dagilimini karsilastirin.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="bolumOeeGrafigi"></canvas>
-                    </div>
-                </div>
+                        @if (showBolumBazliOee)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Bolum Bazli OEE</h2>
+                                        <p>Bolumler arasinda verim dagilimini karsilastirin.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="bolumOeeGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>@personelBolumTitle</h2>
-                            <p>Bolumlere gore toplam personel yuk dagilimi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="personelBolumGrafigi"></canvas>
-                    </div>
-                </div>
+                        @if (showBolumBazliPersonel)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>@personelBolumTitle</h2>
+                                        <p>Bolumlere gore toplam personel yuk dagilimi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="personelBolumGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Modul Trendi</h2>
-                            <p>Gun bazli toplam modul sayisi hareketi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart">
-                        <canvas id="duraklamaTrendGrafigi"></canvas>
-                    </div>
-                </div>
-            </section>
+                        @if (showModulTrendi)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Modul Trendi</h2>
+                                        <p>Gun bazli toplam modul sayisi hareketi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart">
+                                    <canvas id="duraklamaTrendGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
 
-            <section class="gunluk-grid gunluk-grid--insights">
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Hata Nedenleri</h2>
-                            <p>En yuksek hacimli ilk 6 hata nedeni.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart-pie">
-                        <canvas id="hataNedenGenelGrafigi"></canvas>
-                    </div>
-                </div>
+                @if (insightLayoutItemCount > 0)
+                {
+                    <section class="@insightLayoutClass">
+                        @if (showHataNedenleri)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Hata Nedenleri</h2>
+                                        <p>En yuksek hacimli ilk 6 hata nedeni.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart-pie">
+                                    <canvas id="hataNedenGenelGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Bolum Bazli Hata</h2>
-                            <p>Toplam hata adedinin bolumlere gore dagilimi.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
-                        <canvas id="bolumHataGrafigi"></canvas>
-                    </div>
-                </div>
+                        @if (showBolumBazliHata)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Bolum Bazli Hata</h2>
+                                        <p>Toplam hata adedinin bolumlere gore dagilimi.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
+                                    <canvas id="bolumHataGrafigi"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-panel">
-                    <div class="gunluk-panel__header">
-                        <div>
-                            <h2>Hata Trendi</h2>
-                            <p>Gun bazli hatali adet degisimini izleyin.</p>
-                        </div>
-                    </div>
-                    <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
-                        <canvas id="genelHataTrend"></canvas>
-                    </div>
-                </div>
+                        @if (showHataTrendi)
+                        {
+                            <div class="gunluk-panel">
+                                <div class="gunluk-panel__header">
+                                    <div>
+                                        <h2>Hata Trendi</h2>
+                                        <p>Gun bazli hatali adet degisimini izleyin.</p>
+                                    </div>
+                                </div>
+                                <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">
+                                    <canvas id="genelHataTrend"></canvas>
+                                </div>
+                            </div>
+                        }
 
-                <div class="gunluk-kpi-stack gunluk-kpi-stack--summary">
-                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
-                        <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
-                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
-                    </article>
-                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
-                        <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
-                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
-                        <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
-                    </article>
+                        @if (hasInsightKpiStack)
+                        {
+                            <div class="gunluk-kpi-stack gunluk-kpi-stack--summary" style="@insightKpiStyle">
+                                @if (showEnCokHataNedeni)
+                                {
+                                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
+                                        <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
+                                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
+                                        <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
+                                    </article>
+                                }
+                                @if (showEnCokHataOperatoru)
+                                {
+                                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
+                                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
+                                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
+                                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
+                                    </article>
+                                }
+                                @if (showEnCokHataBolumu)
+                                {
+                                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
+                                        <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
+                                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
+                                        <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gunluk-board mb-4">
+                <div class="gunluk-empty-state">
+                    Bu rol icin gorunur gunluk dashboard karti tanimlanmamis.
                 </div>
-            </section>
-        </div>
+            </div>
+        }
 
     </div>
 </div>
 
+@if (showHataliAdet)
+{
 <div class="modal fade" id="hataDetayModal" tabindex="-1" aria-labelledby="hataDetayModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content gunluk-modal">
@@ -442,7 +635,10 @@
         </div>
     </div>
 </div>
+}
 
+@if (showToplamDuraklama)
+{
 <div class="modal fade" id="duraklamaDetayModal" tabindex="-1" aria-labelledby="duraklamaDetayModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content gunluk-modal">
@@ -513,11 +709,12 @@
         </div>
     </div>
 </div>
+}
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="gunluk-veriler-data" type="application/json">
-        @Html.Raw(Json.Serialize(new { model = Model, personelSeriesLabel }))
+        @Html.Raw(Json.Serialize(new { model = chartPayload, personelSeriesLabel = showBolumBazliPersonel ? personelSeriesLabel : null }))
     </script>
     <script src="~/js/pages/dashboards/gunluk-veriler.js" asp-append-version="true"></script>
 }

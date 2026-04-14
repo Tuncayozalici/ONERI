@@ -161,7 +161,9 @@ public class DashboardQueryService : IDashboardQueryService
                 x.Tarih,
                 Makine: x.CalisilanMakine,
                 Uretim: (double)x.UretimAdedi,
-                Duraklama: (double)(x.DuraklamaSuresi1 + x.DuraklamaSuresi2 + x.DuraklamaSuresi3)))
+                Duraklama: (double)(x.KalanSure > 0
+                    ? x.KalanSure
+                    : x.DuraklamaSuresi1 + x.DuraklamaSuresi2 + x.DuraklamaSuresi3)))
             .ToList();
 
         var boyaRows = snapshot.BoyaUretimRows
@@ -288,14 +290,26 @@ public class DashboardQueryService : IDashboardQueryService
             .ToList();
 
         var hataliRows = new List<(DateTime Tarih, double Adet, double M2, string? Neden, string? Bolum, string? Operator)>();
+        var hasLegacyProfilHataRows = snapshot.ProfilHataRows.Any(x =>
+            x.Tarih != DateTime.MinValue
+            && IsProfilLazerHataBolumu(x.BolumAdi));
 
         hataliRows.AddRange(snapshot.HataliParcaRows
             .Where(x => x.Tarih != DateTime.MinValue)
             .Select(x => (x.Tarih, x.Adet, x.ToplamM2, x.HataNedeni, x.BolumAdi, x.OperatorAdi)));
 
-        hataliRows.AddRange(snapshot.ProfilHataRows
-            .Where(x => x.Tarih != DateTime.MinValue)
-            .Select(x => (x.Tarih, (double)x.Adet, 0d, x.HataNedeni, x.BolumAdi, (string?)null)));
+        if (hasLegacyProfilHataRows)
+        {
+            hataliRows.AddRange(snapshot.ProfilHataRows
+                .Where(x => x.Tarih != DateTime.MinValue)
+                .Select(x => (x.Tarih, (double)x.Adet, 0d, x.HataNedeni, x.BolumAdi, (string?)null)));
+        }
+        else
+        {
+            hataliRows.AddRange(snapshot.ProfilRows
+                .Where(x => x.Tarih != DateTime.MinValue && x.HataSayisi > 0)
+                .Select(x => (x.Tarih, (double)x.HataSayisi, 0d, (string?)"Metal Hata Sayısı", (string?)"Profil Lazer", (string?)null)));
+        }
 
         if (boyaHataFromUretimRows.Any())
         {
@@ -579,6 +593,27 @@ public class DashboardQueryService : IDashboardQueryService
             };
         }
 
+        static double ResolveProfilLazerOeeForGunluk(SatirModeli row)
+        {
+            var explicitOee = DashboardParsingHelper.NormalizePercentValue(row.Oee);
+            if (explicitOee > 0)
+            {
+                return explicitOee;
+            }
+
+            var performans = DashboardParsingHelper.NormalizePercentValue(row.Performans);
+            var kullanilabilirlik = DashboardParsingHelper.NormalizePercentValue(row.Kullanilabilirlik);
+            var kalite = DashboardParsingHelper.NormalizePercentValue(row.Kalite);
+
+            if (performans > 0 && kullanilabilirlik > 0 && kalite > 0)
+            {
+                return DashboardParsingHelper.NormalizePercentValue(
+                    performans * kullanilabilirlik * kalite / 10000d);
+            }
+
+            return 0;
+        }
+
         static IEnumerable<(double Performans, double Kullanilabilirlik, double Kalite, double Oee)> ExtractMetricRows<T>(IEnumerable<T> rows, DateTime start, DateTime end)
         {
             var type = typeof(T);
@@ -849,6 +884,25 @@ public class DashboardQueryService : IDashboardQueryService
                 && x.Tarih.Date <= ozetEnd
                 && IsProfilLazerHataBolumu(x.BolumAdi))
             .Sum(x => (double)x.Adet);
+        if (profilDashboardHataAdedi <= 0)
+        {
+            var inlineProfilHataRows = snapshot.ProfilRows
+                .Where(x => x.Tarih != DateTime.MinValue
+                    && x.Tarih.Date >= ozetStart
+                    && x.Tarih.Date <= ozetEnd
+                    && x.HataSayisi > 0)
+                .ToList();
+
+            profilDashboardHataAdedi = inlineProfilHataRows.Sum(x => (double)x.HataSayisi);
+            foreach (var row in inlineProfilHataRows)
+            {
+                AddKpiDetay(
+                    hataDetayMap,
+                    "Profil Lazer",
+                    string.IsNullOrWhiteSpace(row.CalisilanMakine) ? "Makine bilgisi yok" : DashboardParsingHelper.NormalizeLabel(row.CalisilanMakine),
+                    row.HataSayisi);
+            }
+        }
 
         var boyahaneHataSatirlari = snapshot.BoyaUretimRows
             .Where(x => x.Tarih != DateTime.MinValue
@@ -1126,6 +1180,15 @@ public class DashboardQueryService : IDashboardQueryService
                 : (oeeValues.Any() ? oeeValues.Average() : 0);
 
         var machineOeeRows = new List<(string Machine, double Oee)>();
+        machineOeeRows.AddRange(snapshot.ProfilRows
+            .Where(x => x.Tarih != DateTime.MinValue
+                && x.Tarih.Date >= ozetStart
+                && x.Tarih.Date <= ozetEnd
+                && !string.IsNullOrWhiteSpace(x.CalisilanMakine))
+            .Select(x => (
+                Machine: DashboardParsingHelper.NormalizeLabel(x.CalisilanMakine),
+                Oee: ResolveProfilLazerOeeForGunluk(x)))
+            .Where(x => !string.IsNullOrWhiteSpace(x.Machine) && !x.Machine.Equals("Bilinmeyen", StringComparison.OrdinalIgnoreCase)));
         machineOeeRows.AddRange(boyaRows
             .Where(x => x.Tarih.Date >= ozetStart && x.Tarih.Date <= ozetEnd && x.Oee > 0)
             .Select(x =>
@@ -1366,47 +1429,105 @@ public class DashboardQueryService : IDashboardQueryService
         };
     }
 
-    public async Task<DashboardPageResult<GunlukVerilerViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
+    public async Task<DashboardPageResult<ProfilLazerDashboardViewModel>> GetProfilLazerAsync(DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken = default)
     {
+        static double NormalizeMetric(double value) => DashboardParsingHelper.NormalizePercentValue(value);
+
+        static double ResolveRowOee(SatirModeli row)
+        {
+            var explicitOee = NormalizeMetric(row.Oee);
+            if (explicitOee > 0)
+            {
+                return explicitOee;
+            }
+
+            var performans = NormalizeMetric(row.Performans);
+            var kullanilabilirlik = NormalizeMetric(row.Kullanilabilirlik);
+            var kalite = NormalizeMetric(row.Kalite);
+
+            if (performans > 0 && kullanilabilirlik > 0 && kalite > 0)
+            {
+                return DashboardParsingHelper.NormalizePercentValue(
+                    performans * kullanilabilirlik * kalite / 10000d);
+            }
+
+            return 0;
+        }
+
+        static double AveragePositive(IEnumerable<double> values)
+        {
+            var positives = values.Where(x => x > 0).ToList();
+            return positives.Any() ? Math.Round(positives.Average(), 2) : 0;
+        }
+
+        static List<(string Neden, int ToplamSure)> BuildProfilDuraklamaDagilimi(IEnumerable<SatirModeli> rows)
+        {
+            return rows
+                .SelectMany(x => new[]
+                {
+                    new { Neden = x.DuraklamaNedeni1, Sure = x.DuraklamaSuresi1 },
+                    new { Neden = x.DuraklamaNedeni2, Sure = x.DuraklamaSuresi2 },
+                    new { Neden = x.DuraklamaNedeni3, Sure = x.DuraklamaSuresi3 }
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Neden) && x.Sure > 0)
+                .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
+                .Select(g => (Neden: g.Key, ToplamSure: g.Sum(x => x.Sure)))
+                .OrderByDescending(x => x.ToplamSure)
+                .ToList();
+        }
+
+        static List<(string Label, int Value)> TakeTopBuckets(IEnumerable<(string Label, int Value)> items, int takeCount)
+        {
+            var ordered = items
+                .Where(x => !string.IsNullOrWhiteSpace(x.Label) && x.Value > 0)
+                .OrderByDescending(x => x.Value)
+                .ToList();
+
+            if (ordered.Count <= takeCount)
+            {
+                return ordered;
+            }
+
+            var topItems = ordered.Take(takeCount).ToList();
+            var remaining = ordered.Skip(takeCount).Sum(x => x.Value);
+            if (remaining > 0)
+            {
+                topItems.Add(("Diğer", remaining));
+            }
+
+            return topItems;
+        }
+
         var snapshot = await _ingestionService.GetSnapshotAsync(cancellationToken);
         var secilenTarih = raporTarihi?.Date;
-
-        var viewModel = new GunlukVerilerViewModel
+        var bag = new Dictionary<string, object?>();
+        var viewModel = new ProfilLazerDashboardViewModel
         {
-            RaporTarihi = secilenTarih ?? DateTime.Today,
-            ProfilIsimleri = new List<string>(),
-            ProfilUretimAdetleri = new List<int>(),
-            Son7GunTarihleri = new List<string>(),
-            GunlukUretimSayilari = new List<int>(),
-            UrunIsimleri = new List<string>(),
-            UrunHarcananSure = new List<int>(),
-            HataNedenleri = new List<string>(),
-            HataNedenAdetleri = new List<int>(),
-            HataUrunSonuclari = new List<string>(),
-            HataUrunSonucAdetleri = new List<int>()
+            RaporTarihi = secilenTarih ?? DateTime.Today
         };
 
-        var bag = new Dictionary<string, object?>();
-
         var excelData = snapshot.ProfilRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
-        var hataExcelData = snapshot.ProfilHataRows.Where(x => x.Tarih != DateTime.MinValue).ToList();
+        var legacyHataData = snapshot.ProfilHataRows
+            .Where(x => x.Tarih != DateTime.MinValue && IsProfilLazerDepartment(x.BolumAdi ?? string.Empty))
+            .ToList();
         var personelRows = NormalizePersonelRows(snapshot.PersonelRows);
 
         if (!excelData.Any())
         {
             bag["ErrorMessage"] = "Dashboard verisi henüz hazır değil. Lütfen daha sonra tekrar deneyin.";
-            return new DashboardPageResult<GunlukVerilerViewModel> { Model = viewModel, ViewBagValues = bag };
+            return new DashboardPageResult<ProfilLazerDashboardViewModel> { Model = viewModel, ViewBagValues = bag };
         }
 
         var islenecekTarih = secilenTarih ?? ResolveClosestAvailableDate(excelData.Select(x => x.Tarih), DateTime.Today);
         viewModel.RaporTarihi = islenecekTarih;
+
         var (rangeStart, rangeEnd) = NormalizeDateRange(baslangicTarihi, bitisTarihi);
         var hasDateRange = rangeStart.HasValue && rangeEnd.HasValue;
         var isSingleDayRange = hasDateRange && rangeStart!.Value.Date == rangeEnd!.Value.Date;
         var allRelevantDates = excelData.Select(x => x.Tarih).ToList();
         AddFilterAvailabilityMetadata(bag, allRelevantDates);
-        DateTime? effectiveRangeEnd = null;
 
+        DateTime? effectiveRangeEnd = null;
         if (hasDateRange)
         {
             effectiveRangeEnd = ResolveLastAvailableDateInRange(allRelevantDates, rangeStart!.Value, rangeEnd!.Value);
@@ -1426,27 +1547,28 @@ public class DashboardQueryService : IDashboardQueryService
             }
         }
 
-        var gununVerileri = excelData.AsQueryable();
+        var filteredRows = excelData.AsQueryable();
         if (hasDateRange)
         {
             var effectiveEnd = effectiveRangeEnd ?? rangeEnd!.Value;
-            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
+            filteredRows = filteredRows.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
             viewModel.RaporTarihi = effectiveEnd;
         }
         else if (ay.HasValue && yil.HasValue)
         {
             var monthStart = new DateTime(yil.Value, ay.Value, 1);
             var effectiveEnd = effectiveRangeEnd ?? monthStart.AddMonths(1).AddDays(-1);
-            gununVerileri = gununVerileri.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
+            filteredRows = filteredRows.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
             viewModel.RaporTarihi = effectiveEnd;
         }
         else
         {
-            gununVerileri = gununVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            filteredRows = filteredRows.Where(x => x.Tarih.Date == islenecekTarih.Date);
         }
 
-        var gununVerileriList = gununVerileri.ToList();
-        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(gununVerileriList.Select(x => x.Tarih));
+        var filteredRowsList = filteredRows.ToList();
+        viewModel.CalisilanIsGunu = CountDistinctWorkingDays(filteredRowsList.Select(x => x.Tarih));
+
         var personelStart = hasDateRange
             ? rangeStart!.Value
             : ay.HasValue && yil.HasValue
@@ -1459,130 +1581,111 @@ public class DashboardQueryService : IDashboardQueryService
                 : islenecekTarih.Date;
         viewModel.OrtalamaCalisanPersonel = CalculateRoundedAveragePersonnel(personelRows, personelStart, personelEnd, IsProfilLazerDepartment);
 
-        viewModel.GunlukToplamUretim = gununVerileriList.Sum(x => x.UretimAdedi);
-        viewModel.GunlukToplamSure = gununVerileriList.Sum(x => x.CalismaSuresi);
-        viewModel.OrtalamaIslemSuresi = viewModel.GunlukToplamUretim > 0
-            ? (double)viewModel.GunlukToplamSure / viewModel.GunlukToplamUretim
-            : 0;
+        viewModel.ToplamKesilenProfilBoy = filteredRowsList.Sum(x => x.KesilenProfilBoy);
+        viewModel.ToplamParcaSayisi = filteredRowsList.Sum(x => x.UretimAdedi);
+        viewModel.ToplamKullanilanSure = filteredRowsList.Sum(x => x.CalismaSuresi);
+        viewModel.ToplamKalanSure = filteredRowsList.Sum(x => x.KalanSure);
 
-        var profilHataVerileri = hataExcelData
-            .Where(x =>
-            {
-                var bolum = (x.BolumAdi ?? string.Empty).ToLowerInvariant();
-                return bolum.Contains("metal") || bolum.Contains("profil") || bolum.Contains("lazer");
-            })
-            .AsQueryable();
+        var performansValues = filteredRowsList.Select(x => NormalizeMetric(x.Performans)).Where(x => x > 0).ToList();
+        var kullanilabilirlikValues = filteredRowsList.Select(x => NormalizeMetric(x.Kullanilabilirlik)).Where(x => x > 0).ToList();
+        var kaliteValues = filteredRowsList.Select(x => NormalizeMetric(x.Kalite)).Where(x => x > 0).ToList();
+        var oeeValues = filteredRowsList.Select(ResolveRowOee).Where(x => x > 0).ToList();
 
+        viewModel.OrtalamaPerformans = AveragePositive(performansValues);
+        viewModel.OrtalamaKullanilabilirlik = AveragePositive(kullanilabilirlikValues);
+        viewModel.OrtalamaKalite = AveragePositive(kaliteValues);
+        viewModel.OrtalamaOee = oeeValues.Any()
+            ? Math.Round(oeeValues.Average(), 2)
+            : (viewModel.OrtalamaPerformans > 0 && viewModel.OrtalamaKullanilabilirlik > 0 && viewModel.OrtalamaKalite > 0
+                ? Math.Round(DashboardParsingHelper.NormalizePercentValue(
+                    viewModel.OrtalamaPerformans * viewModel.OrtalamaKullanilabilirlik * viewModel.OrtalamaKalite / 10000d), 2)
+                : 0);
+
+        var hasInlineHataData = filteredRowsList.Any(x => x.HataSayisi > 0);
+        var filteredLegacyHataData = legacyHataData.AsQueryable();
         if (hasDateRange)
         {
             var effectiveEnd = effectiveRangeEnd ?? rangeEnd!.Value;
-            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
+            filteredLegacyHataData = filteredLegacyHataData.Where(x => x.Tarih.Date >= rangeStart!.Value && x.Tarih.Date <= effectiveEnd);
         }
         else if (ay.HasValue && yil.HasValue)
         {
             var monthStart = new DateTime(yil.Value, ay.Value, 1);
             var effectiveEnd = effectiveRangeEnd ?? monthStart.AddMonths(1).AddDays(-1);
-            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
+            filteredLegacyHataData = filteredLegacyHataData.Where(x => x.Tarih.Date >= monthStart && x.Tarih.Date <= effectiveEnd);
         }
         else
         {
-            profilHataVerileri = profilHataVerileri.Where(x => x.Tarih.Date == islenecekTarih.Date);
+            filteredLegacyHataData = filteredLegacyHataData.Where(x => x.Tarih.Date == islenecekTarih.Date);
         }
 
-        var profilHataVerileriList = profilHataVerileri.ToList();
+        var filteredLegacyHataList = filteredLegacyHataData.ToList();
+        viewModel.ToplamHataSayisi = hasInlineHataData
+            ? filteredRowsList.Sum(x => x.HataSayisi)
+            : filteredLegacyHataList.Sum(x => x.Adet);
 
-        viewModel.HataliUrunAdedi = profilHataVerileriList.Sum(x => x.Adet);
-        viewModel.HurdaAdedi = profilHataVerileriList
-            .Where(x => (x.HataUrunSonucu ?? string.Empty).ToLowerInvariant().Contains("hurda"))
-            .Sum(x => x.Adet);
+        var profilDagilimi = TakeTopBuckets(
+            filteredRowsList
+                .GroupBy(x => DashboardParsingHelper.NormalizeProfilLabel(x.ProfilTipi))
+                .Select(g => (Label: g.Key, Value: g.Sum(x => x.UretimAdedi))),
+            7);
+        viewModel.ProfilLabels = profilDagilimi.Select(x => x.Label).ToList();
+        viewModel.ProfilParcaData = profilDagilimi.Select(x => x.Value).ToList();
 
-        var hataNedenGruplari = profilHataVerileriList
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
-            .Select(g => new { Neden = g.Key, Toplam = g.Sum(x => x.Adet) })
-            .OrderByDescending(x => x.Toplam)
-            .ToList();
+        var musteriDagilimi = TakeTopBuckets(
+            filteredRowsList
+                .Where(x => !string.IsNullOrWhiteSpace(x.MusteriAdi))
+                .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.MusteriAdi))
+                .Select(g => (Label: g.Key, Value: g.Sum(x => x.UretimAdedi))),
+            8);
+        viewModel.MusteriLabels = musteriDagilimi.Select(x => x.Label).ToList();
+        viewModel.MusteriParcaData = musteriDagilimi.Select(x => x.Value).ToList();
 
-        viewModel.HataNedenleri = hataNedenGruplari.Select(x => x.Neden).ToList();
-        viewModel.HataNedenAdetleri = hataNedenGruplari.Select(x => x.Toplam).ToList();
-
-        var hataUrunGruplari = profilHataVerileriList
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataUrunSonucu))
-            .Select(g => new { Sonuc = g.Key, Toplam = g.Sum(x => x.Adet) })
-            .OrderByDescending(x => x.Toplam)
-            .ToList();
-
-        viewModel.HataUrunSonuclari = hataUrunGruplari.Select(x => x.Sonuc).ToList();
-        viewModel.HataUrunSonucAdetleri = hataUrunGruplari.Select(x => x.Toplam).ToList();
-
-        var pastaGrafikData = gununVerileriList
-            .GroupBy(x => DashboardParsingHelper.NormalizeProfilLabel(x.ProfilTipi))
-            .Select(g => new { Profil = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
-            .OrderByDescending(x => x.ToplamUretim)
-            .ToList();
-
-        viewModel.ProfilIsimleri = pastaGrafikData.Select(x => x.Profil).Where(p => !string.IsNullOrWhiteSpace(p)).Cast<string>().ToList();
-        viewModel.ProfilUretimAdetleri = pastaGrafikData.Select(x => x.ToplamUretim).ToList();
-
-        var urunBazliSureData = gununVerileriList
-            .GroupBy(x => DashboardParsingHelper.NormalizeProfilLabel(x.ProfilTipi))
-            .Select(g => new { Urun = g.Key, ToplamSure = g.Sum(x => x.CalismaSuresi) })
-            .OrderByDescending(x => x.ToplamSure)
-            .ToList();
-
-        var toplamSureTumUrunler = (double)urunBazliSureData.Sum(x => x.ToplamSure);
-        viewModel.UrunIsimleri = urunBazliSureData.Select(x => x.Urun).Where(u => !string.IsNullOrWhiteSpace(u)).Cast<string>().ToList();
-        viewModel.UrunHarcananSure = urunBazliSureData
-            .Select(x => toplamSureTumUrunler > 0 ? (int)Math.Round(x.ToplamSure / toplamSureTumUrunler * 100) : 0)
-            .ToList();
-
-        var makineBazliUretim = gununVerileriList
-            .Where(x => !string.IsNullOrWhiteSpace(x.CalisilanMakine) && x.UretimAdedi > 0)
-            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.CalisilanMakine))
-            .Select(g => new { Makine = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
-            .OrderByDescending(x => x.ToplamUretim)
-            .ToList();
-        viewModel.MakineLabels = makineBazliUretim.Select(x => x.Makine).ToList();
-        viewModel.MakineUretimData = makineBazliUretim.Select(x => x.ToplamUretim).ToList();
-
-        var mesaiDurumuDagilimi = gununVerileriList
+        var mesaiDurumuDagilimi = filteredRowsList
             .Where(x => !string.IsNullOrWhiteSpace(x.MesaiDurumu))
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.MesaiDurumu))
-            .Select(g => new { Mesai = g.Key, ToplamSure = g.Sum(x => x.CalismaSuresi) })
+            .Select(g => new
+            {
+                Mesai = g.Key,
+                ToplamSure = g.Sum(x => x.CalismaSuresi)
+            })
             .OrderByDescending(x => x.ToplamSure)
             .ToList();
         viewModel.MesaiDurumuLabels = mesaiDurumuDagilimi.Select(x => x.Mesai).ToList();
         viewModel.MesaiDurumuData = mesaiDurumuDagilimi.Select(x => x.ToplamSure).ToList();
 
-        static List<(string Neden, int ToplamSure)> BuildProfilDuraklamaDagilimi(IEnumerable<SatirModeli> rows)
-        {
-            return rows
-                .SelectMany(x => new[]
-                {
-                    new { Neden = x.DuraklamaNedeni1, Sure = x.DuraklamaSuresi1 },
-                    new { Neden = x.DuraklamaNedeni2, Sure = x.DuraklamaSuresi2 },
-                    new { Neden = x.DuraklamaNedeni3, Sure = x.DuraklamaSuresi3 }
-                })
-                .Where(x => !string.IsNullOrWhiteSpace(x.Neden) && x.Sure > 0)
-                .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Neden))
-                .Select(g => (Neden: g.Key, ToplamSure: g.Sum(x => x.Sure)))
-                .OrderByDescending(x => x.ToplamSure)
-                .ToList();
-        }
+        var makineOzetleri = filteredRowsList
+            .Where(x => !string.IsNullOrWhiteSpace(x.CalisilanMakine))
+            .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.CalisilanMakine))
+            .Select(g => new
+            {
+                Makine = g.Key,
+                OrtalamaOee = AveragePositive(g.Select(ResolveRowOee)),
+                KullanilanSure = g.Sum(x => x.CalismaSuresi),
+                KalanSure = g.Sum(x => x.KalanSure)
+            })
+            .OrderByDescending(x => x.OrtalamaOee)
+            .ThenByDescending(x => x.KullanilanSure)
+            .ToList();
+        viewModel.MakineLabels = makineOzetleri.Select(x => x.Makine).ToList();
+        viewModel.MakineOeeData = makineOzetleri.Select(x => x.OrtalamaOee).ToList();
+        viewModel.MakineKullanilanSureData = makineOzetleri.Select(x => x.KullanilanSure).ToList();
+        viewModel.MakineKalanSureData = makineOzetleri.Select(x => x.KalanSure).ToList();
 
-        var duraklamaDagilimi = BuildProfilDuraklamaDagilimi(gununVerileriList);
+        var duraklamaDagilimi = BuildProfilDuraklamaDagilimi(filteredRowsList);
         viewModel.DuraklamaNedenLabels = duraklamaDagilimi.Select(x => x.Neden).ToList();
         viewModel.DuraklamaNedenData = duraklamaDagilimi.Select(x => x.ToplamSure).ToList();
-        viewModel.MakineDuraklamaDagilimlari = makineBazliUretim
+        viewModel.MakineDuraklamaDagilimlari = makineOzetleri
             .Select(x =>
             {
-                var makineDuraklamaDagilimi = BuildProfilDuraklamaDagilimi(
-                    gununVerileriList.Where(row => DashboardParsingHelper.NormalizeLabel(row.CalisilanMakine) == x.Makine));
+                var makineDagilim = BuildProfilDuraklamaDagilimi(
+                    filteredRowsList.Where(row => DashboardParsingHelper.NormalizeLabel(row.CalisilanMakine) == x.Makine));
 
                 return new MakineDuraklamaNedenDagilimModel
                 {
                     Makine = x.Makine,
-                    DuraklamaNedenLabels = makineDuraklamaDagilimi.Select(y => y.Neden).ToList(),
-                    DuraklamaNedenData = makineDuraklamaDagilimi.Select(y => y.ToplamSure).ToList()
+                    DuraklamaNedenLabels = makineDagilim.Select(y => y.Neden).ToList(),
+                    DuraklamaNedenData = makineDagilim.Select(y => y.ToplamSure).ToList()
                 };
             })
             .ToList();
@@ -1592,54 +1695,69 @@ public class DashboardQueryService : IDashboardQueryService
         if (hasDateRange)
         {
             trendBitis = effectiveRangeEnd ?? rangeEnd!.Value;
-            trendBaslangic = isSingleDayRange
-                ? trendBitis.AddDays(-5)
-                : rangeStart!.Value;
-            bag["TrendTitle"] = isSingleDayRange
-                ? "Seçili Tarih ve Önceki 5 Gün Üretim Trendi"
-                : "Seçili Tarih Aralığı Üretim Trendi";
+            trendBaslangic = isSingleDayRange ? trendBitis.AddDays(-5) : rangeStart!.Value;
+            bag["MetalTrendTitle"] = isSingleDayRange
+                ? "Seçili Tarih ve Önceki 5 Gün OEE Trendi"
+                : "Seçili Tarih Aralığı OEE Trendi";
         }
         else if (ay.HasValue && yil.HasValue)
         {
             trendBaslangic = new DateTime(yil.Value, ay.Value, 1);
             trendBitis = effectiveRangeEnd ?? trendBaslangic.AddMonths(1).AddDays(-1);
-            bag["TrendTitle"] = "Aylık Üretim Trendi";
+            bag["MetalTrendTitle"] = "Aylık OEE Trendi";
         }
         else
         {
-            var referansTarih = islenecekTarih;
-            trendBaslangic = referansTarih.AddDays(-6);
-            trendBitis = referansTarih;
-            bag["TrendTitle"] = "Son 7 Günlük Üretim Trendi";
+            trendBitis = islenecekTarih;
+            trendBaslangic = trendBitis.AddDays(-6);
+            bag["MetalTrendTitle"] = "Son 7 Günlük OEE Trendi";
         }
 
-        var trendVerileri = excelData
+        var dailyTrendData = excelData
             .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
             .GroupBy(x => x.Tarih.Date)
-            .Select(g => new { Tarih = g.Key, ToplamUretim = g.Sum(x => x.UretimAdedi) })
-            .OrderBy(x => x.Tarih)
-            .ToDictionary(x => x.Tarih, x => x.ToplamUretim);
+            .Select(g => new
+            {
+                Tarih = g.Key,
+                Performans = AveragePositive(g.Select(x => NormalizeMetric(x.Performans))),
+                Kullanilabilirlik = AveragePositive(g.Select(x => NormalizeMetric(x.Kullanilabilirlik))),
+                Kalite = AveragePositive(g.Select(x => NormalizeMetric(x.Kalite))),
+                Oee = AveragePositive(g.Select(ResolveRowOee))
+            })
+            .ToDictionary(x => x.Tarih);
+
+        var hataTrendData = hasInlineHataData
+            ? excelData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.HataSayisi))
+            : legacyHataData
+                .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
+                .GroupBy(x => x.Tarih.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
 
         var tumTarihler = Enumerable.Range(0, (trendBitis.Date - trendBaslangic.Date).Days + 1)
             .Select(offset => trendBaslangic.Date.AddDays(offset))
             .ToList();
 
-        viewModel.Son7GunTarihleri = tumTarihler.Select(t => t.ToString("dd.MM")).ToList();
-        viewModel.GunlukUretimSayilari = tumTarihler.Select(t => trendVerileri.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
+        viewModel.TrendTarihleri = tumTarihler.Select(x => x.ToString("dd.MM")).ToList();
+        viewModel.PerformansTrendData = tumTarihler
+            .Select(x => dailyTrendData.TryGetValue(x, out var value) ? value.Performans : 0)
+            .ToList();
+        viewModel.KullanilabilirlikTrendData = tumTarihler
+            .Select(x => dailyTrendData.TryGetValue(x, out var value) ? value.Kullanilabilirlik : 0)
+            .ToList();
+        viewModel.KaliteTrendData = tumTarihler
+            .Select(x => dailyTrendData.TryGetValue(x, out var value) ? value.Kalite : 0)
+            .ToList();
+        viewModel.OeeTrendData = tumTarihler
+            .Select(x => dailyTrendData.TryGetValue(x, out var value) ? value.Oee : 0)
+            .ToList();
+        viewModel.HataTrendData = tumTarihler
+            .Select(x => hataTrendData.TryGetValue(x, out var value) ? value : 0)
+            .ToList();
 
-        var hataTrendVerileri = hataExcelData
-            .Where(x =>
-            {
-                var bolum = (x.BolumAdi ?? string.Empty).ToLowerInvariant();
-                return bolum.Contains("metal") || bolum.Contains("profil") || bolum.Contains("lazer");
-            })
-            .Where(x => x.Tarih.Date >= trendBaslangic.Date && x.Tarih.Date <= trendBitis.Date)
-            .GroupBy(x => x.Tarih.Date)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
-
-        viewModel.GunlukHataliUrunSayilari = tumTarihler.Select(t => hataTrendVerileri.TryGetValue(t, out var toplam) ? toplam : 0).ToList();
-
-        return new DashboardPageResult<GunlukVerilerViewModel>
+        return new DashboardPageResult<ProfilLazerDashboardViewModel>
         {
             Model = viewModel,
             ViewBagValues = bag

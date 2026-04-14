@@ -204,16 +204,32 @@ public class DashboardIngestionService : IDashboardIngestionService
         int colMusteri = DashboardParsingHelper.FindColumn(worksheet, "MÜŞTERİ ADI", "MUSTERI ADI");
         int colMakine = DashboardParsingHelper.FindColumn(worksheet, "ÇALIŞILAN MAKİNE", "CALISILAN MAKINE");
         int colMesai = DashboardParsingHelper.FindColumn(worksheet, "MESAİ DURUM", "MESAI DURUM", "MESAİ DURUMU", "MESAI DURUMU");
-        int colProfil = DashboardParsingHelper.FindColumn(worksheet, "PROFİL", "PROFIL", "PROFİL HAMMEDDE", "PROFIL HAMMEDDE", "HAMMEDDE");
-        int colUretim = DashboardParsingHelper.FindColumn(worksheet, "KESİLEN PROFİL BOY", "KESILEN PROFIL BOY");
-        int colCalisma = DashboardParsingHelper.FindColumn(worksheet, "KAÇ DAKİKA ÇALIŞILDI", "KAC DAKIKA CALISILDI");
+        int colProfil = DashboardParsingHelper.FindColumn(
+            worksheet,
+            "PROFİL HAMMEDDE",
+            "PROFIL HAMMEDDE",
+            "PROFİL HAMMADDE",
+            "PROFIL HAMMADDE",
+            "HAMMEDDE",
+            "HAMMADDE",
+            "PROFİL",
+            "PROFIL");
+        int colKesilenProfilBoy = DashboardParsingHelper.FindColumn(worksheet, "KESİLEN PROFİL BOY", "KESILEN PROFIL BOY", "KESİLEN BOY PROFİL", "KESILEN BOY PROFIL");
+        int colParcaSayisi = DashboardParsingHelper.FindColumn(worksheet, "ORT. PARÇA SAYISI", "ORT PARCA SAYISI", "ORTALAMA PARÇA SAYISI", "ORTALAMA PARCA SAYISI");
+        int colHataSayisi = DashboardParsingHelper.FindColumn(worksheet, "HATA SAYISI");
         int colDuraklamaNedeni1 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ-1", "DURAKLAMA NEDENI-1");
-        int colDuraklamaSuresi1 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-1", "DURAKLAMA SURESI-1");
+        int colDuraklamaSuresi1 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-1", "DURAKLAMA SURESI-1", "DURAKLAMA SÜRESİ(Dk)-1", "DURAKLAMA SURESI(Dk)-1");
         int colDuraklamaNedeni2 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ-2", "DURAKLAMA NEDENI-2");
-        int colDuraklamaSuresi2 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-2", "DURAKLAMA SURESI-2");
+        int colDuraklamaSuresi2 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-2", "DURAKLAMA SURESI-2", "DURAKLAMA SÜRESİ(Dk)-2", "DURAKLAMA SURESI(Dk)-2");
         int colDuraklamaNedeni3 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA NEDENİ-3", "DURAKLAMA NEDENI-3");
-        int colDuraklamaSuresi3 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-3", "DURAKLAMA SURESI-3");
+        int colDuraklamaSuresi3 = DashboardParsingHelper.FindColumn(worksheet, "DURAKLAMA SÜRESİ-3", "DURAKLAMA SURESI-3", "DURAKLAMA SÜRESİ(Dk)-3", "DURAKLAMA SURESI(Dk)-3");
         int colAciklama = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
+        int colKullanilanSure = DashboardParsingHelper.FindColumn(worksheet, "KULLANILAN SÜRE", "KULLANILAN SURE", "KAÇ DAKİKA ÇALIŞILDI", "KAC DAKIKA CALISILDI");
+        int colKalanSure = DashboardParsingHelper.FindColumn(worksheet, "KALAN SÜRE", "KALAN SURE");
+        int colPerformans = DashboardParsingHelper.FindColumn(worksheet, "PERFORMANS");
+        int colKullanilabilirlik = DashboardParsingHelper.FindColumn(worksheet, "KULLANILABİLİRLİK", "KULLANILABILIRLIK", "KULLANILABİLİRLİK", "KULLANILABILIRLIK");
+        int colKalite = DashboardParsingHelper.FindColumn(worksheet, "KALİTE", "KALITE");
+        int colOee = DashboardParsingHelper.FindColumn(worksheet, "OEE");
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
@@ -221,6 +237,9 @@ public class DashboardIngestionService : IDashboardIngestionService
             {
                 var dateCell = worksheet.Cells[row, colTarih > 0 ? colTarih : 1];
                 var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
+                var kesilenProfilBoy = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colKesilenProfilBoy > 0 ? colKesilenProfilBoy : 6].Value);
+                var parcaSayisi = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colParcaSayisi > 0 ? colParcaSayisi : (colKesilenProfilBoy > 0 ? colKesilenProfilBoy : 6)].Value);
+                var kullanilanSure = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colKullanilanSure > 0 ? colKullanilanSure : 7].Value);
 
                 result.Add(new SatirModeli
                 {
@@ -229,8 +248,23 @@ public class DashboardIngestionService : IDashboardIngestionService
                     CalisilanMakine = worksheet.Cells[row, colMakine > 0 ? colMakine : 3].Value?.ToString()?.Trim(),
                     MesaiDurumu = worksheet.Cells[row, colMesai > 0 ? colMesai : 4].Value?.ToString()?.Trim(),
                     ProfilTipi = worksheet.Cells[row, colProfil > 0 ? colProfil : 5].Value?.ToString()?.Trim(),
-                    UretimAdedi = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colUretim > 0 ? colUretim : 6].Value),
-                    CalismaSuresi = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colCalisma > 0 ? colCalisma : 7].Value),
+                    KesilenProfilBoy = kesilenProfilBoy,
+                    HataSayisi = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colHataSayisi > 0 ? colHataSayisi : 8].Value),
+                    UretimAdedi = parcaSayisi,
+                    CalismaSuresi = kullanilanSure,
+                    KalanSure = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colKalanSure > 0 ? colKalanSure : 13].Value),
+                    Performans = colPerformans > 0
+                        ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, colPerformans].Value))
+                        : 0,
+                    Kullanilabilirlik = colKullanilabilirlik > 0
+                        ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, colKullanilabilirlik].Value))
+                        : 0,
+                    Kalite = colKalite > 0
+                        ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, colKalite].Value))
+                        : 0,
+                    Oee = colOee > 0
+                        ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, colOee].Value))
+                        : 0,
                     DuraklamaNedeni1 = worksheet.Cells[row, colDuraklamaNedeni1 > 0 ? colDuraklamaNedeni1 : 8].Value?.ToString()?.Trim(),
                     DuraklamaSuresi1 = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi1 > 0 ? colDuraklamaSuresi1 : 9].Value),
                     DuraklamaNedeni2 = worksheet.Cells[row, colDuraklamaNedeni2 > 0 ? colDuraklamaNedeni2 : 10].Value?.ToString()?.Trim(),

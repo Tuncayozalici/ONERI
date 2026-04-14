@@ -7,12 +7,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const payload = JSON.parse(payloadElement.textContent || '{}');
     const data = normalizePayloadKeys(payload.model || {});
     const chartCanvasIds = [
-        'pastaGrafigi',
-        'cizgiGrafigi',
-        'makineUretimGrafigi',
-        'hataNedenGrafigi',
-        'urunSureGrafigi',
-        'duraklamaNedenGrafigi'
+        'oeeTrendGrafigi',
+        'makineOeeGrafigi',
+        'sureDengeGrafigi',
+        'duraklamaNedenGrafigi',
+        'profilDagilimGrafigi',
+        'musteriGrafigi',
+        'hataTrendGrafigi'
     ];
     const chartParents = new Map();
     const chartTemplates = new Map();
@@ -20,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const duraklamaTitleElement = document.getElementById('duraklamaPanelTitle');
     const duraklamaDescriptionElement = document.getElementById('duraklamaPanelDescription');
     let selectedMachine = null;
-    let machineProductionChart = null;
+    let machineOeeChart = null;
     let duraklamaChart = null;
 
     chartCanvasIds.forEach(function (canvasId) {
@@ -55,18 +56,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             textColor: isDarkTheme ? '#9aa8bd' : '#475569',
             strongTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
-            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
-            productionLine: isDarkTheme ? '#67e8f9' : '#0891b2',
-            productionFill: isDarkTheme ? 'rgba(103, 232, 249, 0.18)' : 'rgba(8, 145, 178, 0.12)',
-            machineBar: isDarkTheme ? 'rgba(34, 197, 94, 0.8)' : 'rgba(22, 163, 74, 0.72)',
-            machineBarBorder: isDarkTheme ? 'rgba(134, 239, 172, 1)' : 'rgba(21, 128, 61, 1)',
-            errorBar: isDarkTheme ? 'rgba(251, 113, 133, 0.82)' : 'rgba(225, 29, 72, 0.72)',
-            errorBarBorder: isDarkTheme ? 'rgba(253, 164, 175, 1)' : 'rgba(190, 24, 93, 1)',
-            durationBar: isDarkTheme ? 'rgba(196, 181, 253, 0.82)' : 'rgba(124, 58, 237, 0.72)',
-            durationBarBorder: isDarkTheme ? 'rgba(221, 214, 254, 1)' : 'rgba(109, 40, 217, 1)',
+            gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.28)',
+            oeeLine: isDarkTheme ? '#fbbf24' : '#d97706',
+            performansLine: isDarkTheme ? '#67e8f9' : '#0891b2',
+            kullanilabilirlikLine: isDarkTheme ? '#22c55e' : '#15803d',
+            kaliteLine: isDarkTheme ? '#f472b6' : '#db2777',
+            machineBar: isDarkTheme ? 'rgba(251, 191, 36, 0.82)' : 'rgba(217, 119, 6, 0.76)',
+            machineBarBorder: isDarkTheme ? '#fde68a' : '#92400e',
+            usedDuration: isDarkTheme ? 'rgba(14, 165, 233, 0.8)' : 'rgba(2, 132, 199, 0.76)',
+            remainingDuration: isDarkTheme ? 'rgba(100, 116, 139, 0.74)' : 'rgba(71, 85, 105, 0.64)',
+            customerBar: isDarkTheme ? 'rgba(45, 212, 191, 0.82)' : 'rgba(13, 148, 136, 0.75)',
+            errorBar: isDarkTheme ? 'rgba(251, 113, 133, 0.84)' : 'rgba(225, 29, 72, 0.76)',
             donutColors: [
-                '#67e8f9', '#f59e0b', '#34d399', '#a78bfa', '#fb7185',
-                '#38bdf8', '#f97316', '#22c55e', '#eab308', '#818cf8'
+                '#f59e0b', '#06b6d4', '#22c55e', '#e11d48',
+                '#8b5cf6', '#f97316', '#14b8a6', '#64748b'
             ]
         };
     }
@@ -128,6 +131,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return instance;
     }
 
+    function percentTick(value) {
+        return value + '%';
+    }
+
     function getMachineDuraklamaDataset(machineName) {
         if (!machineName) {
             return {
@@ -160,12 +167,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (machineName) {
             duraklamaTitleElement.textContent = 'Duraklama Nedenleri - ' + machineName;
-            duraklamaDescriptionElement.textContent = 'Secili makinenin kayitli duraklama sureleri gosteriliyor. Ayni cubuga tekrar tiklayarak filtreyi kaldirabilirsiniz.';
+            duraklamaDescriptionElement.textContent = 'Seçili makinenin kayıtlı duraklama süreleri gösteriliyor. Aynı çubuğa tekrar tıklayarak filtreyi kaldırabilirsiniz.';
             return;
         }
 
         duraklamaTitleElement.textContent = 'Duraklama Nedenleri';
-        duraklamaDescriptionElement.textContent = 'Makine bazli filtrelemek icin soldaki grafikten bir makineye tiklayin.';
+        duraklamaDescriptionElement.textContent = 'Makine seçimi yapıldığında grafik sadece o makinenin kayıtlarını gösterir.';
     }
 
     function buildMachineBarStyles(machineLabels, palette) {
@@ -196,12 +203,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         syncDuraklamaPanelText(selectedMachine);
 
-        if (machineProductionChart) {
+        if (machineOeeChart) {
             const machineStyles = buildMachineBarStyles(machineLabels, palette);
-            machineProductionChart.data.datasets[0].backgroundColor = machineStyles.backgroundColor;
-            machineProductionChart.data.datasets[0].borderColor = machineStyles.borderColor;
-            machineProductionChart.data.datasets[0].borderWidth = machineStyles.borderWidth;
-            machineProductionChart.update();
+            machineOeeChart.data.datasets[0].backgroundColor = machineStyles.backgroundColor;
+            machineOeeChart.data.datasets[0].borderColor = machineStyles.borderColor;
+            machineOeeChart.data.datasets[0].borderWidth = machineStyles.borderWidth;
+            machineOeeChart.update();
         }
 
         if (duraklamaChart) {
@@ -218,44 +225,41 @@ document.addEventListener('DOMContentLoaded', function () {
         syncDuraklamaPanelText(selectedMachine);
 
         const machineLabels = data.MakineLabels || [];
-        const machineValues = data.MakineUretimData || [];
-        const machineDuraklamaDataset = getMachineDuraklamaDataset(selectedMachine);
         const machineStyles = buildMachineBarStyles(machineLabels, palette);
+        const machineDuraklamaDataset = getMachineDuraklamaDataset(selectedMachine);
 
-        createChart('pastaGrafigi', {
-            type: 'doughnut',
-            data: {
-                labels: data.ProfilIsimleri || [],
-                datasets: [
-                    {
-                        data: data.ProfilUretimAdetleri || [],
-                        backgroundColor: palette.donutColors,
-                        borderWidth: 0,
-                        cutout: '58%'
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                }
-            }
-        }, hasAnyData(data.ProfilUretimAdetleri), 'Profil dagilim verisi bulunamadi.');
-
-        createChart('cizgiGrafigi', {
+        createChart('oeeTrendGrafigi', {
             type: 'line',
             data: {
-                labels: data.Son7GunTarihleri || [],
+                labels: data.TrendTarihleri || [],
                 datasets: [
                     {
-                        label: 'Gunluk Uretim Adedi',
-                        data: data.GunlukUretimSayilari || [],
-                        borderColor: palette.productionLine,
-                        backgroundColor: palette.productionFill,
-                        fill: true,
+                        label: 'OEE',
+                        data: data.OeeTrendData || [],
+                        borderColor: palette.oeeLine,
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        tension: 0.28
+                    },
+                    {
+                        label: 'Performans',
+                        data: data.PerformansTrendData || [],
+                        borderColor: palette.performansLine,
+                        backgroundColor: 'transparent',
+                        tension: 0.28
+                    },
+                    {
+                        label: 'Kullanılabilirlik',
+                        data: data.KullanilabilirlikTrendData || [],
+                        borderColor: palette.kullanilabilirlikLine,
+                        backgroundColor: 'transparent',
+                        tension: 0.28
+                    },
+                    {
+                        label: 'Kalite',
+                        data: data.KaliteTrendData || [],
+                        borderColor: palette.kaliteLine,
+                        backgroundColor: 'transparent',
                         tension: 0.28
                     }
                 ]
@@ -274,22 +278,26 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
+                        suggestedMax: 100,
+                        ticks: {
+                            callback: percentTick
+                        },
                         grid: {
                             color: palette.gridColor
                         }
                     }
                 }
             }
-        }, hasAnyData(data.GunlukUretimSayilari), 'Uretim trend verisi bulunamadi.');
+        }, hasAnyData(data.OeeTrendData) || hasAnyData(data.PerformansTrendData) || hasAnyData(data.KullanilabilirlikTrendData) || hasAnyData(data.KaliteTrendData), 'Seçilen dönem için OEE bileşen trend verisi bulunamadı.');
 
-        machineProductionChart = createChart('makineUretimGrafigi', {
+        machineOeeChart = createChart('makineOeeGrafigi', {
             type: 'bar',
             data: {
                 labels: machineLabels,
                 datasets: [
                     {
-                        label: 'Uretim Adedi',
-                        data: machineValues,
+                        label: 'Ortalama OEE (%)',
+                        data: data.MakineOeeData || [],
                         backgroundColor: machineStyles.backgroundColor,
                         borderColor: machineStyles.borderColor,
                         borderWidth: machineStyles.borderWidth,
@@ -323,86 +331,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                }
-            }
-        }, hasAnyData(machineValues), 'Makine bazli uretim verisi bulunamadi.');
-
-        createChart('hataNedenGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.HataNedenleri || [],
-                datasets: [
-                    {
-                        label: 'Hata adedi',
-                        data: data.HataNedenAdetleri || [],
-                        backgroundColor: palette.errorBar,
-                        borderColor: palette.errorBarBorder,
-                        borderWidth: 1,
-                        borderRadius: 10,
-                        maxBarThickness: 42
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
+                        suggestedMax: 100,
                         ticks: {
-                            precision: 0
-                        },
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.HataNedenAdetleri), 'Secili donemde hata nedeni verisi bulunamadi.');
-
-        createChart('urunSureGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.UrunIsimleri || [],
-                datasets: [
-                    {
-                        label: 'Sure Yuzdesi (%)',
-                        data: data.UrunHarcananSure || [],
-                        backgroundColor: palette.durationBar,
-                        borderColor: palette.durationBarBorder,
-                        borderWidth: 1,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function (value) {
-                                return value + '%';
-                            }
+                            callback: percentTick
                         },
                         grid: {
                             color: palette.gridColor
@@ -415,7 +346,46 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, hasAnyData(data.UrunHarcananSure), 'Sure dagilim verisi bulunamadi.');
+        }, hasAnyData(data.MakineOeeData), 'Makine bazlı OEE verisi bulunamadı.');
+
+        createChart('sureDengeGrafigi', {
+            type: 'bar',
+            data: {
+                labels: machineLabels,
+                datasets: [
+                    {
+                        label: 'Kullanılan süre (dk)',
+                        data: data.MakineKullanilanSureData || [],
+                        backgroundColor: palette.usedDuration,
+                        borderRadius: 8
+                    },
+                    {
+                        label: 'Kalan süre (dk)',
+                        data: data.MakineKalanSureData || [],
+                        backgroundColor: palette.remainingDuration,
+                        borderRadius: 8
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                }
+            }
+        }, hasAnyData(data.MakineKullanilanSureData) || hasAnyData(data.MakineKalanSureData), 'Makine bazlı süre dengesi verisi bulunamadı.');
 
         duraklamaChart = createChart('duraklamaNedenGrafigi', {
             type: 'doughnut',
@@ -432,11 +402,6 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 maintainAspectRatio: false,
-                cutout: '58%',
-                animation: {
-                    duration: 350,
-                    easing: 'easeOutCubic'
-                },
                 plugins: {
                     legend: {
                         position: 'top'
@@ -444,9 +409,109 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         }, hasAnyData(machineDuraklamaDataset.values), selectedMachine
-            ? selectedMachine + ' icin duraklama verisi bulunamadi.'
-            : 'Duraklama verisi bulunamadi.');
+            ? selectedMachine + ' için duraklama verisi bulunamadı.'
+            : 'Duraklama verisi bulunamadı.');
 
+        createChart('profilDagilimGrafigi', {
+            type: 'doughnut',
+            data: {
+                labels: data.ProfilLabels || [],
+                datasets: [
+                    {
+                        data: data.ProfilParcaData || [],
+                        backgroundColor: palette.donutColors,
+                        borderWidth: 0,
+                        cutout: '58%'
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                }
+            }
+        }, hasAnyData(data.ProfilParcaData), 'Profil dağılım verisi bulunamadı.');
+
+        createChart('musteriGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.MusteriLabels || [],
+                datasets: [
+                    {
+                        label: 'Parça sayısı',
+                        data: data.MusteriParcaData || [],
+                        backgroundColor: palette.customerBar,
+                        borderRadius: 10,
+                        maxBarThickness: 36
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.MusteriParcaData), 'Müşteri bazlı parça verisi bulunamadı.');
+
+        createChart('hataTrendGrafigi', {
+            type: 'bar',
+            data: {
+                labels: data.TrendTarihleri || [],
+                datasets: [
+                    {
+                        label: 'Hata sayısı',
+                        data: data.HataTrendData || [],
+                        backgroundColor: palette.errorBar,
+                        borderRadius: 10,
+                        maxBarThickness: 34
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        },
+                        grid: {
+                            color: palette.gridColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }, hasAnyData(data.HataTrendData), 'Günlük hata verisi bulunamadı.');
     }
 
     renderCharts();

@@ -188,6 +188,10 @@ html[data-theme="dark"] .profile-hero__note {
     gap: 1rem;
 }
 
+.profile-kpis--six {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .profile-kpi {
     padding: 1.1rem 1.15rem;
     border-radius: 22px;
@@ -234,6 +238,10 @@ html[data-theme="dark"] .profile-kpi {
     color: #0ea5e9;
 }
 
+.profile-kpi--emerald .profile-kpi__value {
+    color: #059669;
+}
+
 html[data-theme="dark"] .profile-kpi--cyan .profile-kpi__value {
     color: #67e8f9;
 }
@@ -252,6 +260,10 @@ html[data-theme="dark"] .profile-kpi--rose .profile-kpi__value {
 
 html[data-theme="dark"] .profile-kpi--slate .profile-kpi__value {
     color: #7dd3fc;
+}
+
+html[data-theme="dark"] .profile-kpi--emerald .profile-kpi__value {
+    color: #6ee7b7;
 }
 
 .profile-panel {

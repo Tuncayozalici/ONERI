@@ -1,12 +1,12 @@
-@model ONERI.Models.GunlukVerilerViewModel
+@model ONERI.Models.ProfilLazerDashboardViewModel
 @{
     ViewData["Title"] = "Metal Verileri";
-    var aktifProfilSayisi = Model.ProfilIsimleri.Count;
     var aktifMakineSayisi = Model.MakineLabels.Count;
-    var oneCikanProfil = Model.ProfilIsimleri.FirstOrDefault() ?? "Profil kaydi yok";
-    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydi yok";
-    var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydi yok";
-    var baskinHataNedeni = Model.HataNedenleri.FirstOrDefault() ?? "Hata nedeni kaydi yok";
+    var aktifMusteriSayisi = Model.MusteriLabels.Count;
+    var oneCikanProfil = Model.ProfilLabels.FirstOrDefault() ?? "Profil kaydı yok";
+    var baskinDuraklama = Model.DuraklamaNedenLabels.FirstOrDefault() ?? "Duraklama kaydı yok";
+    var baskinMesai = Model.MesaiDurumuLabels.FirstOrDefault() ?? "Mesai kaydı yok";
+    var oneCikanMusteri = Model.MusteriLabels.FirstOrDefault() ?? "Müşteri kaydı yok";
 }
 
 @section Styles {
@@ -27,17 +27,17 @@ else
                 <div class="profile-hero__content">
                     <div class="profile-hero__eyebrow">
                         <i class="bi bi-layers"></i>
-                        OPERASYON RAPORU
+                        METAL OPERASYON
                     </div>
-                    <h1>Metal Operasyon Panosu</h1>
+                    <h1>Profil Lazer Verileri</h1>
                     <p>
-                        Uretim, sure, hatali urun ve hurda sinyallerini tek panel yapisinda izleyin.
-                        KPI kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
+                        Metal veri kayıt sayfasındaki yeni yapı üzerinden kullanılan süre, kalan süre,
+                        hata, performans, kullanılabilirlik, kalite ve OEE değerlerini tek akışta izleyin.
                     </p>
 
                     <div class="profile-hero__facts profile-hero__facts--triple">
                         <div class="profile-fact">
-                            <span>Calisilan is gunu</span>
+                            <span>Çalışılan iş günü</span>
                             <strong>@Model.CalisilanIsGunu</strong>
                         </div>
                         <div class="profile-fact">
@@ -45,20 +45,20 @@ else
                             <strong>@aktifMakineSayisi</strong>
                         </div>
                         <div class="profile-fact">
-                            <span>Ortalama calisan personel</span>
-                            <strong>@Model.OrtalamaCalisanPersonel</strong>
+                            <span>Aktif müşteri</span>
+                            <strong>@aktifMusteriSayisi</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
-                            <span>One cikan profil</span>
+                            <span>Öne çıkan profil</span>
                             <strong>@oneCikanProfil</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
-                            <span>Baskin duraklama</span>
+                            <span>Baskın duraklama</span>
                             <strong>@baskinDuraklama</strong>
                         </div>
                         <div class="profile-fact profile-fact--wide">
-                            <span>Baskin hata nedeni</span>
-                            <strong>@baskinHataNedeni</strong>
+                            <span>Baskın müşteri ve mesai</span>
+                            <strong>@oneCikanMusteri | @baskinMesai</strong>
                         </div>
                     </div>
                 </div>
@@ -78,42 +78,51 @@ else
 
                     <div class="profile-hero__note">
                         <p>
-                            <strong>Toplam sure</strong> secilen donemde metal operasyonu icin kaydedilen toplam calisma suresidir.
-                            <strong>Ortalama sure</strong> toplam sure / toplam uretim uzerinden okunur.
+                            <strong>Kullanılan süre</strong> ve <strong>kalan süre</strong> doğrudan yeni metal Excel’indeki süre kolonlarından okunur.
+                            OEE skoru ayrıca performans, kullanılabilirlik ve kalite alanlarıyla çapraz kontrol edilir.
                         </p>
                         <p class="mb-0">
-                            <strong>Makine</strong>, <strong>mesai</strong> ve <strong>duraklama</strong> panelleri yeni lazer veri yapisindaki operasyon akisina gore guncellendi.
-                            <strong>Baskin mesai durumu</strong> bu donemde en yogun sureye sahip kayit: @baskinMesai.
+                            Makine OEE grafiğinde bir makine seçtiğinizde duraklama paneli yalnızca o makinenin kayıtlarına iner.
+                            Hata serisi ise yeni sayfadaki <strong>HATA SAYISI</strong> kolonunu, veri yoksa eski hata dosyasını kullanır.
                         </p>
                     </div>
                 </div>
             </section>
 
-            <section class="profile-kpis mb-4">
+            <section class="profile-kpis profile-kpis--six mb-4">
                 <article class="profile-kpi profile-kpi--cyan">
-                    <span class="profile-kpi__label">Toplam Uretim</span>
-                    <strong class="profile-kpi__value">@Model.GunlukToplamUretim.ToString("N0")</strong>
-                    <small class="profile-kpi__meta">Secilen donemde uretilen toplam adet</small>
+                    <span class="profile-kpi__label">Toplam Parça</span>
+                    <strong class="profile-kpi__value">@Model.ToplamParcaSayisi.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Seçilen dönemde kaydedilen toplam parça sayısı</small>
                 </article>
                 <article class="profile-kpi profile-kpi--amber">
-                    <span class="profile-kpi__label">Toplam Sure</span>
-                    <strong class="profile-kpi__value">@Model.GunlukToplamSure.ToString("N0") dk</strong>
-                    <small class="profile-kpi__meta">Toplam operasyon suresi</small>
-                </article>
-                <article class="profile-kpi profile-kpi--violet">
-                    <span class="profile-kpi__label">Ortalama Sure</span>
-                    <strong class="profile-kpi__value">@Model.OrtalamaIslemSuresi.ToString("F2") dk/adet</strong>
-                    <small class="profile-kpi__meta">Birim basina islem suresi</small>
+                    <span class="profile-kpi__label">Kesilen Profil Boy</span>
+                    <strong class="profile-kpi__value">@Model.ToplamKesilenProfilBoy.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Profil boy toplamı</small>
                 </article>
                 <article class="profile-kpi profile-kpi--rose">
-                    <span class="profile-kpi__label">Hatali Urun</span>
-                    <strong class="profile-kpi__value">@Model.HataliUrunAdedi.ToString("N0")</strong>
-                    <small class="profile-kpi__meta">Secilen donemde tespit edilen toplam hata</small>
+                    <span class="profile-kpi__label">Hata Sayısı</span>
+                    <strong class="profile-kpi__value">@Model.ToplamHataSayisi.ToString("N0")</strong>
+                    <small class="profile-kpi__meta">Aynı dönemde kaydedilen toplam hata</small>
+                </article>
+                <article class="profile-kpi profile-kpi--violet">
+                    <span class="profile-kpi__label">Kullanılan Süre</span>
+                    <strong class="profile-kpi__value">@Model.ToplamKullanilanSure.ToString("N0") dk</strong>
+                    <small class="profile-kpi__meta">Operasyonda kullanılan toplam süre</small>
                 </article>
                 <article class="profile-kpi profile-kpi--slate">
-                    <span class="profile-kpi__label">Hurda</span>
-                    <strong class="profile-kpi__value">@Model.HurdaAdedi.ToString("N0")</strong>
-                    <small class="profile-kpi__meta">Hurda karari verilen toplam adet</small>
+                    <span class="profile-kpi__label">Kalan Süre</span>
+                    <strong class="profile-kpi__value">@Model.ToplamKalanSure.ToString("N0") dk</strong>
+                    <small class="profile-kpi__meta">Vardiya içinde kalan toplam süre</small>
+                </article>
+                <article class="profile-kpi profile-kpi--emerald">
+                    <span class="profile-kpi__label">Ortalama OEE</span>
+                    <strong class="profile-kpi__value">@Model.OrtalamaOee.ToString("N1")%</strong>
+                    <small class="profile-kpi__meta">
+                        Perf. @Model.OrtalamaPerformans.ToString("N1")% |
+                        Kul. @Model.OrtalamaKullanilabilirlik.ToString("N1")% |
+                        Kal. @Model.OrtalamaKalite.ToString("N1")%
+                    </small>
                 </article>
             </section>
 
@@ -122,12 +131,12 @@ else
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>Profil Tipine Gore Uretim Dagilimi</h2>
-                                <p>Secilen donemde profil karmasinin adet bazli dagilimini inceleyin.</p>
+                                <h2>@(ViewBag.MetalTrendTitle ?? "OEE ve Bileşen Trendi")</h2>
+                                <p>Performans, kullanılabilirlik, kalite ve OEE günlük akışını birlikte izleyin.</p>
                             </div>
                         </div>
-                        <div class="profile-panel__body profile-panel__body--chart-pie">
-                            <canvas id="pastaGrafigi"></canvas>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="oeeTrendGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
@@ -136,12 +145,12 @@ else
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>@(ViewBag.TrendTitle ?? "Uretim Trendi")</h2>
-                                <p>Gun bazli uretim akisini tek eksende izleyin.</p>
+                                <h2>Makine Bazlı OEE</h2>
+                                <p>Makine ortalamalarını karşılaştırın. Duraklama panelini filtrelemek için çubuk seçin.</p>
                             </div>
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart">
-                            <canvas id="cizgiGrafigi"></canvas>
+                            <canvas id="makineOeeGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
@@ -150,12 +159,12 @@ else
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>Makine Bazli Uretim</h2>
-                                <p>Calisilan makinelerin toplam uretim hacmini karsilastirin.</p>
+                                <h2>Makine Bazlı Süre Dengesi</h2>
+                                <p>Kullanılan ve kalan süreyi aynı eksende görün.</p>
                             </div>
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart">
-                            <canvas id="makineUretimGrafigi"></canvas>
+                            <canvas id="sureDengeGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
@@ -165,7 +174,7 @@ else
                         <div class="profile-panel__header">
                             <div>
                                 <h2 id="duraklamaPanelTitle">Duraklama Nedenleri</h2>
-                                <p id="duraklamaPanelDescription">Makine bazli filtrelemek icin soldaki grafikten bir makineye tiklayin.</p>
+                                <p id="duraklamaPanelDescription">Makine seçimi yapıldığında grafik sadece o makinenin kayıtlarını gösterir.</p>
                             </div>
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart-pie">
@@ -174,34 +183,47 @@ else
                     </div>
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 col-xl-6">
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>Hata Nedenleri Dagilimi</h2>
-                                <p>Hatali urun kayitlarinin hangi nedenlerde toplandigini adet bazli izleyin.</p>
+                                <h2>Profil Hammadde Dağılımı</h2>
+                                <p>Parça yükünün hangi profil tiplerinde yoğunlaştığını izleyin.</p>
                             </div>
                         </div>
-                        <div class="profile-panel__body profile-panel__body--chart">
-                            <canvas id="hataNedenGrafigi"></canvas>
+                        <div class="profile-panel__body profile-panel__body--chart-pie">
+                            <canvas id="profilDagilimGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 col-xl-6">
                     <div class="profile-panel h-100">
                         <div class="profile-panel__header">
                             <div>
-                                <h2>Profil Tipine Gore Sure Dagilimi</h2>
-                                <p>Toplam sureden hangi profil tipinin ne kadar pay aldigini okuyun.</p>
+                                <h2>Müşteri Bazlı Parça Yoğunluğu</h2>
+                                <p>Toplam parça sayısına göre en yoğun müşteri akışını görün.</p>
                             </div>
                         </div>
                         <div class="profile-panel__body profile-panel__body--chart">
-                            <canvas id="urunSureGrafigi"></canvas>
+                            <canvas id="musteriGrafigi"></canvas>
                         </div>
                     </div>
                 </div>
 
+                <div class="col-12 col-xl-6">
+                    <div class="profile-panel h-100">
+                        <div class="profile-panel__header">
+                            <div>
+                                <h2>Günlük Hata Akışı</h2>
+                                <p>Yeni veri ekranındaki hata kolonundan günlük toplama inin.</p>
+                            </div>
+                        </div>
+                        <div class="profile-panel__body profile-panel__body--chart">
+                            <canvas id="hataTrendGrafigi"></canvas>
+                        </div>
+                    </div>
+                </div>
             </section>
         </div>
     </div>

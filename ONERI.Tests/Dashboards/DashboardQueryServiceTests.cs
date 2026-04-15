@@ -138,6 +138,42 @@ public class DashboardQueryServiceTests
         Assert.Equal(new[] { 92d, 84d }, result.Model.PlanUyumBolumData);
     }
 
+    [Fact]
+    public async Task GetProfilLazerAsync_IgnoresNumericDowntimeReasonLabels()
+    {
+        var selectedDate = new DateTime(2026, 4, 15);
+        var snapshot = new DashboardDataSnapshot
+        {
+            ProfilRows = new List<SatirModeli>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    CalisilanMakine = "PROFİL LAZER MANUEL",
+                    DuraklamaNedeni1 = "Personel Eksik",
+                    DuraklamaSuresi1 = 25,
+                    DuraklamaNedeni2 = "0",
+                    DuraklamaSuresi2 = 25,
+                    DuraklamaNedeni3 = "16",
+                    DuraklamaSuresi3 = 260
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetProfilLazerAsync(
+            raporTarihi: selectedDate,
+            baslangicTarihi: null,
+            bitisTarihi: null,
+            ay: null,
+            yil: null,
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(new[] { "Personel Eksik" }, result.Model.DuraklamaNedenLabels);
+        Assert.Equal(new[] { 25 }, result.Model.DuraklamaNedenData);
+    }
+
     private sealed class StubDashboardIngestionService : IDashboardIngestionService
     {
         private readonly DashboardDataSnapshot _snapshot;

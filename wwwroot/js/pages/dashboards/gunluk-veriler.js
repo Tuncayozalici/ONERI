@@ -88,6 +88,15 @@ document.addEventListener('DOMContentLoaded', function () {
             trendPurpleFill: isDarkTheme ? 'rgba(139, 92, 246, 0.14)' : 'rgba(124, 58, 237, 0.12)',
             trendRose: isDarkTheme ? '#fb7185' : '#e11d48',
             trendRoseFill: isDarkTheme ? 'rgba(251, 113, 133, 0.14)' : 'rgba(225, 29, 72, 0.12)',
+            occupancySeries: [
+                isDarkTheme ? '#60a5fa' : '#3b82f6',
+                isDarkTheme ? '#34d399' : '#10b981',
+                isDarkTheme ? '#fbbf24' : '#f59e0b',
+                isDarkTheme ? '#f472b6' : '#ec4899',
+                isDarkTheme ? '#a78bfa' : '#8b5cf6',
+                isDarkTheme ? '#22d3ee' : '#06b6d4',
+                isDarkTheme ? '#fb7185' : '#f43f5e'
+            ],
             donutColors: [
                 '#fb7185', '#60a5fa', '#fbbf24', '#2dd4bf', '#a78bfa',
                 '#fb923c', '#94a3b8', '#22c55e', '#f472b6', '#38bdf8'
@@ -228,6 +237,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 ctx.restore();
             }
         };
+    }
+
+    function buildOccupancyDatasets(seriesList, palette) {
+        return seriesList.map(function (series, index) {
+            const color = palette.occupancySeries[index % palette.occupancySeries.length];
+            return {
+                label: series.Bolum || ('Bolum ' + (index + 1)),
+                data: Array.isArray(series.DolulukOranlari) ? series.DolulukOranlari.map(clampPercent) : [],
+                moduleCounts: Array.isArray(series.ModulSayilari) ? series.ModulSayilari : [],
+                borderColor: color,
+                backgroundColor: color + '22',
+                tension: 0.28,
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            };
+        });
     }
 
     function createGaugeCenterPlugin(value, target, palette) {
@@ -786,27 +813,36 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, trendHasData && hasAnyData(modulTrendValues), 'Modul trend verisi bulunamadi.');
 
-        const hataTrendValues = Array.isArray(data.HataTrendData) ? data.HataTrendData : [];
+        const istasyonDolulukSerileri = Array.isArray(data.IstasyonDolulukSerileri) ? data.IstasyonDolulukSerileri : [];
+        const occupancyDatasets = buildOccupancyDatasets(istasyonDolulukSerileri, palette);
+        const occupancyHasData = occupancyDatasets.some(function (dataset) {
+            return hasAnyData(dataset.data);
+        });
         createChart('genelHataTrend', {
             type: 'line',
             data: {
                 labels: trendLabels,
-                datasets: [
-                    {
-                        label: 'Hatali Adet',
-                        data: hataTrendValues,
-                        borderColor: palette.trendRose,
-                        backgroundColor: palette.trendRoseFill,
-                        tension: 0.28,
-                        fill: true
-                    }
-                ]
+                datasets: occupancyDatasets
             },
             options: {
                 maintainAspectRatio: false,
                 interaction: {
                     mode: 'index',
                     intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const doluluk = Number(context.parsed.y || 0).toFixed(2);
+                                const moduleCounts = Array.isArray(context.dataset.moduleCounts)
+                                    ? context.dataset.moduleCounts
+                                    : [];
+                                const moduleCount = moduleCounts[context.dataIndex] ?? 0;
+                                return context.dataset.label + ': ' + doluluk + '% | Modul: ' + Number(moduleCount).toLocaleString('tr-TR');
+                            }
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -816,13 +852,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
                         grid: {
                             color: palette.gridColor
                         }
                     }
                 }
             }
-        }, trendHasData && hasAnyData(hataTrendValues), 'Hata trend verisi bulunamadi.');
+        }, trendHasData && occupancyHasData, 'Istasyon doluluk verisi bulunamadi.');
     }
 
     setupUltraToggle();

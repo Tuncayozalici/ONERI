@@ -9,9 +9,6 @@
             || (await AuthorizationService.AuthorizeAsync(User, null, permissionKey)).Succeeded;
     }
 
-    var toplamDuraklamaDakika = (int)Math.Round(Model.ToplamDuraklamaDakika, MidpointRounding.AwayFromZero);
-    var toplamDuraklamaSaat = toplamDuraklamaDakika / 60;
-    var kalanDuraklamaDakika = toplamDuraklamaDakika % 60;
     var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Bölüm Bazlı Personel (Toplam)";
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
     var seciliDonemOzeti = (string?)ViewBag.OzetRange ?? Model.RaporTarihi.ToString("dd.MM.yyyy");
@@ -203,7 +200,7 @@
 
     if (showHataTrendi)
     {
-        chartPayload["HataTrendData"] = Model.HataTrendData;
+        chartPayload["IstasyonDolulukSerileri"] = Model.IstasyonDolulukSerileri;
     }
 }
 
@@ -305,8 +302,9 @@
 
                     <a id="sectionPickerCta"
                        href="@varsayilanBolum.Url"
-                       class="btn btn-dark gunluk-section-picker__cta">
+                       class="btn gunluk-section-picker__cta">
                         <span id="sectionPickerCtaLabel">@($"{varsayilanBolum.Title} ekranina git")</span>
+                        <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
                     </a>
                 </div>
             </aside>
@@ -349,8 +347,7 @@
                                             data-bs-target="#duraklamaDetayModal"
                                             aria-label="Toplam duraklama detaylarini ac">
                                         <span class="gunluk-kpi__label">Toplam Duraklama</span>
-                                        <strong class="gunluk-kpi__value">@toplamDuraklamaSaat.ToString("N0") sa @kalanDuraklamaDakika.ToString("D2") dk</strong>
-                                        <small class="gunluk-kpi__meta">Makine bazli toplam kayip sure. Detay icin tiklayin.</small>
+                                        <strong class="gunluk-kpi__value gunluk-kpi__value--action">Duraklama sürelerini görmek için tıklayınız</strong>
                                     </button>
                                 }
                             </div>
@@ -506,8 +503,8 @@
                             <div class="gunluk-panel">
                                 <div class="gunluk-panel__header">
                                     <div>
-                                        <h2>Hata Trendi</h2>
-                                        <p>Gun bazli hatali adet degisimini izleyin.</p>
+                                        <h2>Istasyon Doluluk Orani</h2>
+                                        <p>Bolumlerin gun bazli modül yukunu ve doluluk oranini izleyin.</p>
                                     </div>
                                 </div>
                                 <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">

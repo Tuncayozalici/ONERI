@@ -28,6 +28,7 @@ namespace ONERI.Models
         public List<double> ModulTrendData { get; set; } = new List<double>();
         public List<double> UretimTrendData { get; set; } = new List<double>();
         public List<double> HataTrendData { get; set; } = new List<double>();
+        public List<IstasyonDolulukSeriModel> IstasyonDolulukSerileri { get; set; } = new List<IstasyonDolulukSeriModel>();
         public List<double> DuraklamaTrendData { get; set; } = new List<double>();
         public List<KpiBolumDetayModel> UretimBolumDetaylari { get; set; } = new List<KpiBolumDetayModel>();
         public List<KpiBolumDetayModel> HataBolumDetaylari { get; set; } = new List<KpiBolumDetayModel>();

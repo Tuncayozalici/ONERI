@@ -109,6 +109,36 @@
             </div>
         </section>
 
+        <section class="cnc-machine-links mb-4">
+            <div class="cnc-panel">
+                <div class="cnc-panel__header">
+                    <div>
+                        <h2>Makine Ekranları</h2>
+                        <p>Masterwood, Skipper ve Rover-B detay ekranlarına tek tıkla geçin.</p>
+                    </div>
+                </div>
+                <div class="cnc-panel__body">
+                    <div class="cnc-machine-link-grid">
+                        @foreach (var machine in machineCards)
+                        {
+                            <a href="@machine.Url" class="cnc-machine-link-card">
+                                <div class="cnc-machine-link-card__icon">
+                                    <i class="bi @machine.Icon"></i>
+                                </div>
+                                <div class="cnc-machine-link-card__content">
+                                    <div class="cnc-machine-link-card__top">
+                                        <h3>@machine.Name Makinesi</h3>
+                                        <span>Detaya Git</span>
+                                    </div>
+                                    <p>Üretim: @machine.Summary.Uretim.ToString("N0") | Hatalı: @machine.Summary.HataliParca.ToString("N0") | OEE: @machine.Summary.Oee.ToString("N2")%</p>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="cnc-kpis mb-4">
             <article class="cnc-kpi cnc-kpi--cyan">
                 <span class="cnc-kpi__label">Toplam Üretim</span>
@@ -272,35 +302,6 @@
             </div>
         </section>
 
-        <section class="cnc-machine-links mt-4">
-            <div class="cnc-panel">
-                <div class="cnc-panel__header">
-                    <div>
-                        <h2>Makine Ekranları</h2>
-                        <p>Masterwood, Skipper ve Rover-B detay ekranlarına tek tıkla geçin.</p>
-                    </div>
-                </div>
-                <div class="cnc-panel__body">
-                    <div class="cnc-machine-link-grid">
-                        @foreach (var machine in machineCards)
-                        {
-                            <a href="@machine.Url" class="cnc-machine-link-card">
-                                <div class="cnc-machine-link-card__icon">
-                                    <i class="bi @machine.Icon"></i>
-                                </div>
-                                <div class="cnc-machine-link-card__content">
-                                    <div class="cnc-machine-link-card__top">
-                                        <h3>@machine.Name Makinesi</h3>
-                                        <span>Detaya Git</span>
-                                    </div>
-                                    <p>Üretim: @machine.Summary.Uretim.ToString("N0") | Hatalı: @machine.Summary.HataliParca.ToString("N0") | OEE: @machine.Summary.Oee.ToString("N2")%</p>
-                                </div>
-                            </a>
-                        }
-                    </div>
-                </div>
-            </div>
-        </section>
     </div>
 </div>
 

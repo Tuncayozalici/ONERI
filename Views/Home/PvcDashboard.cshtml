@@ -133,6 +133,47 @@
             </div>
         </section>
 
+        @if (Model.MakineKartlari.Count > 1)
+        {
+            <section class="pvc-machine-links mb-4">
+                <div class="pvc-panel">
+                    <div class="pvc-panel__header">
+                        <div>
+                            <h2>Makine Ekranları</h2>
+                            <p>Alt hat görünümüne tek tıkla geçin veya tüm makineler görünümüne dönün.</p>
+                        </div>
+                    </div>
+                    <div class="pvc-panel__body">
+                        <div class="pvc-machine-link-grid">
+                            @foreach (var kart in Model.MakineKartlari)
+                            {
+                                var makineUrl = Url.Action("PvcDashboard", "Home", new
+                                {
+                                    startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
+                                    endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate,
+                                    makine = kart.MakineAdi
+                                });
+                                var isSelectedCard = selectedMachine.Equals(kart.MakineAdi, StringComparison.OrdinalIgnoreCase);
+
+                                <a href="@makineUrl" class="pvc-machine-link-card @(isSelectedCard ? "is-selected" : string.Empty)">
+                                    <div class="pvc-machine-link-card__icon">
+                                        <i class="bi bi-cpu"></i>
+                                    </div>
+                                    <div class="pvc-machine-link-card__content">
+                                        <div class="pvc-machine-link-card__top">
+                                            <h3>@kart.MakineAdi Makinesi</h3>
+                                            <span>@(isSelectedCard ? "Açık" : "Detaya Git")</span>
+                                        </div>
+                                        <p>Üretim: @kart.Uretim.ToString("N0") | Hatalı: @kart.HataliParca.ToString("N0") | OEE: @kart.Oee.ToString("N2")%</p>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+        }
+
         <section class="pvc-kpis mb-4">
             <article class="pvc-kpi pvc-kpi--cyan">
                 <span class="pvc-kpi__label">Toplam Üretim (Metraj)</span>
@@ -356,46 +397,6 @@
             </div>
         </section>
 
-        @if (Model.MakineKartlari.Count > 1)
-        {
-            <section class="pvc-machine-links mt-4">
-                <div class="pvc-panel">
-                    <div class="pvc-panel__header">
-                        <div>
-                            <h2>Makine Ekranları</h2>
-                            <p>Alt hat görünümüne tek tıkla geçin veya tüm makineler görünümüne dönün.</p>
-                        </div>
-                    </div>
-                    <div class="pvc-panel__body">
-                        <div class="pvc-machine-link-grid">
-                            @foreach (var kart in Model.MakineKartlari)
-                            {
-                                var makineUrl = Url.Action("PvcDashboard", "Home", new
-                                {
-                                    startDate = string.IsNullOrWhiteSpace(routeStartDate) ? null : routeStartDate,
-                                    endDate = string.IsNullOrWhiteSpace(routeEndDate) ? null : routeEndDate,
-                                    makine = kart.MakineAdi
-                                });
-                                var isSelectedCard = selectedMachine.Equals(kart.MakineAdi, StringComparison.OrdinalIgnoreCase);
-
-                                <a href="@makineUrl" class="pvc-machine-link-card @(isSelectedCard ? "is-selected" : string.Empty)">
-                                    <div class="pvc-machine-link-card__icon">
-                                        <i class="bi bi-cpu"></i>
-                                    </div>
-                                    <div class="pvc-machine-link-card__content">
-                                        <div class="pvc-machine-link-card__top">
-                                            <h3>@kart.MakineAdi Makinesi</h3>
-                                            <span>@(isSelectedCard ? "Açık" : "Detaya Git")</span>
-                                        </div>
-                                        <p>Üretim: @kart.Uretim.ToString("N0") | Hatalı: @kart.HataliParca.ToString("N0") | OEE: @kart.Oee.ToString("N2")%</p>
-                                    </div>
-                                </a>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </section>
-        }
     </div>
 </div>
 

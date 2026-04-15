@@ -265,13 +265,27 @@ public class DashboardIngestionService : IDashboardIngestionService
                     Oee = colOee > 0
                         ? DashboardParsingHelper.NormalizePercentValue(DashboardParsingHelper.ParsePercentCell(worksheet.Cells[row, colOee].Value))
                         : 0,
-                    DuraklamaNedeni1 = worksheet.Cells[row, colDuraklamaNedeni1 > 0 ? colDuraklamaNedeni1 : 8].Value?.ToString()?.Trim(),
-                    DuraklamaSuresi1 = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi1 > 0 ? colDuraklamaSuresi1 : 9].Value),
-                    DuraklamaNedeni2 = worksheet.Cells[row, colDuraklamaNedeni2 > 0 ? colDuraklamaNedeni2 : 10].Value?.ToString()?.Trim(),
-                    DuraklamaSuresi2 = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi2 > 0 ? colDuraklamaSuresi2 : 11].Value),
-                    DuraklamaNedeni3 = worksheet.Cells[row, colDuraklamaNedeni3 > 0 ? colDuraklamaNedeni3 : 12].Value?.ToString()?.Trim(),
-                    DuraklamaSuresi3 = DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi3 > 0 ? colDuraklamaSuresi3 : 13].Value),
-                    Aciklama = worksheet.Cells[row, colAciklama > 0 ? colAciklama : 14].Value?.ToString()?.Trim()
+                    DuraklamaNedeni1 = colDuraklamaNedeni1 > 0
+                        ? worksheet.Cells[row, colDuraklamaNedeni1].Value?.ToString()?.Trim()
+                        : null,
+                    DuraklamaSuresi1 = colDuraklamaSuresi1 > 0
+                        ? DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi1].Value)
+                        : 0,
+                    DuraklamaNedeni2 = colDuraklamaNedeni2 > 0
+                        ? worksheet.Cells[row, colDuraklamaNedeni2].Value?.ToString()?.Trim()
+                        : null,
+                    DuraklamaSuresi2 = colDuraklamaSuresi2 > 0
+                        ? DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi2].Value)
+                        : 0,
+                    DuraklamaNedeni3 = colDuraklamaNedeni3 > 0
+                        ? worksheet.Cells[row, colDuraklamaNedeni3].Value?.ToString()?.Trim()
+                        : null,
+                    DuraklamaSuresi3 = colDuraklamaSuresi3 > 0
+                        ? DashboardParsingHelper.ParseCalismaSuresiDakika(worksheet.Cells[row, colDuraklamaSuresi3].Value)
+                        : 0,
+                    Aciklama = colAciklama > 0
+                        ? worksheet.Cells[row, colAciklama].Value?.ToString()?.Trim()
+                        : null
                 });
             }
             catch (Exception ex)

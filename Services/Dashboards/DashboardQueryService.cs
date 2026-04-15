@@ -179,17 +179,6 @@ public class DashboardQueryService : IDashboardQueryService
                 Oee: x.Oee))
             .ToList();
 
-        var boyaHataFromUretimRows = snapshot.BoyaUretimRows
-            .Where(x => x.Tarih != DateTime.MinValue && x.HataliParcaSayisi > 0)
-            .Select(x => (
-                x.Tarih,
-                Adet: (double)x.HataliParcaSayisi,
-                M2: 0d,
-                Neden: (string?)(string.IsNullOrWhiteSpace(x.Aciklama) ? "Boyahane Hatalı Parça" : x.Aciklama),
-                Bolum: (string?)"Boyahane",
-                Operator: (string?)null))
-            .ToList();
-
         var boyaHataLegacyRows = snapshot.BoyaHataRows
             .Where(x => x.Tarih != DateTime.MinValue)
             .Select(x => (
@@ -311,14 +300,7 @@ public class DashboardQueryService : IDashboardQueryService
                 .Select(x => (x.Tarih, (double)x.HataSayisi, 0d, (string?)"Metal Hata Sayısı", (string?)"Profil Lazer", (string?)null)));
         }
 
-        if (boyaHataFromUretimRows.Any())
-        {
-            hataliRows.AddRange(boyaHataFromUretimRows);
-        }
-        else
-        {
-            hataliRows.AddRange(boyaHataLegacyRows);
-        }
+        hataliRows.AddRange(boyaHataLegacyRows);
 
         var allDates = profilRows.Select(x => x.Tarih.Date)
             .Concat(boyaRows.Select(x => x.Tarih.Date))
@@ -918,61 +900,15 @@ public class DashboardQueryService : IDashboardQueryService
             }
         }
 
-        var boyahaneHataSatirlari = snapshot.BoyaUretimRows
+        var boyahaneHataSatirlari = snapshot.BoyaHataRows
             .Where(x => x.Tarih != DateTime.MinValue
                 && x.Tarih.Date >= ozetStart
-                && x.Tarih.Date <= ozetEnd
-                && x.HataliParcaSayisi > 0)
+                && x.Tarih.Date <= ozetEnd)
             .ToList();
-        var boyahaneDashboardHataAdedi = boyahaneHataSatirlari.Sum(x => (double)x.HataliParcaSayisi);
-        if (boyahaneDashboardHataAdedi > 0)
+        var boyahaneDashboardHataAdedi = boyahaneHataSatirlari.Sum(x => (double)x.HataliAdet);
+        foreach (var row in boyahaneHataSatirlari)
         {
-            foreach (var row in boyahaneHataSatirlari)
-            {
-                AddKpiDetay(hataDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.HataliParcaSayisi);
-            }
-        }
-        else
-        {
-            var boyaLegacyHataSatirlari = snapshot.BoyaHataRows
-                .Where(x => x.Tarih != DateTime.MinValue
-                    && x.Tarih.Date >= ozetStart
-                    && x.Tarih.Date <= ozetEnd)
-                .ToList();
-            boyahaneDashboardHataAdedi = boyaLegacyHataSatirlari.Sum(x => (double)x.HataliAdet);
-            foreach (var row in boyaLegacyHataSatirlari)
-            {
-                AddKpiDetay(hataDetayMap, "Boyahane", "Makine bilgisi yok", row.HataliAdet);
-            }
-        }
-
-        var boyahaneMakineDisiHataSatirlari = snapshot.BoyaUretimRows
-            .Where(x => x.Tarih != DateTime.MinValue
-                && x.Tarih.Date >= ozetStart
-                && x.Tarih.Date <= ozetEnd
-                && x.HataliParcaSayisi > 0)
-            .ToList();
-        var boyahaneHataKatkisi = boyahaneMakineDisiHataSatirlari.Sum(x => (double)x.HataliParcaSayisi);
-        if (boyahaneHataKatkisi > 0)
-        {
-            foreach (var row in boyahaneMakineDisiHataSatirlari)
-            {
-                AddKpiDetay(hataDetayMap, "Boyahane", NormalizeBoyaMakineAdiForGunluk(row.Makine), row.HataliParcaSayisi);
-            }
-        }
-        else
-        {
-            var boyaLegacyMakineDisiHataSatirlari = snapshot.BoyaHataRows
-                .Where(x => x.Tarih != DateTime.MinValue
-                    && x.Tarih.Date >= ozetStart
-                    && x.Tarih.Date <= ozetEnd
-                    && !IsMakineHatasi(x.HataNedeni))
-                .ToList();
-            boyahaneHataKatkisi = boyaLegacyMakineDisiHataSatirlari.Sum(x => (double)x.HataliAdet);
-            foreach (var row in boyaLegacyMakineDisiHataSatirlari)
-            {
-                AddKpiDetay(hataDetayMap, "Boyahane", "Makine bilgisi yok", row.HataliAdet);
-            }
+            AddKpiDetay(hataDetayMap, "Boyahane", "Makine bilgisi yok", row.HataliAdet);
         }
 
         var cncGenelHataToplami = snapshot.HataliParcaRows
@@ -1114,8 +1050,7 @@ public class DashboardQueryService : IDashboardQueryService
                     && x.Tarih.Date >= ozetStart
                     && x.Tarih.Date <= ozetEnd
                     && !IsMakineHatasi(x.HataNedeni))
-                .Sum(x => (double)x.Adet)
-            + boyahaneHataKatkisi;
+                .Sum(x => (double)x.Adet);
 
         model.ToplamUretim = uretimGunluk.Values.Sum();
         model.ToplamHataAdet = profilDashboardHataAdedi + boyahaneDashboardHataAdedi + hataliParcaDashboardHataAdedi;
@@ -3553,8 +3488,16 @@ public class DashboardQueryService : IDashboardQueryService
         var duraklamaNedenleri = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in filtreliVeri)
         {
-            var neden1 = string.IsNullOrWhiteSpace(row.DuraklamaNedeni1) ? "Bilinmiyor" : row.DuraklamaNedeni1;
-            var neden2 = string.IsNullOrWhiteSpace(row.DuraklamaNedeni2) ? "Bilinmiyor" : row.DuraklamaNedeni2;
+            var neden1 = row.DuraklamaNedeni1;
+            var neden2 = row.DuraklamaNedeni2;
+            if (row.Duraklama1 <= 0
+                && row.Duraklama2 > 0
+                && string.IsNullOrWhiteSpace(neden2)
+                && !string.IsNullOrWhiteSpace(neden1))
+            {
+                neden2 = neden1;
+            }
+
             DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, neden1, row.Duraklama1);
             DashboardParsingHelper.AddDuraklama(duraklamaNedenleri, neden2, row.Duraklama2);
         }
@@ -3598,35 +3541,16 @@ public class DashboardQueryService : IDashboardQueryService
                 HataNedeni = x.HataNedeni
             }));
 
-        var boyaHataUretimRows = snapshot.BoyaUretimRows
-            .Where(x => x.Tarih != DateTime.MinValue && x.HataliParcaSayisi > 0)
+        excelData.AddRange(snapshot.BoyaHataRows
+            .Where(x => x.Tarih != DateTime.MinValue)
             .Select(x => new HataliParcaSatirModel
             {
                 Tarih = x.Tarih,
                 BolumAdi = "Boyahane",
-                Adet = x.HataliParcaSayisi,
+                Adet = x.HataliAdet,
                 ToplamM2 = 0,
-                HataNedeni = string.IsNullOrWhiteSpace(x.Aciklama) ? "Boyahane Hatalı Parça" : x.Aciklama
-            })
-            .ToList();
-
-        if (boyaHataUretimRows.Any())
-        {
-            excelData.AddRange(boyaHataUretimRows);
-        }
-        else
-        {
-            excelData.AddRange(snapshot.BoyaHataRows
-                .Where(x => x.Tarih != DateTime.MinValue)
-                .Select(x => new HataliParcaSatirModel
-                {
-                    Tarih = x.Tarih,
-                    BolumAdi = "Boyahane",
-                    Adet = x.HataliAdet,
-                    ToplamM2 = 0,
-                    HataNedeni = x.HataNedeni
-                }));
-        }
+                HataNedeni = x.HataNedeni
+            }));
 
         if (!excelData.Any())
         {
@@ -3695,6 +3619,7 @@ public class DashboardQueryService : IDashboardQueryService
         var topNeden = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .FirstOrDefault();
         if (topNeden != null)
@@ -3705,6 +3630,7 @@ public class DashboardQueryService : IDashboardQueryService
         var topBolum = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.BolumAdi))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .FirstOrDefault();
         if (topBolum != null)
@@ -3715,6 +3641,7 @@ public class DashboardQueryService : IDashboardQueryService
         var topOperator = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.OperatorAdi))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .FirstOrDefault();
         if (topOperator != null)
@@ -3760,6 +3687,7 @@ public class DashboardQueryService : IDashboardQueryService
         var hataNedenList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .ToList();
         viewModel.HataNedenLabels = hataNedenList.Select(x => x.Key).ToList();
@@ -3768,6 +3696,7 @@ public class DashboardQueryService : IDashboardQueryService
         var bolumList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.BolumAdi))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .ToList();
         viewModel.BolumLabels = bolumList.Select(x => x.Key).ToList();
@@ -3776,11 +3705,13 @@ public class DashboardQueryService : IDashboardQueryService
         viewModel.BolumBazliHataNedenleri = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.BolumAdi))
             .AsEnumerable()
+            .Where(g => g.Sum(x => x.Adet) > 0)
             .Select(g =>
             {
                 var nedenler = g
                     .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.HataNedeni))
                     .Select(ng => new { Neden = ng.Key, Toplam = ng.Sum(x => x.Adet) })
+                    .Where(x => x.Toplam > 0)
                     .OrderByDescending(x => x.Toplam)
                     .ToList();
 
@@ -3797,6 +3728,7 @@ public class DashboardQueryService : IDashboardQueryService
         var operatorList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.OperatorAdi))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .Take(10)
             .ToList();
@@ -3806,6 +3738,7 @@ public class DashboardQueryService : IDashboardQueryService
         var kalinlikList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Kalinlik))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .ToList();
         viewModel.KalinlikLabels = kalinlikList.Select(x => x.Key).ToList();
@@ -3814,6 +3747,7 @@ public class DashboardQueryService : IDashboardQueryService
         var renkList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.Renk))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .Take(10)
             .ToList();
@@ -3823,6 +3757,7 @@ public class DashboardQueryService : IDashboardQueryService
         var kesimList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.KesimDurumu))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .ToList();
         viewModel.KesimDurumLabels = kesimList.Select(x => x.Key).ToList();
@@ -3831,6 +3766,7 @@ public class DashboardQueryService : IDashboardQueryService
         var pvcList = filtreliVeri
             .GroupBy(x => DashboardParsingHelper.NormalizeLabel(x.PvcDurumu))
             .Select(g => new { Key = g.Key, Total = g.Sum(x => x.Adet) })
+            .Where(x => x.Total > 0)
             .OrderByDescending(x => x.Total)
             .ToList();
         viewModel.PvcDurumLabels = pvcList.Select(x => x.Key).ToList();

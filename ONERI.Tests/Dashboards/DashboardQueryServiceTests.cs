@@ -60,7 +60,7 @@ public class DashboardQueryServiceTests
             yil: null,
             cancellationToken: CancellationToken.None);
 
-        Assert.Equal(41d, result.Model.ToplamHataAdet);
+        Assert.Equal(37d, result.Model.ToplamHataAdet);
     }
 
     [Fact]
@@ -136,6 +136,147 @@ public class DashboardQueryServiceTests
 
         Assert.Equal(new[] { "Kesim", "PVC" }, result.Model.PlanUyumBolumLabels);
         Assert.Equal(new[] { 92d, 84d }, result.Model.PlanUyumBolumData);
+    }
+
+    [Fact]
+    public async Task GetGunlukVerilerAsync_UsesOnlyBoyaHataRowsForBoyahaneErrors()
+    {
+        var selectedDate = new DateTime(2026, 4, 15);
+        var snapshot = new DashboardDataSnapshot
+        {
+            HataliParcaRows = new List<HataliParcaSatirModel>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    BolumAdi = null,
+                    HataNedeni = null,
+                    OperatorAdi = null,
+                    Adet = 0
+                }
+            },
+            BoyaUretimRows = new List<BoyaUretimSatir>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    Makine = "KONVEYÖR HATTI",
+                    HataliParcaSayisi = 500
+                }
+            },
+            BoyaHataRows = new List<BoyaHataSatir>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    HataNedeni = "Boya Kusuru",
+                    HataliAdet = 7
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetGunlukVerilerAsync(
+            raporTarihi: null,
+            baslangicTarihi: selectedDate,
+            bitisTarihi: selectedDate,
+            ay: null,
+            yil: null,
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(7d, result.Model.ToplamHataAdet);
+
+        var boyahaneDetay = Assert.Single(result.Model.HataBolumDetaylari);
+        Assert.Equal("Boyahane", boyahaneDetay.Bolum);
+        Assert.Equal(7d, boyahaneDetay.ToplamDeger);
+
+        var makineDetay = Assert.Single(boyahaneDetay.MakineDetaylari);
+        Assert.Equal("Makine bilgisi yok", makineDetay.Makine);
+        Assert.Equal(7d, makineDetay.Deger);
+    }
+
+    [Fact]
+    public async Task GetHataliParcaAsync_UsesOnlyBoyaHataRowsForBoyahaneCharts()
+    {
+        var selectedDate = new DateTime(2026, 4, 15);
+        var snapshot = new DashboardDataSnapshot
+        {
+            BoyaUretimRows = new List<BoyaUretimSatir>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    Makine = "KONVEYÖR HATTI",
+                    Aciklama = "Üretim Excel Hatası",
+                    HataliParcaSayisi = 500
+                }
+            },
+            BoyaHataRows = new List<BoyaHataSatir>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    HataNedeni = "Boya Kusuru",
+                    HataliAdet = 7
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetHataliParcaAsync(
+            raporTarihi: selectedDate,
+            baslangicTarihi: null,
+            bitisTarihi: null,
+            ay: null,
+            yil: null,
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(7d, result.Model.ToplamHataAdet);
+        Assert.Equal(new[] { "Boyahane" }, result.Model.BolumLabels);
+        Assert.Equal(new[] { 7d }, result.Model.BolumData);
+        Assert.Equal(new[] { "Boya Kusuru" }, result.Model.HataNedenLabels);
+        Assert.Equal(new[] { 7d }, result.Model.HataNedenData);
+        Assert.DoesNotContain("Bilinmeyen", result.Model.BolumLabels);
+        Assert.DoesNotContain("Bilinmeyen", result.Model.HataNedenLabels);
+        Assert.DoesNotContain(500d, result.Model.HataAdetTrendData);
+    }
+
+    [Fact]
+    public async Task GetEbatlamaAsync_UsesFirstReasonWhenOnlySecondDowntimeDurationIsFilled()
+    {
+        var selectedDate = new DateTime(2026, 4, 15);
+        var snapshot = new DashboardDataSnapshot
+        {
+            EbatlamaRows = new List<EbatlamaSatirModel>
+            {
+                new()
+                {
+                    Tarih = selectedDate,
+                    Makine = "SELCO",
+                    Duraklama1 = 0,
+                    DuraklamaNedeni1 = "İŞ BEKLEME",
+                    Duraklama2 = 540,
+                    DuraklamaNedeni2 = null
+                }
+            }
+        };
+
+        var service = new DashboardQueryService(new StubDashboardIngestionService(snapshot));
+
+        var result = await service.GetEbatlamaAsync(
+            raporTarihi: null,
+            baslangicTarihi: selectedDate,
+            bitisTarihi: selectedDate,
+            ay: null,
+            yil: null,
+            makine: "SELCO",
+            cancellationToken: CancellationToken.None);
+
+        Assert.Equal(new[] { "İŞ BEKLEME" }, result.Model.DuraklamaNedenLabels);
+        Assert.Equal(new[] { 540d }, result.Model.DuraklamaNedenData);
+        Assert.DoesNotContain("Bilinmiyor", result.Model.DuraklamaNedenLabels);
     }
 
     [Fact]

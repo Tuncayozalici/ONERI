@@ -10,8 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'hataAdetTrend',
         'hataNedenGrafigi',
         'bolumGrafigi',
-        'operatorGrafigi',
-        'kalinlikGrafigi'
+        'operatorGrafigi'
     ];
     const chartParents = new Map();
     const chartTemplates = new Map();
@@ -318,42 +317,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         }, hasAnyData(data.OperatorData), 'Operatöre göre hata grafiği için veri bulunamadı.');
-
-        createChart('kalinlikGrafigi', {
-            type: 'bar',
-            data: {
-                labels: data.KalinlikLabels || [],
-                datasets: [
-                    {
-                        label: 'Hatalı Adet',
-                        data: data.KalinlikData || [],
-                        backgroundColor: palette.detailBar,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        }, hasAnyData(data.KalinlikData), 'Kalınlık dağılımı için veri bulunamadı.');
 
     }
 

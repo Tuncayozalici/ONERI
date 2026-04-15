@@ -642,10 +642,17 @@ html[data-theme="dark"] .gunluk-summary-item {
 
 .gunluk-grid--insights.gunluk-grid--items-4 {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 260px);
+    align-items: start;
 }
 
 .gunluk-grid--insights > .gunluk-kpi-stack--summary {
-    min-height: 100%;
+    align-self: start;
+    min-height: 0;
+}
+
+.gunluk-grid--insights .gunluk-kpi--stacked {
+    min-height: 154px;
+    height: auto;
 }
 
 .gunluk-empty-state {

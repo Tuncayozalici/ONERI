@@ -30,7 +30,7 @@
                     Hatalı adet, neden, bölüm, operatör ve süreç kırılımlarını tek analiz akışında izleyin.
                     Seçilen döneme göre trendler ve dağılımlar otomatik olarak yeniden hesaplanır.
                 </p>
-                <div class="hatali-hero__facts hatali-hero__facts--triple">
+                <div class="hatali-hero__facts">
                     <div class="hatali-fact">
                         <span>Hata nedeni</span>
                         <strong>@hataNedeniSayisi</strong>
@@ -38,10 +38,6 @@
                     <div class="hatali-fact">
                         <span>Çalışılan iş günü</span>
                         <strong>@Model.CalisilanIsGunu</strong>
-                    </div>
-                    <div class="hatali-fact">
-                        <span>Ortalama çalışan personel</span>
-                        <strong>@Model.OrtalamaCalisanPersonel</strong>
                     </div>
                     <div class="hatali-fact hatali-fact--wide">
                         <span>Öne çıkan neden</span>
@@ -183,7 +179,7 @@
                 </div>
             </div>
 
-            <div class="col-12 col-xl-6">
+            <div class="col-12">
                 <div class="hatali-panel h-100">
                     <div class="hatali-panel__header">
                         <div>
@@ -193,20 +189,6 @@
                     </div>
                     <div class="hatali-panel__body hatali-panel__body--chart">
                         <canvas id="operatorGrafigi"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-xl-6">
-                <div class="hatali-panel h-100">
-                    <div class="hatali-panel__header">
-                        <div>
-                            <h2>Kalınlık Dağılımı</h2>
-                            <p>Hataların kalınlık tipine göre yoğunluğu.</p>
-                        </div>
-                    </div>
-                    <div class="hatali-panel__body hatali-panel__body--chart">
-                        <canvas id="kalinlikGrafigi"></canvas>
                     </div>
                 </div>
             </div>

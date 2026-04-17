@@ -111,7 +111,7 @@ namespace ONERI.Models.Authorization
             new(Dashboards.Ebatlama, "Ebatlama Bölümü", "Dashboards"),
             new(Dashboards.HataliParca, "Hatalı Parça Analizi", "Dashboards"),
 
-            new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Toplam Modül Sayısı", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Depoya Giren Modül", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.HataliAdet, "Günlük Veriler: Hatalı Adet", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ToplamDuraklama, "Günlük Veriler: Toplam Duraklama", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.GenelOeeSkoru, "Günlük Veriler: Genel OEE Skoru", "Günlük Veriler Kartları"),

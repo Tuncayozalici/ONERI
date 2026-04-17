@@ -669,41 +669,154 @@ document.addEventListener('DOMContentLoaded', function () {
         }, hasAnyData(bolumHataValues), 'Bolum bazli hata verisi bulunamadi.');
 
         const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
-        const personelValues = Array.isArray(data.PersonelBolumData) ? data.PersonelBolumData : [];
-        createChart('personelBolumGrafigi', {
-            type: 'bar',
-            data: {
-                labels: personelLabels,
-                datasets: [
-                    {
-                        label: personelSeriesLabel,
-                        data: personelValues,
-                        backgroundColor: palette.personnelBar,
-                        borderColor: palette.personnelBarBorder,
-                        borderWidth: 1,
-                        borderRadius: 10
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            color: palette.gridColor
+        const direktPersonelValues = Array.isArray(data.DirektPersonelBolumData) ? data.DirektPersonelBolumData : [];
+        const endirektPersonelValues = Array.isArray(data.EndirektPersonelBolumData) ? data.EndirektPersonelBolumData : [];
+        const personelOzetLabels = Array.isArray(data.PersonelOzetLabels) && data.PersonelOzetLabels.length > 0
+            ? data.PersonelOzetLabels
+            : ['Direkt Çalışan Sayısı', 'Endirekt Çalışan Sayısı'];
+        const personelOzetValues = Array.isArray(data.PersonelOzetData) ? data.PersonelOzetData : [];
+        const personelBackButton = document.getElementById('personelChartBack');
+
+        function renderPersonelSummaryChart() {
+            if (personelBackButton) {
+                personelBackButton.classList.add('d-none');
+            }
+
+            return createChart('personelBolumGrafigi', {
+                type: 'bar',
+                data: {
+                    labels: personelOzetLabels,
+                    datasets: [
+                        {
+                            label: personelSeriesLabel,
+                            data: personelOzetValues,
+                            backgroundColor: [palette.personnelBar, palette.trendPurpleFill],
+                            borderColor: [palette.personnelBarBorder, palette.trendPurple],
+                            borderWidth: 1,
+                            borderRadius: 10,
+                            detailTypes: ['direct', 'indirect']
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    onClick: function (_, elements) {
+                        if (!elements || elements.length === 0) {
+                            return;
+                        }
+
+                        const type = elements[0].index === 0 ? 'direct' : 'indirect';
+                        renderPersonelDetailChart(type);
+                    },
+                    onHover: function (event, elements) {
+                        if (event?.native?.target) {
+                            event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
                         }
                     },
-                    y: {
-                        grid: {
-                            display: false
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: palette.gridColor
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
+                },
+                plugins: [horizontalValueLabelPlugin]
+            }, hasAnyData(personelOzetValues), 'Personel ozet verisi bulunamadi.');
+        }
+
+        function renderPersonelDetailChart(type) {
+            const canvasId = 'personelBolumGrafigi';
+            const parent = chartParents.get(canvasId);
+            const template = chartTemplates.get(canvasId);
+            if (!parent || !template) {
+                return;
+            }
+
+            const existingIndex = chartInstances.findIndex(function (instance) {
+                return instance.canvas && instance.canvas.id === canvasId;
+            });
+            if (existingIndex >= 0) {
+                chartInstances[existingIndex].destroy();
+                chartInstances.splice(existingIndex, 1);
+            }
+
+            parent.innerHTML = template;
+            if (personelBackButton) {
+                personelBackButton.classList.remove('d-none');
+            }
+
+            const values = type === 'direct' ? direktPersonelValues : endirektPersonelValues;
+            const title = type === 'direct' ? 'Direkt Çalışan Sayısı' : 'Endirekt Çalışan Sayısı';
+            createChart(canvasId, {
+                type: 'bar',
+                data: {
+                    labels: personelLabels,
+                    datasets: [
+                        {
+                            label: title,
+                            data: values,
+                            backgroundColor: type === 'direct' ? palette.personnelBar : palette.trendPurpleFill,
+                            borderColor: type === 'direct' ? palette.personnelBarBorder : palette.trendPurple,
+                            borderWidth: 1,
+                            borderRadius: 10
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: palette.gridColor
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                },
+                plugins: [horizontalValueLabelPlugin]
+            }, hasAnyData(values), title + ' bolum detayi bulunamadi.');
+        }
+
+        if (personelBackButton) {
+            personelBackButton.onclick = function () {
+                const canvasId = 'personelBolumGrafigi';
+                const existingIndex = chartInstances.findIndex(function (instance) {
+                    return instance.canvas && instance.canvas.id === canvasId;
+                });
+                if (existingIndex >= 0) {
+                    chartInstances[existingIndex].destroy();
+                    chartInstances.splice(existingIndex, 1);
                 }
-            },
-            plugins: [horizontalValueLabelPlugin]
-        }, hasAnyData(personelValues), 'Bolum bazli personel verisi bulunamadi.');
+
+                const parent = chartParents.get(canvasId);
+                const template = chartTemplates.get(canvasId);
+                if (parent && template) {
+                    parent.innerHTML = template;
+                }
+                renderPersonelSummaryChart();
+            };
+        }
+
+        renderPersonelSummaryChart();
 
         const planUyumLabels = Array.isArray(data.PlanUyumBolumLabels) ? data.PlanUyumBolumLabels : [];
         const planUyumValues = (Array.isArray(data.PlanUyumBolumData) ? data.PlanUyumBolumData : []).map(clampPercent);
@@ -782,7 +895,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 labels: trendLabels,
                 datasets: [
                     {
-                        label: 'Toplam Modul',
+                        label: 'Depoya Giren Modul',
                         data: modulTrendValues,
                         borderColor: palette.personnelBarBorder,
                         backgroundColor: palette.personnelBar,
@@ -811,7 +924,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, trendHasData && hasAnyData(modulTrendValues), 'Modul trend verisi bulunamadi.');
+        }, trendHasData && hasAnyData(modulTrendValues), 'Depo modul trend verisi bulunamadi.');
 
         const istasyonDolulukSerileri = Array.isArray(data.IstasyonDolulukSerileri) ? data.IstasyonDolulukSerileri : [];
         const occupancyDatasets = buildOccupancyDatasets(istasyonDolulukSerileri, palette);

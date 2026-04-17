@@ -9,9 +9,10 @@
             || (await AuthorizationService.AuthorizeAsync(User, null, permissionKey)).Succeeded;
     }
 
-    var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Bölüm Bazlı Personel (Toplam)";
+    var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Personel Dağılımı (Direkt + Endirekt Toplam)";
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
     var seciliDonemOzeti = (string?)ViewBag.OzetRange ?? Model.RaporTarihi.ToString("dd.MM.yyyy");
+    var bolumHedefLookup = Model.BolumHedefKartlari.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
     var enYuksekHataBolumu = Model.HataBolumDetaylari.FirstOrDefault();
     var enYuksekHataMakinesi = Model.HataBolumDetaylari
         .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
@@ -108,11 +109,10 @@
     var showBolumBazliHata = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliHata);
     var showHataTrendi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataTrendi);
     var showEnCokHataNedeni = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataNedeni);
-    var showEnCokHataOperatoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataOperatoru);
+    var showEnCokHataOperatoru = false;
     var showEnCokHataBolumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataBolumu);
 
-    var topKpiRowCount = (showToplamModulSayisi ? 1 : 0)
-        + (showHataliAdet ? 1 : 0)
+    var topKpiRowCount = (showToplamModulSayisi ? 2 : 0)
         + (showToplamDuraklama ? 1 : 0);
     var hasTopKpiStack = topKpiRowCount > 0;
     var topLayoutItemCount = (hasTopKpiStack ? 1 : 0)
@@ -125,7 +125,8 @@
         + (showModulTrendi ? 1 : 0);
     var insightKpiRowCount = (showEnCokHataNedeni ? 1 : 0)
         + (showEnCokHataOperatoru ? 1 : 0)
-        + (showEnCokHataBolumu ? 1 : 0);
+        + (showEnCokHataBolumu ? 1 : 0)
+        + (showHataliAdet ? 1 : 0);
     var hasInsightKpiStack = insightKpiRowCount > 0;
     var insightLayoutItemCount = (showHataNedenleri ? 1 : 0)
         + (showBolumBazliHata ? 1 : 0)
@@ -174,6 +175,10 @@
     {
         chartPayload["PersonelBolumLabels"] = Model.PersonelBolumLabels;
         chartPayload["PersonelBolumData"] = Model.PersonelBolumData;
+        chartPayload["PersonelOzetLabels"] = Model.PersonelOzetLabels;
+        chartPayload["PersonelOzetData"] = Model.PersonelOzetData;
+        chartPayload["DirektPersonelBolumData"] = Model.DirektPersonelBolumData;
+        chartPayload["EndirektPersonelBolumData"] = Model.EndirektPersonelBolumData;
     }
 
     if (showHataNedenleri)
@@ -234,6 +239,10 @@
                         <div class="gunluk-fact">
                             <span>Ortalama calisan personel</span>
                             <strong>@Model.OrtalamaCalisanPersonel</strong>
+                            @if (Model.PersonelTahminiMi)
+                            {
+                                <small>tahmini endirekt dahil</small>
+                            }
                         </div>
                     </div>
                 </div>
@@ -282,8 +291,9 @@
                         @foreach (var bolum in bolumNavigasyonlari)
                         {
                             var isSelected = bolum.Key == varsayilanBolum.Key;
+                            var hasTarget = bolumHedefLookup.TryGetValue(bolum.Key, out var hedefKarti);
                             <button type="button"
-                                    class="gunluk-section-option js-section-option@(isSelected ? " is-selected" : string.Empty)"
+                                    class="gunluk-section-option js-section-option@(isSelected ? " is-selected" : string.Empty)@(hasTarget ? $" gunluk-section-option--{hedefKarti!.Durum}" : string.Empty)"
                                     data-section-key="@bolum.Key"
                                     data-section-title="@bolum.Title"
                                     data-section-url="@bolum.Url"
@@ -295,6 +305,17 @@
                                 <span class="gunluk-section-option__content">
                                     <strong>@bolum.Title</strong>
                                     <small>@bolum.Description</small>
+                                    @if (hasTarget)
+                                    {
+                                        <span class="gunluk-section-option__target">
+                                            <span>@hedefKarti!.GerceklesenModul.ToString("N0") / @hedefKarti.HedefModul.ToString("N0") modül</span>
+                                            <strong>@hedefKarti.GerceklesmeOrani.ToString("N1")%</strong>
+                                            @if (hedefKarti.TahminiMi)
+                                            {
+                                                <em>tahmini veri</em>
+                                            }
+                                        </span>
+                                    }
                                 </span>
                             </button>
                         }
@@ -321,23 +342,17 @@
                             <div class="gunluk-kpi-stack" style="@topKpiStyle">
                                 @if (showToplamModulSayisi)
                                 {
-                                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked">
-                                        <span class="gunluk-kpi__label">Toplam Modul Sayisi</span>
+                                    <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked gunluk-kpi--depot-module">
+                                        <span class="gunluk-kpi__label">Depoya Giren Modul</span>
                                         <strong class="gunluk-kpi__value">@Model.ToplamModulSayisi.ToString("N0")</strong>
-                                        <small class="gunluk-kpi__meta">Günlük Çalışma Verileri, Veriler sayfası O sütunu toplamı.</small>
+                                        <small class="gunluk-kpi__meta">
+                                            Fiilen depoya giren modül miktarı.
+                                            @if (Model.ModulSayisiTahminiMi)
+                                            {
+                                                <span class="gunluk-kpi__badge">tahmini veri</span>
+                                            }
+                                        </small>
                                     </article>
-                                }
-                                @if (showHataliAdet)
-                                {
-                                    <button type="button"
-                                            class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked gunluk-kpi--interactive"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#hataDetayModal"
-                                            aria-label="Hatali adet detaylarini ac">
-                                        <span class="gunluk-kpi__label">Hatali Adet</span>
-                                        <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
-                                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata. Detay icin tiklayin.</small>
-                                    </button>
                                 }
                                 @if (showToplamDuraklama)
                                 {
@@ -439,8 +454,9 @@
                                 <div class="gunluk-panel__header">
                                     <div>
                                         <h2>@personelBolumTitle</h2>
-                                        <p>Bolumlere gore toplam personel yuk dagilimi.</p>
+                                        <p>Direkt ve endirekt calisan dagilimi; sutuna tiklayinca bolum detayi acilir.</p>
                                     </div>
+                                    <button type="button" id="personelChartBack" class="gunluk-panel__action d-none">Ozete don</button>
                                 </div>
                                 <div class="gunluk-panel__body gunluk-panel__body--chart">
                                     <canvas id="personelBolumGrafigi"></canvas>
@@ -539,6 +555,18 @@
                                         <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
                                         <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
                                     </article>
+                                }
+                                @if (showHataliAdet)
+                                {
+                                    <button type="button"
+                                            class="gunluk-kpi gunluk-kpi--rose gunluk-kpi--stacked gunluk-kpi--interactive"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#hataDetayModal"
+                                            aria-label="Hatali adet detaylarini ac">
+                                        <span class="gunluk-kpi__label">Hatali Adet</span>
+                                        <strong class="gunluk-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
+                                        <small class="gunluk-kpi__meta">Tum bolumlerde kayitli toplam hata. Detay icin tiklayin.</small>
+                                    </button>
                                 }
                             </div>
                         }

@@ -49,6 +49,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function formatNumber(value, fractionDigits) {
+        return Number(value || 0).toLocaleString('tr-TR', {
+            minimumFractionDigits: fractionDigits || 0,
+            maximumFractionDigits: fractionDigits || 0
+        });
+    }
+
     function getThemeName() {
         return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     }
@@ -139,7 +146,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     normalizeKey(item.Bolum),
                     {
                         labels: Array.isArray(item.NedenLabels) ? item.NedenLabels : [],
-                        values: Array.isArray(item.NedenData) ? item.NedenData : []
+                        values: Array.isArray(item.NedenData) ? item.NedenData : [],
+                        counts: Array.isArray(item.NedenAdetData) ? item.NedenAdetData : []
                     }
                 ];
             })
@@ -151,8 +159,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 labels: data.TrendLabels || [],
                 datasets: [
                     {
-                        label: 'Hatalı Adet',
-                        data: data.HataAdetTrendData || [],
+                        label: 'Hatalı Parça Oranı (%)',
+                        data: data.HataliParcaOraniTrendData || [],
+                        errorCounts: data.HataAdetTrendData || [],
                         borderColor: palette.trendLine,
                         backgroundColor: palette.trendFill,
                         tension: 0.28,
@@ -174,13 +183,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
                         grid: {
                             color: palette.gridColor
                         }
                     }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const count = context.dataset.errorCounts?.[context.dataIndex] || 0;
+                                return 'Oran: ' + formatNumber(context.parsed.y, 2) + '% | Hata: ' + formatNumber(count) + ' adet';
+                            }
+                        }
+                    }
                 }
             }
-        }, hasAnyData(data.HataAdetTrendData), 'Seçilen dönem için hatalı parça trend verisi bulunamadı.');
+        }, hasAnyData(data.HataliParcaOraniTrendData), 'Seçilen dönem için hatalı parça oran trend verisi bulunamadı.');
 
         const hataNedenChart = createChart('hataNedenGrafigi', {
             type: 'doughnut',
@@ -189,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [
                     {
                         data: data.HataNedenData || [],
+                        counts: data.HataNedenAdetData || [],
                         backgroundColor: donutColors,
                         borderWidth: 0
                     }
@@ -196,7 +221,17 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 maintainAspectRatio: false,
-                cutout: '58%'
+                cutout: '58%',
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const count = context.dataset.counts?.[context.dataIndex] || 0;
+                                return context.label + ': ' + formatNumber(context.parsed, 1) + '% (' + formatNumber(count) + ' adet)';
+                            }
+                        }
+                    }
+                }
             }
         }, hasAnyData(data.HataNedenData), 'Hata nedeni dağılımı için veri bulunamadı.');
 
@@ -211,12 +246,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (detay && detay.labels.length > 0) {
                 hataNedenChart.data.labels = detay.labels;
                 hataNedenChart.data.datasets[0].data = detay.values;
+                hataNedenChart.data.datasets[0].counts = detay.counts;
                 if (titleElement) {
                     titleElement.textContent = `Hata Nedenleri - ${bolum}`;
                 }
             } else {
                 hataNedenChart.data.labels = data.HataNedenLabels || [];
                 hataNedenChart.data.datasets[0].data = data.HataNedenData || [];
+                hataNedenChart.data.datasets[0].counts = data.HataNedenAdetData || [];
                 if (titleElement) {
                     titleElement.textContent = 'Hata Nedenleri';
                 }
@@ -231,8 +268,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 labels: data.BolumLabels || [],
                 datasets: [
                     {
-                        label: 'Hatalı Adet',
+                        label: 'Hata Payı (%)',
                         data: data.BolumData || [],
+                        counts: data.BolumAdetData || [],
                         backgroundColor: (data.BolumLabels || []).map(function () { return palette.departmentBar; }),
                         borderRadius: 10
                     }
@@ -268,6 +306,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     y: {
                         beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
                         grid: {
                             color: palette.gridColor
                         }
@@ -276,6 +319,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const count = context.dataset.counts?.[context.dataIndex] || 0;
+                                return 'Pay: ' + formatNumber(context.parsed.y, 1) + '% (' + formatNumber(count) + ' adet)';
+                            }
+                        }
                     }
                 }
             }

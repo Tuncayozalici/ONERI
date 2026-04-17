@@ -9,6 +9,8 @@ namespace ONERI.Models
         public int CalisilanIsGunu { get; set; }
         public int OrtalamaCalisanPersonel { get; set; }
         public int ToplamModulSayisi { get; set; }
+        public bool ModulSayisiTahminiMi { get; set; }
+        public bool PersonelTahminiMi { get; set; }
 
         public double ToplamUretim { get; set; }
         public double ToplamHataAdet { get; set; }
@@ -40,6 +42,10 @@ namespace ONERI.Models
         public List<double> BolumHataData { get; set; } = new List<double>();
         public List<string> PersonelBolumLabels { get; set; } = new List<string>();
         public List<double> PersonelBolumData { get; set; } = new List<double>();
+        public List<string> PersonelOzetLabels { get; set; } = new List<string>();
+        public List<double> PersonelOzetData { get; set; } = new List<double>();
+        public List<double> DirektPersonelBolumData { get; set; } = new List<double>();
+        public List<double> EndirektPersonelBolumData { get; set; } = new List<double>();
         public List<string> PlanUyumBolumLabels { get; set; } = new List<string>();
         public List<double> PlanUyumBolumData { get; set; } = new List<double>();
 
@@ -51,5 +57,17 @@ namespace ONERI.Models
 
         public List<string> BolumOeeLabels { get; set; } = new List<string>();
         public List<double> BolumOeeData { get; set; } = new List<double>();
+        public List<BolumHedefKartiViewModel> BolumHedefKartlari { get; set; } = new List<BolumHedefKartiViewModel>();
+    }
+
+    public class BolumHedefKartiViewModel
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Bolum { get; set; } = string.Empty;
+        public int GerceklesenModul { get; set; }
+        public int HedefModul { get; set; }
+        public double GerceklesmeOrani { get; set; }
+        public string Durum { get; set; } = "under-target";
+        public bool TahminiMi { get; set; }
     }
 }

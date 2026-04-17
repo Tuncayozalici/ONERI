@@ -1488,6 +1488,8 @@ public class DashboardIngestionService : IDashboardIngestionService
         int colTarih = DashboardParsingHelper.FindColumn(worksheet, "TARİH", "TARIH");
         int colBolum = DashboardParsingHelper.FindColumn(worksheet, "BÖLÜM", "BOLUM", "BÖLÜM ADI", "BOLUM ADI");
         int colPersonelSayisi = DashboardParsingHelper.FindColumn(worksheet, "PERSONEL SAYISI", "PERSONEL");
+        int colDirektPersonel = DashboardParsingHelper.FindColumn(worksheet, "DİREKT PERSONEL", "DIREKT PERSONEL", "DİREKT ÇALIŞAN", "DIREKT CALISAN", "DİREKT", "DIREKT");
+        int colEndirektPersonel = DashboardParsingHelper.FindColumn(worksheet, "ENDİREKT PERSONEL", "ENDIREKT PERSONEL", "İNDİREKT PERSONEL", "INDIREKT PERSONEL", "ENDİREKT ÇALIŞAN", "ENDIREKT CALISAN", "ENDİREKT", "ENDIREKT", "İNDİREKT", "INDIREKT");
         int colAciklama = DashboardParsingHelper.FindColumn(worksheet, "AÇIKLAMA", "ACIKLAMA");
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
@@ -1503,6 +1505,15 @@ public class DashboardIngestionService : IDashboardIngestionService
                 var parsedDate = DashboardParsingHelper.ParseDateCell(dateCell.Value, dateCell.Text);
                 var bolumAdi = worksheet.Cells[row, bolumCol].Value?.ToString()?.Trim();
                 var personelSayisi = DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, personelCol].Value);
+                var direktPersonel = colDirektPersonel > 0
+                    ? DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colDirektPersonel].Value)
+                    : 0;
+                var endirektPersonel = colEndirektPersonel > 0
+                    ? DashboardParsingHelper.ParseUretimAdedi(worksheet.Cells[row, colEndirektPersonel].Value)
+                    : 0;
+                var toplamPersonel = colDirektPersonel > 0 || colEndirektPersonel > 0
+                    ? Math.Max(personelSayisi, direktPersonel + endirektPersonel)
+                    : personelSayisi;
                 var aciklama = worksheet.Cells[row, aciklamaCol].Value?.ToString()?.Trim();
 
                 if (parsedDate == DateTime.MinValue && string.IsNullOrWhiteSpace(bolumAdi) && personelSayisi == 0)
@@ -1515,6 +1526,10 @@ public class DashboardIngestionService : IDashboardIngestionService
                     Tarih = parsedDate,
                     BolumAdi = bolumAdi,
                     PersonelSayisi = personelSayisi,
+                    DirektPersonelSayisi = direktPersonel,
+                    EndirektPersonelSayisi = endirektPersonel,
+                    ToplamPersonelSayisi = toplamPersonel,
+                    TahminiEndirektMi = colDirektPersonel <= 0 && colEndirektPersonel <= 0,
                     Aciklama = aciklama
                 });
             }
@@ -1575,6 +1590,63 @@ public class DashboardIngestionService : IDashboardIngestionService
             "TOPLAM MODUL SAYISI",
             "MODÜL SAYISI",
             "MODUL SAYISI");
+        int colDepoModul = DashboardParsingHelper.FindColumn(
+            worksheet,
+            "DEPOYA GİREN MODÜL",
+            "DEPOYA GIREN MODUL",
+            "DEPO GİRİŞ MODÜL",
+            "DEPO GIRIS MODUL",
+            "STOK GİRİŞ MODÜL",
+            "STOK GIRIS MODUL",
+            "AMBAR GİRİŞ MODÜL",
+            "AMBAR GIRIS MODUL",
+            "DEPO MODÜL",
+            "DEPO MODUL");
+        int colModulHedefi = DashboardParsingHelper.FindColumn(
+            worksheet,
+            "MODÜL HEDEFİ",
+            "MODUL HEDEFI",
+            "GÜNLÜK MODÜL HEDEFİ",
+            "GUNLUK MODUL HEDEFI",
+            "HEDEF MODÜL",
+            "HEDEF MODUL",
+            "MODÜL HEDEF",
+            "MODUL HEDEF");
+
+        if (colDepoModul <= 0)
+        {
+            colDepoModul = FindHeuristicColumn(worksheet, static normalized =>
+                normalized.Contains("depo", StringComparison.Ordinal)
+                || normalized.Contains("ambar", StringComparison.Ordinal)
+                || normalized.Contains("stokgiris", StringComparison.Ordinal)
+                || normalized.Contains("depogiris", StringComparison.Ordinal));
+        }
+
+        if (colModulHedefi <= 0)
+        {
+            colModulHedefi = FindHeuristicColumn(worksheet, static normalized =>
+                normalized.Contains("hedef", StringComparison.Ordinal)
+                && normalized.Contains("modul", StringComparison.Ordinal));
+        }
+
+        static int FindHeuristicColumn(ExcelWorksheet worksheet, Func<string, bool> predicate)
+        {
+            if (worksheet.Dimension == null)
+            {
+                return -1;
+            }
+
+            for (int col = 1; col <= worksheet.Dimension.Columns; col++)
+            {
+                var normalized = DashboardParsingHelper.NormalizeHeaderForMatch(worksheet.Cells[1, col].Value?.ToString() ?? string.Empty);
+                if (!string.IsNullOrWhiteSpace(normalized) && predicate(normalized))
+                {
+                    return col;
+                }
+            }
+
+            return -1;
+        }
 
         for (int row = 2; row <= worksheet.Dimension.Rows; row++)
         {
@@ -1584,14 +1656,22 @@ public class DashboardIngestionService : IDashboardIngestionService
                 var tarihCell = worksheet.Cells[row, colTarih > 0 ? colTarih : 9];
                 var planUyumCell = worksheet.Cells[row, colPlanUyum > 0 ? colPlanUyum : 6];
                 var toplamModulCell = worksheet.Cells[row, colToplamModul > 0 ? colToplamModul : 15];
+                var depoModulCell = colDepoModul > 0 ? worksheet.Cells[row, colDepoModul] : null;
+                var modulHedefCell = colModulHedefi > 0 ? worksheet.Cells[row, colModulHedefi] : null;
 
                 var bolumAdi = NormalizeGunlukCalismaBolumu(bolumCell.Value?.ToString());
                 var tarih = DashboardParsingHelper.ParseDateCell(tarihCell.Value, tarihCell.Text);
                 var planUyum = DashboardParsingHelper.NormalizePercentValue(
                     DashboardParsingHelper.ParsePercentCell(planUyumCell.Value ?? planUyumCell.Text));
                 var toplamModulSayisi = DashboardParsingHelper.ParseUretimAdedi(toplamModulCell.Value ?? toplamModulCell.Text);
+                var depoGirenModulSayisi = depoModulCell == null
+                    ? 0
+                    : DashboardParsingHelper.ParseUretimAdedi(depoModulCell.Value ?? depoModulCell.Text);
+                var modulHedefi = modulHedefCell == null
+                    ? 0
+                    : DashboardParsingHelper.ParseUretimAdedi(modulHedefCell.Value ?? modulHedefCell.Text);
 
-                if (tarih == DateTime.MinValue || string.IsNullOrWhiteSpace(bolumAdi) || (planUyum <= 0 && toplamModulSayisi <= 0))
+                if (tarih == DateTime.MinValue || string.IsNullOrWhiteSpace(bolumAdi) || (planUyum <= 0 && toplamModulSayisi <= 0 && depoGirenModulSayisi <= 0 && modulHedefi <= 0))
                 {
                     continue;
                 }
@@ -1601,7 +1681,9 @@ public class DashboardIngestionService : IDashboardIngestionService
                     Tarih = tarih.Date,
                     BolumAdi = bolumAdi,
                     PlanUyumOrani = planUyum,
-                    ToplamModulSayisi = toplamModulSayisi
+                    ToplamModulSayisi = toplamModulSayisi,
+                    DepoGirenModulSayisi = depoGirenModulSayisi,
+                    ModulHedefi = modulHedefi
                 });
             }
             catch (Exception ex)

@@ -144,6 +144,14 @@ html[data-theme="dark"] .gunluk-fact {
     color: var(--gunluk-text-strong);
 }
 
+.gunluk-fact small {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--gunluk-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
 .gunluk-fact--wide {
     grid-column: span 2;
 }
@@ -190,10 +198,10 @@ html[data-theme="dark"] .gunluk-fact {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
     gap: 0.85rem;
-    padding: 0.95rem 1rem;
+    padding: 1.05rem 1.1rem;
     min-height: 0;
     border-radius: 18px;
-    border: 1px solid var(--gunluk-border-soft);
+    border: 2px solid var(--gunluk-border-soft);
     background: rgba(255, 255, 255, 0.55);
     color: inherit;
     text-align: left;
@@ -217,6 +225,51 @@ html[data-theme="dark"] .gunluk-fact {
     border-color: rgba(37, 99, 235, 0.34);
     background: linear-gradient(180deg, rgba(219, 234, 254, 0.78), rgba(255, 255, 255, 0.92));
     box-shadow: 0 18px 32px rgba(96, 165, 250, 0.16);
+}
+
+.gunluk-section-option--under-target,
+.gunluk-section-option--under-target.is-selected {
+    border-color: rgba(220, 38, 38, 0.78);
+    background: linear-gradient(180deg, rgba(254, 226, 226, 0.98), rgba(255, 241, 242, 0.94));
+    box-shadow:
+        inset 9px 0 0 rgba(220, 38, 38, 0.96),
+        0 20px 34px rgba(220, 38, 38, 0.16);
+}
+
+.gunluk-section-option--on-target,
+.gunluk-section-option--on-target.is-selected {
+    border-color: rgba(217, 119, 6, 0.72);
+    background: linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(255, 251, 235, 0.94));
+    box-shadow:
+        inset 9px 0 0 rgba(245, 158, 11, 0.96),
+        0 20px 34px rgba(217, 119, 6, 0.13);
+}
+
+.gunluk-section-option--over-target,
+.gunluk-section-option--over-target.is-selected {
+    border-color: rgba(22, 163, 74, 0.72);
+    background: linear-gradient(180deg, rgba(220, 252, 231, 0.98), rgba(240, 253, 244, 0.94));
+    box-shadow:
+        inset 9px 0 0 rgba(22, 163, 74, 0.96),
+        0 20px 34px rgba(22, 163, 74, 0.13);
+}
+
+.gunluk-section-option--under-target:hover,
+.gunluk-section-option--under-target:focus-visible {
+    border-color: rgba(185, 28, 28, 0.95);
+    background: linear-gradient(180deg, rgba(254, 202, 202, 1), rgba(255, 228, 230, 0.98));
+}
+
+.gunluk-section-option--on-target:hover,
+.gunluk-section-option--on-target:focus-visible {
+    border-color: rgba(180, 83, 9, 0.95);
+    background: linear-gradient(180deg, rgba(253, 230, 138, 1), rgba(254, 243, 199, 0.98));
+}
+
+.gunluk-section-option--over-target:hover,
+.gunluk-section-option--over-target:focus-visible {
+    border-color: rgba(21, 128, 61, 0.95);
+    background: linear-gradient(180deg, rgba(187, 247, 208, 1), rgba(220, 252, 231, 0.98));
 }
 
 .gunluk-section-option__icon {
@@ -246,6 +299,54 @@ html[data-theme="dark"] .gunluk-fact {
     color: var(--gunluk-muted);
     font-size: 0.85rem;
     line-height: 1.45;
+}
+
+.gunluk-section-option__target {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.32rem 0.75rem;
+    align-items: center;
+    margin-top: 0.55rem;
+    padding-top: 0.65rem;
+    border-top: 2px solid rgba(15, 23, 42, 0.08);
+    font-size: 0.84rem;
+}
+
+.gunluk-section-option__target span {
+    color: var(--gunluk-muted);
+    min-width: 0;
+}
+
+.gunluk-section-option__target strong {
+    color: var(--gunluk-text-strong);
+    font-size: 1.22rem;
+    line-height: 1;
+}
+
+.gunluk-section-option__target em {
+    grid-column: 1 / -1;
+    width: max-content;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(14, 165, 233, 0.1);
+    color: #0369a1;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.gunluk-section-option--under-target .gunluk-section-option__icon {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+}
+
+.gunluk-section-option--on-target .gunluk-section-option__icon {
+    background: rgba(245, 158, 11, 0.16);
+    color: #d97706;
+}
+
+.gunluk-section-option--over-target .gunluk-section-option__icon {
+    background: rgba(22, 163, 74, 0.14);
+    color: #16a34a;
 }
 
 .gunluk-section-picker__cta {
@@ -380,6 +481,66 @@ html[data-theme="dark"] .gunluk-section-option__icon {
     color: #93c5fd;
 }
 
+html[data-theme="dark"] .gunluk-section-option--under-target,
+html[data-theme="dark"] .gunluk-section-option--under-target.is-selected {
+    border-color: rgba(248, 113, 113, 0.78);
+    background: linear-gradient(180deg, rgba(69, 10, 10, 0.96), rgba(46, 16, 16, 0.96));
+    box-shadow:
+        inset 9px 0 0 rgba(248, 113, 113, 0.96),
+        0 20px 34px rgba(127, 29, 29, 0.34);
+}
+
+html[data-theme="dark"] .gunluk-section-option--on-target,
+html[data-theme="dark"] .gunluk-section-option--on-target.is-selected {
+    border-color: rgba(251, 191, 36, 0.76);
+    background: linear-gradient(180deg, rgba(69, 43, 7, 0.96), rgba(45, 33, 12, 0.96));
+    box-shadow:
+        inset 9px 0 0 rgba(251, 191, 36, 0.96),
+        0 20px 34px rgba(146, 64, 14, 0.3);
+}
+
+html[data-theme="dark"] .gunluk-section-option--over-target,
+html[data-theme="dark"] .gunluk-section-option--over-target.is-selected {
+    border-color: rgba(74, 222, 128, 0.76);
+    background: linear-gradient(180deg, rgba(5, 46, 22, 0.96), rgba(12, 37, 25, 0.96));
+    box-shadow:
+        inset 9px 0 0 rgba(74, 222, 128, 0.96),
+        0 20px 34px rgba(20, 83, 45, 0.3);
+}
+
+html[data-theme="dark"] .gunluk-section-option--under-target:hover,
+html[data-theme="dark"] .gunluk-section-option--under-target:focus-visible {
+    border-color: rgba(252, 165, 165, 0.92);
+    background: linear-gradient(180deg, rgba(91, 14, 14, 0.98), rgba(63, 20, 20, 0.98));
+}
+
+html[data-theme="dark"] .gunluk-section-option--on-target:hover,
+html[data-theme="dark"] .gunluk-section-option--on-target:focus-visible {
+    border-color: rgba(253, 230, 138, 0.92);
+    background: linear-gradient(180deg, rgba(92, 59, 8, 0.98), rgba(63, 46, 13, 0.98));
+}
+
+html[data-theme="dark"] .gunluk-section-option--over-target:hover,
+html[data-theme="dark"] .gunluk-section-option--over-target:focus-visible {
+    border-color: rgba(134, 239, 172, 0.92);
+    background: linear-gradient(180deg, rgba(6, 78, 35, 0.98), rgba(16, 58, 37, 0.98));
+}
+
+html[data-theme="dark"] .gunluk-section-option--under-target .gunluk-section-option__icon {
+    background: rgba(248, 113, 113, 0.16);
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .gunluk-section-option--on-target .gunluk-section-option__icon {
+    background: rgba(251, 191, 36, 0.16);
+    color: #fde68a;
+}
+
+html[data-theme="dark"] .gunluk-section-option--over-target .gunluk-section-option__icon {
+    background: rgba(74, 222, 128, 0.16);
+    color: #86efac;
+}
+
 .gunluk-hero__note strong,
 .gunluk-summary-item strong,
 .gunluk-panel__header h2,
@@ -452,6 +613,32 @@ html[data-theme="dark"] .gunluk-section-option__icon {
     height: 100%;
 }
 
+.gunluk-kpi--depot-module {
+    grid-row: span 2;
+    min-height: 380px;
+    background:
+        linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.95));
+    border-color: rgba(8, 145, 178, 0.34);
+}
+
+.gunluk-kpi--depot-module .gunluk-kpi__value {
+    font-size: clamp(2.5rem, 3.8vw, 4.6rem);
+    line-height: 0.95;
+    letter-spacing: 0;
+}
+
+.gunluk-kpi__badge {
+    display: inline-flex;
+    width: max-content;
+    margin-top: 0.45rem;
+    padding: 0.16rem 0.52rem;
+    border-radius: 999px;
+    background: rgba(14, 165, 233, 0.12);
+    color: #0369a1;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
 .gunluk-kpi--interactive {
     width: 100%;
     text-align: left;
@@ -480,6 +667,16 @@ html[data-theme="dark"] .gunluk-kpi--interactive:focus-visible {
 
 html[data-theme="dark"] .gunluk-kpi {
     background: linear-gradient(180deg, rgba(12, 24, 41, 0.98), rgba(10, 20, 34, 0.94));
+}
+
+html[data-theme="dark"] .gunluk-kpi--depot-module {
+    background: linear-gradient(180deg, rgba(10, 42, 50, 0.98), rgba(10, 24, 38, 0.94));
+}
+
+html[data-theme="dark"] .gunluk-section-option__target em,
+html[data-theme="dark"] .gunluk-kpi__badge {
+    background: rgba(103, 232, 249, 0.13);
+    color: #67e8f9;
 }
 
 .gunluk-kpi__label {
@@ -569,6 +766,32 @@ html[data-theme="dark"] .gunluk-kpi--slate .gunluk-kpi__value {
 .gunluk-panel__header h2 {
     font-size: 1.08rem;
     margin: 0;
+}
+
+.gunluk-panel__action {
+    flex: 0 0 auto;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 999px;
+    padding: 0.42rem 0.78rem;
+    background: rgba(37, 99, 235, 0.08);
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.2;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.gunluk-panel__action:hover,
+.gunluk-panel__action:focus-visible {
+    border-color: rgba(37, 99, 235, 0.34);
+    background: rgba(37, 99, 235, 0.14);
+    color: #1e40af;
+}
+
+html[data-theme="dark"] .gunluk-panel__action {
+    border-color: rgba(147, 197, 253, 0.22);
+    background: rgba(59, 130, 246, 0.16);
+    color: #bfdbfe;
 }
 
 .gunluk-panel__body {

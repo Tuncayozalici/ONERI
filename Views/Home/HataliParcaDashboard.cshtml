@@ -6,6 +6,7 @@
     var bolumSayisi = Model.BolumLabels.Count;
     var operatorSayisi = Model.OperatorLabels.Count;
     var anaRenk = Model.RenkLabels.FirstOrDefault() ?? "Veri bulunamadı";
+    var enYogunModul = Model.ModulHataAnalizleri.FirstOrDefault();
 }
 
 @section Styles {
@@ -27,7 +28,7 @@
                 </div>
                 <h1>Hatalı Parça Analiz Ekranı</h1>
                 <p>
-                    Hatalı adet, neden, bölüm, operatör ve süreç kırılımlarını tek analiz akışında izleyin.
+                    Hatalı parça oranı, neden, bölüm, operatör ve modül yoğunluğunu tek analiz akışında izleyin.
                     Seçilen döneme göre trendler ve dağılımlar otomatik olarak yeniden hesaplanır.
                 </p>
                 <div class="hatali-hero__facts">
@@ -65,10 +66,10 @@
 
                 <div class="hatali-hero__note">
                     <p>
-                        <strong>Toplam hatalı adet</strong>, makine hatası dışındaki kayıtların toplamıdır.
+                        <strong>Hatalı parça oranı</strong>, hatalı parça adedinin toplam üretim adedine bölünmesiyle hesaplanır.
                     </p>
                     <p class="mb-0">
-                        Bölüme göre hata grafiğindeki bir sütuna tıklayın; hata nedenleri paneli seçilen bölümün nedenlerine göre filtrelensin.
+                        Hata nedenleri operasyonel kök nedenlere normalize edilir; bölüm grafiğindeki bir sütuna tıklayarak nedeni filtreleyebilirsiniz.
                     </p>
                 </div>
             </div>
@@ -76,9 +77,9 @@
 
         <section class="hatali-kpis mb-4">
             <article class="hatali-kpi hatali-kpi--rose">
-                <span class="hatali-kpi__label">Toplam Hatalı Adet</span>
-                <strong class="hatali-kpi__value">@Model.ToplamHataAdet.ToString("N0")</strong>
-                <small class="hatali-kpi__meta">Makine hatası hariç toplam kayıt</small>
+                <span class="hatali-kpi__label">Hatalı Parça Oranı</span>
+                <strong class="hatali-kpi__value">@Model.HataliParcaOrani.ToString("N2")%</strong>
+                <small class="hatali-kpi__meta">@Model.ToplamHataAdet.ToString("N0") hatalı / @Model.ToplamUretimAdet.ToString("N0") üretim</small>
             </article>
             <article class="hatali-kpi hatali-kpi--cyan">
                 <span class="hatali-kpi__label">En Çok Hata Bölümü</span>
@@ -91,9 +92,15 @@
                 <small class="hatali-kpi__meta">Top 10 listesine giren operatör sayısı</small>
             </article>
             <article class="hatali-kpi hatali-kpi--stone">
-                <span class="hatali-kpi__label">Öne Çıkan Renk</span>
-                <strong class="hatali-kpi__value hatali-kpi__value--text">@anaRenk</strong>
-                <small class="hatali-kpi__meta">Hata yükünün yoğunlaştığı renk</small>
+                <span class="hatali-kpi__label">Yoğun Modül</span>
+                <strong class="hatali-kpi__value hatali-kpi__value--text">@(enYogunModul?.Modul ?? anaRenk)</strong>
+                <small class="hatali-kpi__meta">
+                    @(enYogunModul != null ? $"{enYogunModul.HataPayi:N1}% hata payı" : "Hata yükünün yoğunlaştığı renk")
+                    @if (Model.ModulAnaliziTahminiMi)
+                    {
+                        <span class="hatali-kpi__badge">tahmini veri</span>
+                    }
+                </small>
             </article>
         </section>
 
@@ -103,7 +110,7 @@
                     <div class="hatali-panel__header">
                         <div>
                             <h2>@(ViewBag.HataliTrendTitle ?? "Hatalı Parça Trendi")</h2>
-                            <p>Hatalı adet değişimini seçilen dönem akışında izleyin.</p>
+                            <p>Hatalı parça oranını seçilen dönem akışında izleyin.</p>
                         </div>
                     </div>
                     <div class="hatali-panel__body hatali-panel__body--chart-lg">
@@ -122,6 +129,18 @@
                     </div>
                     <div class="hatali-panel__body">
                         <div class="hatali-summary-list">
+                            <div class="hatali-summary-item">
+                                <span>Hatalı parça oranı</span>
+                                <strong>@Model.HataliParcaOrani.ToString("N2")%</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>Toplam hatalı adet</span>
+                                <strong>@Model.ToplamHataAdet.ToString("N0")</strong>
+                            </div>
+                            <div class="hatali-summary-item">
+                                <span>Toplam üretim</span>
+                                <strong>@Model.ToplamUretimAdet.ToString("N0")</strong>
+                            </div>
                             <div class="hatali-summary-item">
                                 <span>En çok hata nedeni</span>
                                 <strong>@Model.EnCokHataNedeni</strong>
@@ -156,7 +175,7 @@
                     <div class="hatali-panel__header">
                         <div>
                             <h2 id="hataNedenPanelTitle">Hata Nedenleri</h2>
-                            <p>Bölüm filtresi ile güncellenebilen neden dağılımı.</p>
+                            <p>Operasyonel kök neden payı; adet bilgisi tooltipte gösterilir.</p>
                         </div>
                     </div>
                     <div class="hatali-panel__body hatali-panel__body--chart-pie">
@@ -170,7 +189,7 @@
                     <div class="hatali-panel__header">
                         <div>
                             <h2>Bölüme Göre Hata</h2>
-                            <p>Bir sütuna tıklayarak hata nedenleri panelini filtreleyin.</p>
+                            <p>Bölüm bazlı hata payı; bir sütuna tıklayarak neden panelini filtreleyin.</p>
                         </div>
                     </div>
                     <div class="hatali-panel__body hatali-panel__body--chart">
@@ -189,6 +208,93 @@
                     </div>
                     <div class="hatali-panel__body hatali-panel__body--chart">
                         <canvas id="operatorGrafigi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Geçmiş Hata Nedenleri</h2>
+                            <p>Son 3, 6 ve 12 ayda yoğunlaşan operasyonel kök nedenler.</p>
+                        </div>
+                    </div>
+                    <div class="hatali-panel__body">
+                        <div class="hatali-period-grid">
+                            @foreach (var donem in Model.HataDonemAnalizleri)
+                            {
+                                <article class="hatali-period-card">
+                                    <h3>@donem.Baslik</h3>
+                                    @if (donem.NedenLabels.Any())
+                                    {
+                                        <div class="hatali-period-card__list">
+                                            @for (var index = 0; index < donem.NedenLabels.Count; index++)
+                                            {
+                                                var pay = donem.NedenPayData.ElementAtOrDefault(index);
+                                                var adet = donem.NedenAdetData.ElementAtOrDefault(index);
+                                                var barWidth = Math.Min(100, Math.Max(2, pay)).ToString("N0");
+                                                <div class="hatali-period-card__item">
+                                                    <div>
+                                                        <span>@donem.NedenLabels[index]</span>
+                                                        <strong>@pay.ToString("N1")%</strong>
+                                                    </div>
+                                                    <small>@adet.ToString("N0") adet</small>
+                                                    <i style="width:@barWidth%"></i>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="hatali-empty-state hatali-empty-state--compact">Bu dönem için veri bulunamadı.</div>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="hatali-panel h-100">
+                    <div class="hatali-panel__header">
+                        <div>
+                            <h2>Modül Bazlı Hata Yoğunluğu</h2>
+                            <p>Hataların yoğunlaştığı modül veya ürün vekilleri.</p>
+                        </div>
+                        @if (Model.ModulAnaliziTahminiMi)
+                        {
+                            <span class="hatali-panel__badge">tahmini veri</span>
+                        }
+                    </div>
+                    <div class="hatali-panel__body">
+                        @if (Model.ModulHataAnalizleri.Any())
+                        {
+                            <div class="hatali-module-list">
+                                @foreach (var modul in Model.ModulHataAnalizleri)
+                                {
+                                    <article class="hatali-module-item">
+                                        <div>
+                                            <strong>@modul.Modul</strong>
+                                            <span>@modul.Bolum</span>
+                                        </div>
+                                        <div class="hatali-module-item__metric">
+                                            <strong>@modul.HataPayi.ToString("N1")%</strong>
+                                            <span>@modul.HataAdet.ToString("N0") adet</span>
+                                            @if (modul.TahminiMi)
+                                            {
+                                                <em>tahmini</em>
+                                            }
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="hatali-empty-state">Seçilen dönem için modül bazlı hata verisi bulunamadı.</div>
+                        }
                     </div>
                 </div>
             </div>

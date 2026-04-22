@@ -382,8 +382,7 @@ html[data-theme="dark"] .hatali-summary-item {
     gap: 0.35rem;
 }
 
-.hatali-period-card__item div,
-.hatali-module-item {
+.hatali-period-card__item div {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -391,8 +390,7 @@ html[data-theme="dark"] .hatali-summary-item {
 }
 
 .hatali-period-card__item span,
-.hatali-period-card__item small,
-.hatali-module-item span {
+.hatali-period-card__item small {
     color: var(--hatali-muted);
 }
 
@@ -400,8 +398,7 @@ html[data-theme="dark"] .hatali-summary-item {
     font-weight: 700;
 }
 
-.hatali-period-card__item strong,
-.hatali-module-item strong {
+.hatali-period-card__item strong {
     color: var(--hatali-text-strong);
 }
 
@@ -413,48 +410,8 @@ html[data-theme="dark"] .hatali-summary-item {
     background: linear-gradient(90deg, rgba(225, 29, 72, 0.82), rgba(245, 158, 11, 0.86));
 }
 
-.hatali-module-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.85rem;
-}
-
-.hatali-module-item {
-    padding: 1rem;
-    border: 1px solid var(--hatali-border-soft);
-    border-radius: 18px;
-    background: rgba(148, 163, 184, 0.08);
-}
-
-.hatali-module-item > div:first-child,
-.hatali-module-item__metric {
-    display: grid;
-    gap: 0.18rem;
-}
-
-.hatali-module-item__metric {
-    justify-items: end;
-    text-align: right;
-}
-
-.hatali-module-item__metric em {
-    padding: 0.12rem 0.45rem;
-    border-radius: 999px;
-    background: rgba(8, 145, 178, 0.1);
-    color: #0e7490;
-    font-style: normal;
-    font-size: 0.72rem;
-    font-weight: 800;
-}
-
-html[data-theme="dark"] .hatali-period-card,
-html[data-theme="dark"] .hatali-module-item {
+html[data-theme="dark"] .hatali-period-card {
     background: rgba(255, 255, 255, 0.035);
-}
-
-html[data-theme="dark"] .hatali-module-item__metric em {
-    background: rgba(103, 232, 249, 0.13);
-    color: #67e8f9;
 }
 
 html[data-theme="dark"] .hatali-empty-state {
@@ -470,8 +427,7 @@ html[data-theme="dark"] .hatali-empty-state {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .hatali-period-grid,
-    .hatali-module-list {
+    .hatali-period-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -506,15 +462,9 @@ html[data-theme="dark"] .hatali-empty-state {
         align-items: flex-start;
     }
 
-    .hatali-module-item,
     .hatali-period-card__item div {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .hatali-module-item__metric {
-        justify-items: start;
-        text-align: left;
     }
 
     .hatali-summary-item strong {

@@ -256,49 +256,6 @@
                 </div>
             </div>
 
-            <div class="col-12">
-                <div class="hatali-panel h-100">
-                    <div class="hatali-panel__header">
-                        <div>
-                            <h2>Modül Bazlı Hata Yoğunluğu</h2>
-                            <p>Hataların yoğunlaştığı modül veya ürün vekilleri.</p>
-                        </div>
-                        @if (Model.ModulAnaliziTahminiMi)
-                        {
-                            <span class="hatali-panel__badge">tahmini veri</span>
-                        }
-                    </div>
-                    <div class="hatali-panel__body">
-                        @if (Model.ModulHataAnalizleri.Any())
-                        {
-                            <div class="hatali-module-list">
-                                @foreach (var modul in Model.ModulHataAnalizleri)
-                                {
-                                    <article class="hatali-module-item">
-                                        <div>
-                                            <strong>@modul.Modul</strong>
-                                            <span>@modul.Bolum</span>
-                                        </div>
-                                        <div class="hatali-module-item__metric">
-                                            <strong>@modul.HataPayi.ToString("N1")%</strong>
-                                            <span>@modul.HataAdet.ToString("N0") adet</span>
-                                            @if (modul.TahminiMi)
-                                            {
-                                                <em>tahmini</em>
-                                            }
-                                        </div>
-                                    </article>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="hatali-empty-state">Seçilen dönem için modül bazlı hata verisi bulunamadı.</div>
-                        }
-                    </div>
-                </div>
-            </div>
-
         </section>
     </div>
 </div>

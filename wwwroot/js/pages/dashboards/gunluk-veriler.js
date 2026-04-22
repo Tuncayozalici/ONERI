@@ -239,21 +239,151 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    function buildOccupancyDatasets(seriesList, palette) {
+    function createVerticalValueLabelPlugin(palette, formatter) {
+        return {
+            id: 'gunlukVerticalValueLabels',
+            afterDatasetsDraw(chart) {
+                if (!chart || chart.options.indexAxis === 'y') {
+                    return;
+                }
+
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                if (!ctx || !chartArea) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.font = '700 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta || meta.hidden || dataset.type === 'line') {
+                        return;
+                    }
+
+                    meta.data.forEach(function (bar, dataIndex) {
+                        const value = Number(dataset.data[dataIndex]);
+                        if (!Number.isFinite(value) || value <= 0) {
+                            return;
+                        }
+
+                        const label = typeof formatter === 'function'
+                            ? formatter(value)
+                            : value.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+                        const barHeight = Math.abs(bar.base - bar.y);
+
+                        if (barHeight >= 28) {
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(label, bar.x, bar.y + 15);
+                            return;
+                        }
+
+                        ctx.fillStyle = palette.textColor;
+                        ctx.fillText(label, bar.x, Math.max(chartArea.top + 10, bar.y - 10));
+                    });
+                });
+
+                ctx.restore();
+            }
+        };
+    }
+
+    function createAverageLinePlugin(palette, averageValue, label) {
+        return {
+            id: 'gunlukAverageLine',
+            afterDatasetsDraw(chart) {
+                const yScale = chart.scales?.y;
+                const chartArea = chart.chartArea;
+                const ctx = chart.ctx;
+                const value = Number(averageValue);
+                if (!ctx || !chartArea || !yScale || !Number.isFinite(value) || value <= 0) {
+                    return;
+                }
+
+                const y = yScale.getPixelForValue(value);
+                if (!Number.isFinite(y) || y < chartArea.top || y > chartArea.bottom) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.setLineDash([6, 6]);
+                ctx.strokeStyle = palette.trendRose;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y);
+                ctx.lineTo(chartArea.right, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = palette.trendRose;
+                ctx.font = '700 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(label + ': ' + value.toFixed(1) + '%', chartArea.right - 4, y - 4);
+                ctx.restore();
+            }
+        };
+    }
+
+    function createDoughnutCenterPlugin(palette, value, label) {
+        return {
+            id: 'gunlukDoughnutCenterText',
+            afterDraw(chart) {
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                if (!ctx || !chartArea) {
+                    return;
+                }
+
+                const centerX = chartArea.left + ((chartArea.right - chartArea.left) / 2);
+                const centerY = chartArea.top + ((chartArea.bottom - chartArea.top) / 2);
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = palette.strongTextColor;
+                ctx.font = '800 24px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(Number(value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 0 }), centerX, centerY - 8);
+                ctx.fillStyle = palette.textColor;
+                ctx.font = '700 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(label, centerX, centerY + 16);
+                ctx.restore();
+            }
+        };
+    }
+
+    function buildOccupancySummary(seriesList, labels, palette) {
         return seriesList.map(function (series, index) {
             const color = palette.occupancySeries[index % palette.occupancySeries.length];
+            const values = Array.isArray(series.DolulukOranlari)
+                ? series.DolulukOranlari.map(clampPercent)
+                : [];
+            const moduleCounts = Array.isArray(series.ModulSayilari) ? series.ModulSayilari : [];
+            const positiveValues = values.filter(function (value) { return value > 0; });
+            let latestIndex = -1;
+
+            for (let valueIndex = values.length - 1; valueIndex >= 0; valueIndex -= 1) {
+                if (values[valueIndex] > 0) {
+                    latestIndex = valueIndex;
+                    break;
+                }
+            }
+
             return {
                 label: series.Bolum || ('Bolum ' + (index + 1)),
-                data: Array.isArray(series.DolulukOranlari) ? series.DolulukOranlari.map(clampPercent) : [],
-                moduleCounts: Array.isArray(series.ModulSayilari) ? series.ModulSayilari : [],
-                borderColor: color,
-                backgroundColor: color + '22',
-                tension: 0.28,
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 3,
-                pointHoverRadius: 5
+                average: positiveValues.length > 0
+                    ? positiveValues.reduce(function (total, value) { return total + value; }, 0) / positiveValues.length
+                    : 0,
+                latest: latestIndex >= 0 ? values[latestIndex] : 0,
+                latestLabel: latestIndex >= 0 ? (labels[latestIndex] || '') : '',
+                latestModuleCount: latestIndex >= 0 ? (moduleCounts[latestIndex] || 0) : 0,
+                color: color
             };
+        }).filter(function (item) {
+            return item.average > 0;
+        }).sort(function (first, second) {
+            return second.average - first.average;
         });
     }
 
@@ -425,6 +555,17 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             : null;
         const horizontalValueLabelPlugin = createHorizontalValueLabelPlugin(palette);
+        const verticalPercentLabelPlugin = createVerticalValueLabelPlugin(palette, function (value) {
+            return value.toLocaleString('tr-TR', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1
+            }) + '%';
+        });
+        const verticalValueLabelPlugin = createVerticalValueLabelPlugin(palette, function (value) {
+            return value.toLocaleString('tr-TR', {
+                maximumFractionDigits: 0
+            });
+        });
 
         configureChartDefaults(palette);
         restoreChartContainers();
@@ -579,6 +720,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const bolumOeeLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
         const bolumOeeValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
         const bolumOeeAxisMax = getPercentAxisMax(bolumOeeValues);
+        const bolumOeeAverage = bolumOeeValues.filter(function (value) { return value > 0; })
+            .reduce(function (total, value, _, values) { return total + (value / values.length); }, 0);
         createChart('bolumOeeGrafigi', {
             type: 'bar',
             data: {
@@ -595,10 +738,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: false
+                        }
+                    },
+                    y: {
                         beginAtZero: true,
                         max: bolumOeeAxisMax,
                         ticks: {
@@ -610,11 +761,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
                     }
                 },
                 plugins: {
@@ -623,7 +769,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+            plugins: [
+                verticalPercentLabelPlugin,
+                createAverageLinePlugin(palette, bolumOeeAverage, 'Ortalama')
+            ]
         }, hasAnyData(bolumOeeValues), 'Bolum bazli OEE verisi bulunamadi.');
 
         const bolumHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
@@ -644,18 +793,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        beginAtZero: true,
                         grid: {
-                            color: palette.gridColor
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: false
                         }
                     },
                     y: {
+                        beginAtZero: true,
                         grid: {
-                            display: false
+                            color: palette.gridColor
                         }
                     }
                 },
@@ -665,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: [horizontalValueLabelPlugin]
+            plugins: [verticalValueLabelPlugin]
         }, hasAnyData(bolumHataValues), 'Bolum bazli hata verisi bulunamadi.');
 
         const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
@@ -682,25 +834,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 personelBackButton.classList.add('d-none');
             }
 
+            const roundedPersonelOzetValues = personelOzetValues.map(function (value) {
+                return Math.round(Number(value || 0));
+            });
+            const personelTotal = roundedPersonelOzetValues.reduce(function (total, value) {
+                return total + Number(value || 0);
+            }, 0);
             return createChart('personelBolumGrafigi', {
-                type: 'bar',
+                type: 'doughnut',
                 data: {
                     labels: personelOzetLabels,
                     datasets: [
                         {
                             label: personelSeriesLabel,
-                            data: personelOzetValues,
+                            data: roundedPersonelOzetValues,
                             backgroundColor: [palette.personnelBar, palette.trendPurpleFill],
                             borderColor: [palette.personnelBarBorder, palette.trendPurple],
-                            borderWidth: 1,
-                            borderRadius: 10,
+                            borderWidth: 2,
+                            hoverOffset: 6,
                             detailTypes: ['direct', 'indirect']
                         }
                     ]
                 },
                 options: {
-                    indexAxis: 'y',
                     maintainAspectRatio: false,
+                    cutout: '62%',
                     onClick: function (_, elements) {
                         if (!elements || elements.length === 0) {
                             return;
@@ -714,22 +872,22 @@ document.addEventListener('DOMContentLoaded', function () {
                             event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
                         }
                     },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            grid: {
-                                color: palette.gridColor
-                            }
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
                         },
-                        y: {
-                            grid: {
-                                display: false
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.label + ': ' + Math.round(Number(context.parsed || 0)).toLocaleString('tr-TR');
+                                }
                             }
                         }
                     }
                 },
-                plugins: [horizontalValueLabelPlugin]
-            }, hasAnyData(personelOzetValues), 'Personel ozet verisi bulunamadi.');
+                plugins: [createDoughnutCenterPlugin(palette, personelTotal, 'toplam')]
+            }, hasAnyData(roundedPersonelOzetValues), 'Personel ozet verisi bulunamadi.');
         }
 
         function renderPersonelDetailChart(type) {
@@ -753,7 +911,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 personelBackButton.classList.remove('d-none');
             }
 
-            const values = type === 'direct' ? direktPersonelValues : endirektPersonelValues;
+            const values = (type === 'direct' ? direktPersonelValues : endirektPersonelValues)
+                .map(function (value) {
+                    return Math.round(Number(value || 0));
+                });
             const title = type === 'direct' ? 'Direkt Çalışan Sayısı' : 'Endirekt Çalışan Sayısı';
             createChart(canvasId, {
                 type: 'bar',
@@ -771,28 +932,38 @@ document.addEventListener('DOMContentLoaded', function () {
                     ]
                 },
                 options: {
-                    indexAxis: 'y',
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            beginAtZero: true,
                             grid: {
-                                color: palette.gridColor
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 0,
+                                autoSkip: false
                             }
                         },
                         y: {
+                            beginAtZero: true,
                             grid: {
-                                display: false
+                                color: palette.gridColor
                             }
                         }
                     },
                     plugins: {
                         legend: {
                             display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + Math.round(Number(context.parsed.y || 0)).toLocaleString('tr-TR');
+                                }
+                            }
                         }
                     }
                 },
-                plugins: [horizontalValueLabelPlugin]
+                plugins: [verticalValueLabelPlugin]
             }, hasAnyData(values), title + ' bolum detayi bulunamadi.');
         }
 
@@ -837,10 +1008,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: false
+                        }
+                    },
+                    y: {
                         beginAtZero: true,
                         max: planUyumAxisMax,
                         ticks: {
@@ -852,11 +1031,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
                     }
                 },
                 plugins: {
@@ -865,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+            plugins: [verticalPercentLabelPlugin]
         }, hasAnyData(planUyumValues), 'Plana uyum verisi bulunamadi.');
 
         const hataNedenLabels = Array.isArray(data.HataNedenLabels) ? data.HataNedenLabels : [];
@@ -927,46 +1101,64 @@ document.addEventListener('DOMContentLoaded', function () {
         }, trendHasData && hasAnyData(modulTrendValues), 'Depo modul trend verisi bulunamadi.');
 
         const istasyonDolulukSerileri = Array.isArray(data.IstasyonDolulukSerileri) ? data.IstasyonDolulukSerileri : [];
-        const occupancyDatasets = buildOccupancyDatasets(istasyonDolulukSerileri, palette);
-        const occupancyHasData = occupancyDatasets.some(function (dataset) {
-            return hasAnyData(dataset.data);
-        });
+        const occupancySummary = buildOccupancySummary(istasyonDolulukSerileri, trendLabels, palette);
+        const occupancyAverageValues = occupancySummary.map(function (item) { return item.average; });
         createChart('genelHataTrend', {
-            type: 'line',
+            type: 'bar',
             data: {
-                labels: trendLabels,
-                datasets: occupancyDatasets
+                labels: occupancySummary.map(function (item) { return item.label; }),
+                datasets: [
+                    {
+                        label: 'Ortalama Doluluk (%)',
+                        data: occupancyAverageValues,
+                        backgroundColor: occupancySummary.map(function (item) { return item.color + 'b8'; }),
+                        borderColor: occupancySummary.map(function (item) { return item.color; }),
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        barThickness: 26
+                    }
+                ]
             },
             options: {
+                indexAxis: 'y',
                 maintainAspectRatio: false,
                 interaction: {
-                    mode: 'index',
-                    intersect: false
+                    mode: 'nearest',
+                    intersect: true
                 },
                 plugins: {
+                    legend: {
+                        display: false
+                    },
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                const doluluk = Number(context.parsed.y || 0).toFixed(2);
-                                const moduleCounts = Array.isArray(context.dataset.moduleCounts)
-                                    ? context.dataset.moduleCounts
-                                    : [];
-                                const moduleCount = moduleCounts[context.dataIndex] ?? 0;
-                                return context.dataset.label + ': ' + doluluk + '% | Modul: ' + Number(moduleCount).toLocaleString('tr-TR');
+                                const item = occupancySummary[context.dataIndex];
+                                const average = Number(context.parsed.x || 0).toLocaleString('tr-TR', {
+                                    minimumFractionDigits: 1,
+                                    maximumFractionDigits: 1
+                                });
+                                if (!item) {
+                                    return 'Ortalama: ' + average + '%';
+                                }
+
+                                const latest = Number(item.latest || 0).toLocaleString('tr-TR', {
+                                    minimumFractionDigits: 1,
+                                    maximumFractionDigits: 1
+                                });
+                                const moduleCount = Number(item.latestModuleCount || 0).toLocaleString('tr-TR');
+                                const latestLabel = item.latestLabel ? ' | Son gun: ' + item.latestLabel + ' ' + latest + '%' : '';
+                                return 'Ortalama: ' + average + '%' + latestLabel + ' | Modul: ' + moduleCount;
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
                         beginAtZero: true,
-                        max: 100,
+                        max: getPercentAxisMax(occupancyAverageValues),
                         ticks: {
+                            stepSize: 10,
                             callback: function (value) {
                                 return value + '%';
                             }
@@ -974,10 +1166,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
                     }
                 }
-            }
-        }, trendHasData && occupancyHasData, 'Istasyon doluluk verisi bulunamadi.');
+            },
+            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+        }, trendHasData && hasAnyData(occupancyAverageValues), 'Istasyon doluluk verisi bulunamadi.');
     }
 
     setupUltraToggle();

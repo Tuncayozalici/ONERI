@@ -13,6 +13,85 @@
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
     var seciliDonemOzeti = (string?)ViewBag.OzetRange ?? Model.RaporTarihi.ToString("dd.MM.yyyy");
     var bolumHedefLookup = Model.BolumHedefKartlari.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
+    var makineArizaLookup = Model.HataBolumDetaylari
+        .SelectMany(x => x.MakineDetaylari
+            .Where(m => !string.IsNullOrWhiteSpace(m.Makine)
+                && !string.Equals(m.Makine, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase))
+            .Select(m => new { Makine = m.Makine, Bolum = x.Bolum, Deger = m.Deger }))
+        .GroupBy(x => x.Makine, StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(
+            x => x.Key,
+            x => new { Bolum = x.First().Bolum, Deger = x.Sum(m => m.Deger) },
+            StringComparer.OrdinalIgnoreCase);
+    var makineDuraklamaLookup = Model.DuraklamaBolumDetaylari
+        .SelectMany(x => x.MakineDetaylari
+            .Where(m => !string.IsNullOrWhiteSpace(m.Makine))
+            .Select(m => new { Makine = m.Makine, Bolum = x.Bolum, Dakika = m.DuraklamaDakika }))
+        .GroupBy(x => x.Makine, StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(
+            x => x.Key,
+            x => new { Bolum = x.First().Bolum, Dakika = x.Sum(m => m.Dakika) },
+            StringComparer.OrdinalIgnoreCase);
+    var makineDurumListesi = Model.MakineOeeLabels
+        .Select((makine, index) =>
+        {
+            makineArizaLookup.TryGetValue(makine, out var ariza);
+            makineDuraklamaLookup.TryGetValue(makine, out var duraklama);
+            var oee = index < Model.MakineOeeData.Count ? Model.MakineOeeData[index] : 0;
+            return new
+            {
+                Makine = makine,
+                Bolum = ariza?.Bolum ?? duraklama?.Bolum ?? "Genel",
+                ArizaVar = ariza?.Deger > 0,
+                ArizaAdet = ariza?.Deger ?? 0,
+                DuraklamaDakika = duraklama?.Dakika ?? 0,
+                Oee = oee,
+                GeciciVeri = false
+            };
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x.Makine))
+        .ToList();
+
+    foreach (var ariza in makineArizaLookup)
+    {
+        if (makineDurumListesi.Any(x => string.Equals(x.Makine, ariza.Key, System.StringComparison.OrdinalIgnoreCase)))
+        {
+            continue;
+        }
+
+        makineDuraklamaLookup.TryGetValue(ariza.Key, out var duraklama);
+        makineDurumListesi.Add(new
+        {
+            Makine = ariza.Key,
+            Bolum = ariza.Value.Bolum,
+            ArizaVar = ariza.Value.Deger > 0,
+            ArizaAdet = ariza.Value.Deger,
+            DuraklamaDakika = duraklama?.Dakika ?? 0,
+            Oee = 0d,
+            GeciciVeri = false
+        });
+    }
+
+    var makineDurumGeciciVeri = !makineDurumListesi.Any();
+    if (makineDurumGeciciVeri)
+    {
+        makineDurumListesi.AddRange(new[]
+        {
+            new { Makine = "Masterwood", Bolum = "CNC", ArizaVar = true, ArizaAdet = 2d, DuraklamaDakika = 48d, Oee = 58.6d, GeciciVeri = true },
+            new { Makine = "Skipper", Bolum = "CNC", ArizaVar = false, ArizaAdet = 0d, DuraklamaDakika = 0d, Oee = 82.4d, GeciciVeri = true },
+            new { Makine = "Rover-B", Bolum = "CNC", ArizaVar = false, ArizaAdet = 0d, DuraklamaDakika = 6d, Oee = 76.9d, GeciciVeri = true },
+            new { Makine = "Konveyor Hatti", Bolum = "Boyahane", ArizaVar = true, ArizaAdet = 1d, DuraklamaDakika = 25d, Oee = 63.2d, GeciciVeri = true },
+            new { Makine = "PVC Hat 1", Bolum = "PVC", ArizaVar = false, ArizaAdet = 0d, DuraklamaDakika = 0d, Oee = 88.1d, GeciciVeri = true },
+            new { Makine = "Ebatlama 1", Bolum = "Ebatlama", ArizaVar = false, ArizaAdet = 0d, DuraklamaDakika = 4d, Oee = 79.7d, GeciciVeri = true }
+        });
+    }
+
+    makineDurumListesi = makineDurumListesi
+        .OrderByDescending(x => x.ArizaVar)
+        .ThenBy(x => x.Makine)
+        .ToList();
+    var arizaliMakineSayisi = makineDurumListesi.Count(x => x.ArizaVar);
+    var temizMakineSayisi = makineDurumListesi.Count - arizaliMakineSayisi;
     var enYuksekHataBolumu = Model.HataBolumDetaylari.FirstOrDefault();
     var enYuksekHataMakinesi = Model.HataBolumDetaylari
         .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
@@ -109,7 +188,7 @@
     var showBolumBazliHata = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliHata);
     var showHataTrendi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataTrendi);
     var showEnCokHataNedeni = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataNedeni);
-    var showEnCokHataOperatoru = false;
+    var showEnCokHataOperatoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataOperatoru);
     var showEnCokHataBolumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataBolumu);
 
     var topKpiRowCount = (showToplamModulSayisi ? 2 : 0)
@@ -245,6 +324,42 @@
                             }
                         </div>
                     </div>
+
+                    <section class="gunluk-machine-status" aria-labelledby="machineStatusTitle">
+                        <div class="gunluk-machine-status__header">
+                            <div>
+                                <h2 id="machineStatusTitle">Makine Durum Listesi</h2>
+                                <p>@arizaliMakineSayisi arizali, @temizMakineSayisi temiz makine kaydi</p>
+                            </div>
+                            @if (makineDurumGeciciVeri)
+                            {
+                                <span class="gunluk-machine-status__source">Gecici veri</span>
+                            }
+                        </div>
+
+                        <div class="gunluk-machine-status__list" role="list">
+                            @foreach (var makine in makineDurumListesi)
+                            {
+                                var durumClass = makine.ArizaVar ? "is-fault" : "is-ok";
+                                var durumLabel = makine.ArizaVar ? "Ariza kaydi" : "Kayit temiz";
+                                var durumDegeri = makine.ArizaVar
+                                    ? formatCount(makine.ArizaAdet)
+                                    : (makine.Oee > 0 ? $"{makine.Oee:N1}%" : "-");
+
+                                <article class="gunluk-machine-status__item @durumClass" role="listitem">
+                                    <span class="gunluk-machine-status__pulse" aria-hidden="true"></span>
+                                    <span class="gunluk-machine-status__name">
+                                        <strong>@makine.Makine</strong>
+                                        <small>@makine.Bolum</small>
+                                    </span>
+                                    <span class="gunluk-machine-status__meta">
+                                        <small>@durumLabel</small>
+                                        <strong>@durumDegeri</strong>
+                                    </span>
+                                </article>
+                            }
+                        </div>
+                    </section>
                 </div>
 
                 <div class="gunluk-hero__panel">
@@ -519,8 +634,8 @@
                             <div class="gunluk-panel">
                                 <div class="gunluk-panel__header">
                                     <div>
-                                        <h2>Istasyon Doluluk Orani</h2>
-                                        <p>Bolumlerin gun bazli modül yukunu ve doluluk oranini izleyin.</p>
+                                        <h2>Istasyon Doluluk Karsilastirmasi</h2>
+                                        <p>Secilen donemde bolumlerin ortalama doluluk oranini sirali olarak izleyin.</p>
                                     </div>
                                 </div>
                                 <div class="gunluk-panel__body gunluk-panel__body--chart gunluk-panel__body--chart-tall">

@@ -2,6 +2,30 @@
 @{
     ViewData["Title"] = "Rol Yetkileri";
     var currentGroup = string.Empty;
+    var gunlukDashboardPermissionKey = Permissions.Dashboards.GunlukVeriler;
+    var gunlukPreviewWidgets = new[]
+    {
+        new { Key = Permissions.GunlukVerilerWidgets.ToplamModulSayisi, Title = "Depoya Giren Modül", Description = "Ana KPI", Tone = "cyan", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.ToplamDuraklama, Title = "Toplam Duraklama", Description = "Duraklama KPI", Tone = "amber", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.GenelOeeSkoru, Title = "Genel OEE Skoru", Description = "Yarım daire gösterge", Tone = "green", Shape = "gauge" },
+        new { Key = Permissions.GunlukVerilerWidgets.MakineBazliOee, Title = "Makine Bazlı OEE", Description = "Sıralı makine grafiği", Tone = "green", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.OeeBilesenleri, Title = "OEE Bileşenleri", Description = "Performans, kullanılabilirlik, kalite", Tone = "violet", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliPlanaUyum, Title = "Bölüm Bazlı Plana Uyum", Description = "Bölüm karşılaştırması", Tone = "green", Shape = "columns" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliOee, Title = "Bölüm Bazlı OEE", Description = "Bölüm ortalaması", Tone = "blue", Shape = "columns" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliPersonel, Title = "Bölüm Bazlı Personel", Description = "Direkt/endirekt dağılım", Tone = "teal", Shape = "donut" },
+        new { Key = Permissions.GunlukVerilerWidgets.ModulTrendi, Title = "Modül Trendi", Description = "Günlük hareket", Tone = "teal", Shape = "line" },
+        new { Key = Permissions.GunlukVerilerWidgets.HataNedenleri, Title = "Hata Nedenleri", Description = "Hata nedeni dağılımı", Tone = "rose", Shape = "donut" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliHata, Title = "Bölüm Bazlı Hata", Description = "Hata adedi grafiği", Tone = "rose", Shape = "columns" },
+        new { Key = Permissions.GunlukVerilerWidgets.HataTrendi, Title = "İstasyon Doluluk Karşılaştırması", Description = "Doluluk sıralaması", Tone = "violet", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.EnCokHataNedeni, Title = "En Çok Hata Nedeni", Description = "Özet kart", Tone = "violet", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.EnCokHataOperatoru, Title = "En Çok Hata Operatörü", Description = "Özet kart", Tone = "slate", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.EnCokHataBolumu, Title = "En Çok Hata Bölümü", Description = "Özet kart", Tone = "green", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.HataliAdet, Title = "Hatalı Adet", Description = "Toplam hata KPI", Tone = "rose", Shape = "kpi" }
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/superadmin-role-edit.css" asp-append-version="true" />
 }
 
 <div class="container py-4">
@@ -18,38 +42,115 @@
         <div class="alert alert-success">@TempData["Success"]</div>
     }
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <form asp-action="EditRole" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" asp-for="RoleId" />
-                <input type="hidden" asp-for="RoleName" />
+    <div class="role-permission-layout">
+        <section class="card shadow-sm role-permission-editor" aria-labelledby="rolePermissionEditorTitle">
+            <div class="card-body">
+                <form asp-action="EditRole" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="RoleId" />
+                    <input type="hidden" asp-for="RoleName" />
 
-                <div asp-validation-summary="All" class="text-danger"></div>
+                    <div asp-validation-summary="All" class="text-danger"></div>
 
-                <div class="d-flex flex-column gap-3">
-                    @for (var i = 0; i < Model.Permissions.Count; i++)
-                    {
-                        if (currentGroup != Model.Permissions[i].Group)
+                    <div id="rolePermissionEditorTitle" class="visually-hidden">Rol yetkileri listesi</div>
+                    <div class="d-flex flex-column gap-3">
+                        @for (var i = 0; i < Model.Permissions.Count; i++)
                         {
-                            currentGroup = Model.Permissions[i].Group;
-                            <div class="fw-semibold text-uppercase text-muted small mt-2">@currentGroup</div>
+                            if (currentGroup != Model.Permissions[i].Group)
+                            {
+                                currentGroup = Model.Permissions[i].Group;
+                                <div class="fw-semibold text-uppercase text-muted small mt-2">@currentGroup</div>
+                            }
+                            <div class="form-check">
+                                <input type="hidden" asp-for="Permissions[i].Key" />
+                                <input type="hidden" asp-for="Permissions[i].Name" />
+                                <input type="hidden" asp-for="Permissions[i].Group" />
+                                <input class="form-check-input js-role-permission"
+                                       asp-for="Permissions[i].Selected"
+                                       data-permission-key="@Model.Permissions[i].Key" />
+                                <label class="form-check-label">@Model.Permissions[i].Name</label>
+                            </div>
                         }
-                        <div class="form-check">
-                            <input type="hidden" asp-for="Permissions[i].Key" />
-                            <input type="hidden" asp-for="Permissions[i].Name" />
-                            <input type="hidden" asp-for="Permissions[i].Group" />
-                            <input class="form-check-input" asp-for="Permissions[i].Selected" />
-                            <label class="form-check-label">@Model.Permissions[i].Name</label>
-                        </div>
-                    }
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a class="btn btn-outline-secondary" asp-action="Roles">İptal</a>
+                        <button type="submit" class="btn btn-dark">Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <aside class="role-dashboard-preview" aria-labelledby="gunlukPreviewTitle">
+            <div class="role-dashboard-preview__sticky">
+                <div class="role-dashboard-preview__header">
+                    <span>Canlı ön izleme</span>
+                    <h2 id="gunlukPreviewTitle">Günlük Veriler Panosu</h2>
+                    <p>Yetki seçimleri değiştikçe bu rolün panoda göreceği kartlar burada güncellenir.</p>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <a class="btn btn-outline-secondary" asp-action="Roles">İptal</a>
-                    <button type="submit" class="btn btn-dark">Kaydet</button>
+                <div id="gunlukRolePreview"
+                     class="role-dashboard-preview__canvas"
+                     data-dashboard-permission="@gunlukDashboardPermissionKey">
+                    <div class="role-dashboard-preview__blocked" data-preview-blocked>
+                        <i class="bi bi-lock" aria-hidden="true"></i>
+                        <strong>Günlük Veriler erişimi kapalı</strong>
+                        <span>Ön izleme için “Günlük Veriler (Özet)” yetkisini işaretleyin.</span>
+                    </div>
+
+                    <div class="role-dashboard-preview__screen" data-preview-screen hidden>
+                        <div class="role-dashboard-preview__topbar">
+                            <span data-preview-access-state>Günlük Veriler açık</span>
+                            <strong><span data-preview-visible-count>0</span> kart görünür</strong>
+                        </div>
+
+                        <div class="role-dashboard-preview__hero">
+                            <div>
+                                <span class="role-dashboard-preview__eyebrow">FABRİKA ÖZETİ</span>
+                                <h3>Günlük Veriler Panosu</h3>
+                                <p>Seçili rolün erişebildiği özet kartları ve grafik alanları.</p>
+                            </div>
+                            <div class="role-dashboard-preview__facts">
+                                <span>Seçili dönem</span>
+                                <strong>01.04 - 15.04</strong>
+                            </div>
+                        </div>
+
+                        <div class="role-dashboard-preview__section">
+                            <span>Bölüm Ekranları</span>
+                            <div class="role-dashboard-preview__section-grid" aria-hidden="true">
+                                <i></i><i></i><i></i><i></i><i></i><i></i>
+                            </div>
+                        </div>
+
+                        <div class="role-dashboard-preview__widgets">
+                            @foreach (var widget in gunlukPreviewWidgets)
+                            {
+                                <article class="role-dashboard-preview__widget role-dashboard-preview__widget--@widget.Tone role-dashboard-preview__widget--@widget.Shape"
+                                         data-preview-widget
+                                         data-permission-key="@widget.Key"
+                                         hidden>
+                                    <div class="role-dashboard-preview__widget-header">
+                                        <strong>@widget.Title</strong>
+                                        <span>@widget.Description</span>
+                                    </div>
+                                    <div class="role-dashboard-preview__mock" aria-hidden="true">
+                                        <i></i><i></i><i></i><i></i>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+
+                        <div class="role-dashboard-preview__empty" data-preview-empty hidden>
+                            Günlük Veriler sayfası açılır, ancak bu rol için görünür kart seçilmemiş.
+                        </div>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </aside>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/pages/superadmin-role-edit.js" asp-append-version="true"></script>
+}

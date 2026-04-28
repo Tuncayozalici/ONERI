@@ -176,6 +176,47 @@ namespace ONERI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                TempData["Error"] = "Silinecek kullanıcı bulunamadı.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var currentUserId = _userManager.GetUserId(User);
+            if (string.Equals(id, currentUserId, StringComparison.Ordinal))
+            {
+                TempData["Error"] = "Kendi kullanıcınızı silemezsiniz.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                TempData["Error"] = "Silinecek kullanıcı bulunamadı.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (await _userManager.IsInRoleAsync(user, Permissions.SuperAdminRole))
+            {
+                TempData["Error"] = "Super Admin kullanıcısı silinemez.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                TempData["Error"] = string.Join(" ", result.Errors.Select(e => e.Description));
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["Success"] = $"'{user.UserName}' kullanıcısı silindi.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(UserEditViewModel model)
         {
             if (string.IsNullOrWhiteSpace(model.UserId))
@@ -366,6 +407,53 @@ namespace ONERI.Controllers
 
             await _roleManager.CreateAsync(new IdentityRole(roleName.Trim()));
             TempData["Success"] = "Rol oluşturuldu.";
+            return RedirectToAction(nameof(Roles));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteRole(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                TempData["Error"] = "Silinecek rol bulunamadı.";
+                return RedirectToAction(nameof(Roles));
+            }
+
+            var role = await _roleManager.FindByIdAsync(id);
+            if (role == null || string.IsNullOrWhiteSpace(role.Name))
+            {
+                TempData["Error"] = "Silinecek rol bulunamadı.";
+                return RedirectToAction(nameof(Roles));
+            }
+
+            if (string.Equals(role.Name, Permissions.SuperAdminRole, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Error"] = "Super Admin rolü silinemez.";
+                return RedirectToAction(nameof(Roles));
+            }
+
+            var assignedUsers = await _userManager.GetUsersInRoleAsync(role.Name);
+            if (assignedUsers.Count > 0)
+            {
+                TempData["Error"] = $"'{role.Name}' rolü {assignedUsers.Count} kullanıcıya atanmış. Silmeden önce bu kullanıcıların rolünü değiştirin.";
+                return RedirectToAction(nameof(Roles));
+            }
+
+            var existingClaims = await _roleManager.GetClaimsAsync(role);
+            foreach (var claim in existingClaims)
+            {
+                await _roleManager.RemoveClaimAsync(role, claim);
+            }
+
+            var result = await _roleManager.DeleteAsync(role);
+            if (!result.Succeeded)
+            {
+                TempData["Error"] = string.Join(" ", result.Errors.Select(e => e.Description));
+                return RedirectToAction(nameof(Roles));
+            }
+
+            TempData["Success"] = $"'{role.Name}' rolü silindi.";
             return RedirectToAction(nameof(Roles));
         }
 

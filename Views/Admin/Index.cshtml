@@ -88,6 +88,11 @@
         </div>
 
         <div class="filter-bar mb-4">
+            @if (TempData["Hata"] != null)
+            {
+                <div class="alert alert-danger mb-3">@TempData["Hata"]</div>
+            }
+
             <form asp-controller="Admin" asp-action="Index" method="get" class="filter-form">
                 <div class="input-group filter-search-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -157,7 +162,20 @@
                                     </div>
                                 </td>
                                 <td class="p-3">
-                                    <span class="status-pill @GetBadgeClass(item.Durum)">@GetStatusName(item.Durum)</span>
+                                    <div class="table-status">
+                                        <span class="status-pill @GetBadgeClass(item.Durum)">@GetStatusName(item.Durum)</span>
+                                        @{
+                                            var kararGerekcesi = GetDecisionReason(item);
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(kararGerekcesi))
+                                        {
+                                            <small>@Truncate(kararGerekcesi, 88)@(kararGerekcesi.Length > 88 ? "..." : "")</small>
+                                        }
+                                        @if (item.YoneticiToplamPuan.HasValue)
+                                        {
+                                            <small>Yönetici puanı: @item.YoneticiToplamPuan/100</small>
+                                        }
+                                    </div>
                                 </td>
                                 <td class="p-3 text-end">
                                     <div class="dropdown">
@@ -178,23 +196,17 @@
                                                 @if (canApprove)
                                                 {
                                                     <li>
-                                                        <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <button type="submit" class="dropdown-item">
-                                                                <i class="bi bi-check-lg text-success me-2"></i>Hızlı Onayla
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#onayModal-@item.Id">
+                                                            <i class="bi bi-check-lg text-success me-2"></i>Gerekçeli Onayla
+                                                        </button>
                                                     </li>
                                                 }
                                                 @if (canReject)
                                                 {
                                                     <li>
-                                                        <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <button type="submit" class="dropdown-item">
-                                                                <i class="bi bi-x-lg text-danger me-2"></i>Hızlı Reddet
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#redModal-@item.Id">
+                                                            <i class="bi bi-x-lg text-danger me-2"></i>Gerekçeli Reddet
+                                                        </button>
                                                     </li>
                                                 }
                                             }
@@ -243,6 +255,107 @@
                                     </div>
                                 </div>
                             </div>
+
+                            @if (item.Durum == OneriDurum.Beklemede)
+                            {
+                                @if (canApprove)
+                                {
+                                    <div class="modal fade" id="onayModal-@item.Id" tabindex="-1" aria-labelledby="onayModalLabel-@item.Id" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content modal-content-soft">
+                                                <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="approve" data-threshold="60">
+                                                    @Html.AntiForgeryToken()
+                                                    <div class="modal-header border-0">
+                                                        <h5 class="modal-title" id="onayModalLabel-@item.Id">Onay Gerekçesi</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin kurula gönderilme nedenini yazın.</p>
+                                                        <div class="manager-score-grid mb-3">
+                                                            <div>
+                                                                <label class="form-label" for="onayGayret-@item.Id">Gayret</label>
+                                                                <input id="onayGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="onayOrijinallik-@item.Id">Orijinallik</label>
+                                                                <input id="onayOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="onayEtki-@item.Id">Etki</label>
+                                                                <input id="onayEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="onayUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
+                                                                <input id="onayUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                        </div>
+                                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
+                                                            <span>Toplam</span>
+                                                            <strong>0/100</strong>
+                                                            <small>Puanları girin.</small>
+                                                        </div>
+                                                        <label class="form-label" for="onayGerekce-@item.Id">Karar Gerekçesi</label>
+                                                        <textarea id="onayGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri uygulanabilir görünüyor ve bölüm verimliliğine katkı potansiyeli taşıyor."></textarea>
+                                                    </div>
+                                                    <div class="modal-footer border-0">
+                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                                                        <button type="submit" class="btn btn-success js-manager-submit"><i class="bi bi-check-lg me-1"></i> Onayla</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (canReject)
+                                {
+                                    <div class="modal fade" id="redModal-@item.Id" tabindex="-1" aria-labelledby="redModalLabel-@item.Id" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content modal-content-soft">
+                                                <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="reject" data-threshold="60">
+                                                    @Html.AntiForgeryToken()
+                                                    <div class="modal-header border-0">
+                                                        <h5 class="modal-title" id="redModalLabel-@item.Id">Red Gerekçesi</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin reddedilme nedenini yazın.</p>
+                                                        <div class="manager-score-grid mb-3">
+                                                            <div>
+                                                                <label class="form-label" for="redGayret-@item.Id">Gayret</label>
+                                                                <input id="redGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="redOrijinallik-@item.Id">Orijinallik</label>
+                                                                <input id="redOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="redEtki-@item.Id">Etki</label>
+                                                                <input id="redEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                            <div>
+                                                                <label class="form-label" for="redUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
+                                                                <input id="redUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                                            </div>
+                                                        </div>
+                                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
+                                                            <span>Toplam</span>
+                                                            <strong>0/100</strong>
+                                                            <small>Puanları girin.</small>
+                                                        </div>
+                                                        <label class="form-label" for="redGerekce-@item.Id">Karar Gerekçesi</label>
+                                                        <textarea id="redGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri mevcut süreçle çakışıyor, uygulanabilirlik için ek veri gerekiyor veya kapsam öneri kriterlerini karşılamıyor."></textarea>
+                                                    </div>
+                                                    <div class="modal-footer border-0">
+                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                                                        <button type="submit" class="btn btn-danger js-manager-submit"><i class="bi bi-x-lg me-1"></i> Reddet</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
                         }
                     </tbody>
                 </table>
@@ -286,4 +399,101 @@
 
         return value.Substring(0, maxLength);
     }
+
+    string GetDecisionReason(Oneri oneri)
+    {
+        var kurulGerekcesi = oneri.Degerlendirmeler?.FirstOrDefault()?.KararGerekcesi;
+        if (!string.IsNullOrWhiteSpace(kurulGerekcesi))
+        {
+            return kurulGerekcesi;
+        }
+
+        return oneri.YoneticiKararGerekcesi ?? "";
+    }
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            document.querySelectorAll('.js-manager-decision-form').forEach(function (form) {
+                var scoreInputs = Array.from(form.querySelectorAll('.js-manager-score'));
+                var summary = form.querySelector('.js-manager-decision-summary');
+                var submitButton = form.querySelector('.js-manager-submit');
+                var decision = form.dataset.decision;
+                var threshold = Number(form.dataset.threshold || 60);
+
+                function resolveState() {
+                    var allFilled = true;
+                    var allInRange = true;
+                    var total = 0;
+
+                    scoreInputs.forEach(function (input) {
+                        if (input.value === '') {
+                            allFilled = false;
+                            return;
+                        }
+
+                        var value = Number(input.value);
+                        if (!Number.isInteger(value) || value < 0 || value > 25) {
+                            allInRange = false;
+                            return;
+                        }
+
+                        total += value;
+                    });
+
+                    var isAllowed = allFilled && allInRange && (
+                        decision === 'approve'
+                            ? total >= threshold
+                            : total < threshold
+                    );
+
+                    if (summary) {
+                        var totalEl = summary.querySelector('strong');
+                        var messageEl = summary.querySelector('small');
+                        if (totalEl) {
+                            totalEl.textContent = total + '/100';
+                        }
+
+                        summary.classList.toggle('is-valid', isAllowed);
+                        summary.classList.toggle('is-invalid', allFilled && allInRange && !isAllowed);
+
+                        if (messageEl) {
+                            if (!allFilled) {
+                                messageEl.textContent = 'Puanları girin.';
+                            } else if (!allInRange) {
+                                messageEl.textContent = 'Her kriter 0-25 aralığında olmalıdır.';
+                            } else if (decision === 'approve' && total < threshold) {
+                                messageEl.textContent = threshold + ' puan eşiğini geçmeyen öneri onaylanamaz.';
+                            } else if (decision === 'reject' && total >= threshold) {
+                                messageEl.textContent = threshold + ' puan eşiğini geçen öneri reddedilemez.';
+                            } else {
+                                messageEl.textContent = decision === 'approve'
+                                    ? 'Puan eşiği geçti, onaylanabilir.'
+                                    : 'Puan eşiği geçmedi, reddedilebilir.';
+                            }
+                        }
+                    }
+
+                    if (submitButton) {
+                        submitButton.disabled = !isAllowed;
+                    }
+
+                    return isAllowed;
+                }
+
+                scoreInputs.forEach(function (input) {
+                    input.addEventListener('input', resolveState);
+                });
+
+                form.addEventListener('submit', function (event) {
+                    if (!resolveState()) {
+                        event.preventDefault();
+                    }
+                });
+
+                resolveState();
+            });
+        })();
+    </script>
 }

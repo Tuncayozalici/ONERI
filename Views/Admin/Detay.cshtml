@@ -29,6 +29,8 @@
             _ => "bg-secondary"
         };
     }
+
+    var degerlendirme = Model.Degerlendirmeler?.FirstOrDefault();
 }
 
 @section Styles {
@@ -72,6 +74,50 @@
             <hr>
             <h6 class="mt-4">Açıklama</h6>
             <div class="desc-box">@Model.Aciklama</div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.YoneticiKararGerekcesi))
+            {
+                <h6 class="mt-4">Yönetici Karar Gerekçesi</h6>
+                <div class="desc-box">
+                    @Model.YoneticiKararGerekcesi
+                    @if (Model.YoneticiKararTarihi.HasValue)
+                    {
+                        <div class="reason-date mt-2">@Model.YoneticiKararTarihi.Value.ToString("dd MMMM yyyy, HH:mm")</div>
+                    }
+                </div>
+            }
+
+            @if (Model.YoneticiToplamPuan.HasValue)
+            {
+                <h6 class="mt-4">Yönetici Puanlaması</h6>
+                <div class="score-summary mt-2">
+                    <div><span>Gayret</span><strong>@Model.YoneticiGayretPuani/25</strong></div>
+                    <div><span>Orijinallik</span><strong>@Model.YoneticiOrijinallikPuani/25</strong></div>
+                    <div><span>Etki</span><strong>@Model.YoneticiEtkiPuani/25</strong></div>
+                    <div><span>Uygulanabilirlik</span><strong>@Model.YoneticiUygulanabilirlikPuani/25</strong></div>
+                    <div><span>Toplam</span><strong>@Model.YoneticiToplamPuan/100</strong></div>
+                </div>
+            }
+
+            @if (degerlendirme != null)
+            {
+                <h6 class="mt-4">Kurul Karar Gerekçesi</h6>
+                <div class="desc-box">@degerlendirme.KararGerekcesi</div>
+
+                @if (!string.IsNullOrWhiteSpace(degerlendirme.KurulYorumu))
+                {
+                    <h6 class="mt-4">Kurul Yorumu</h6>
+                    <div class="desc-box">@degerlendirme.KurulYorumu</div>
+                }
+
+                <div class="score-summary mt-4">
+                    <div><span>Gayret</span><strong>@degerlendirme.GayretPuani/25</strong></div>
+                    <div><span>Orijinallik</span><strong>@degerlendirme.OrijinallikPuani/25</strong></div>
+                    <div><span>Etki</span><strong>@degerlendirme.EtkiPuani/25</strong></div>
+                    <div><span>Uygulanabilirlik</span><strong>@degerlendirme.UygulanabilirlikPuani/25</strong></div>
+                    <div><span>Toplam</span><strong>@degerlendirme.ToplamPuan/100</strong></div>
+                </div>
+            }
         </div>
         <div class="card-footer text-muted p-3">
             <a asp-action="Index" class="btn btn-outline-secondary">

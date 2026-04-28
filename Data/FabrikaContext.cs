@@ -21,11 +21,14 @@ namespace ONERI.Data
             builder.Entity<Oneri>(entity =>
             {
                 entity.HasIndex(x => x.TrackingToken).IsUnique();
+                entity.HasIndex(x => x.TakipKodu).IsUnique();
+                entity.Property(x => x.YoneticiKararGerekcesi).HasMaxLength(1000);
             });
 
             builder.Entity<Degerlendirme>(entity =>
             {
                 entity.HasIndex(x => x.OneriId).IsUnique();
+                entity.Property(x => x.KararGerekcesi).HasMaxLength(1000);
 
                 entity.ToTable(t =>
                 {

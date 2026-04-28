@@ -1,6 +1,7 @@
 @model List<ONERI.Models.UserListItemViewModel>
 @{
     ViewData["Title"] = "Super Admin Paneli";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
 
 <div class="container py-4">
@@ -44,15 +45,38 @@
                     <tbody>
                         @foreach (var user in Model)
                         {
+                            var isCurrentUser = string.Equals(user.Id, currentUserId, StringComparison.Ordinal);
+                            var isSuperAdminUser = user.Roles.Contains(Permissions.SuperAdminRole, StringComparer.OrdinalIgnoreCase);
+                            var deleteDisabled = isCurrentUser || isSuperAdminUser;
+                            var deleteTitle = isCurrentUser
+                                ? "Kendi kullanıcınızı silemezsiniz."
+                                : isSuperAdminUser
+                                    ? "Super Admin kullanıcısı silinemez."
+                                    : "Kullanıcıyı sil";
                             <tr>
                                 <td>@user.UserName</td>
                                 <td>@(string.IsNullOrWhiteSpace(user.AdSoyad) ? "-" : user.AdSoyad)</td>
                                 <td>@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
                                 <td>@(user.Roles.Count == 0 ? "-" : string.Join(", ", user.Roles))</td>
                                 <td class="text-end">
-                                    <a class="btn btn-sm btn-dark" asp-action="EditUser" asp-route-id="@user.Id">
-                                        Düzenle
-                                    </a>
+                                    <div class="d-inline-flex justify-content-end gap-2">
+                                        <a class="btn btn-sm btn-dark" asp-action="EditUser" asp-route-id="@user.Id">
+                                            Düzenle
+                                        </a>
+                                        <form asp-action="DeleteUser"
+                                              method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@user.Id" />
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    @(deleteDisabled ? "disabled" : null)
+                                                    title="@deleteTitle">
+                                                Sil
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }

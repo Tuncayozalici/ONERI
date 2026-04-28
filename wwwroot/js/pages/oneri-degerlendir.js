@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var scoreInputs = document.querySelectorAll(".score-input");
     var totalScoreEl = document.getElementById("total-score");
     var decisionEl = document.getElementById("decision");
+    var decisionReasonEl = document.getElementById("decision-reason");
 
     if (!totalScoreEl || !decisionEl || scoreInputs.length === 0) {
         return;
@@ -25,12 +26,22 @@ document.addEventListener("DOMContentLoaded", function () {
             decisionEl.textContent = "KABUL";
             decisionEl.className = "fw-bold mt-2 fs-5 text-success";
             totalScoreEl.className = "form-control form-control-lg text-center display-4 fw-bold p-0 total-score-input text-success";
+            updateReason("Toplam puan 60 kabul eşiğini karşıladığı için öneri kabul edilecek.");
             return;
         }
 
         decisionEl.textContent = "RED";
         decisionEl.className = "fw-bold mt-2 fs-5 text-danger";
         totalScoreEl.className = "form-control form-control-lg text-center display-4 fw-bold p-0 total-score-input text-danger";
+        updateReason("Toplam puan 60 kabul eşiğinin altında kaldığı için öneri puanlama nedeniyle reddedilecek.");
+    }
+
+    function updateReason(text) {
+        if (!decisionReasonEl) {
+            return;
+        }
+
+        decisionReasonEl.textContent = text;
     }
 
     scoreInputs.forEach(function (input) {

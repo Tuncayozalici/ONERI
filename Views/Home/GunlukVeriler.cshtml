@@ -9,14 +9,20 @@
             || (await AuthorizationService.AuthorizeAsync(User, null, permissionKey)).Succeeded;
     }
 
+    bool IsValidMachineStatusEntry(string? machineName)
+    {
+        return !string.IsNullOrWhiteSpace(machineName)
+            && !string.Equals(machineName, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(machineName, "Makine eslesmedi", System.StringComparison.OrdinalIgnoreCase);
+    }
+
     var personelBolumTitle = (string?)ViewBag.PersonelBolumTitle ?? "Personel Dağılımı (Direkt + Endirekt Toplam)";
     var personelSeriesLabel = (string?)ViewBag.PersonelBolumDatasetLabel ?? "Personel";
     var seciliDonemOzeti = (string?)ViewBag.OzetRange ?? Model.RaporTarihi.ToString("dd.MM.yyyy");
     var bolumHedefLookup = Model.BolumHedefKartlari.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
     var makineArizaLookup = Model.HataBolumDetaylari
         .SelectMany(x => x.MakineDetaylari
-            .Where(m => !string.IsNullOrWhiteSpace(m.Makine)
-                && !string.Equals(m.Makine, "Makine bilgisi yok", System.StringComparison.OrdinalIgnoreCase))
+            .Where(m => IsValidMachineStatusEntry(m.Makine))
             .Select(m => new { Makine = m.Makine, Bolum = x.Bolum, Deger = m.Deger }))
         .GroupBy(x => x.Makine, StringComparer.OrdinalIgnoreCase)
         .ToDictionary(
@@ -25,7 +31,7 @@
             StringComparer.OrdinalIgnoreCase);
     var makineDuraklamaLookup = Model.DuraklamaBolumDetaylari
         .SelectMany(x => x.MakineDetaylari
-            .Where(m => !string.IsNullOrWhiteSpace(m.Makine))
+            .Where(m => IsValidMachineStatusEntry(m.Makine))
             .Select(m => new { Makine = m.Makine, Bolum = x.Bolum, Dakika = m.DuraklamaDakika }))
         .GroupBy(x => x.Makine, StringComparer.OrdinalIgnoreCase)
         .ToDictionary(
@@ -49,7 +55,7 @@
                 GeciciVeri = false
             };
         })
-        .Where(x => !string.IsNullOrWhiteSpace(x.Makine))
+        .Where(x => IsValidMachineStatusEntry(x.Makine))
         .ToList();
 
     foreach (var ariza in makineArizaLookup)
@@ -88,10 +94,26 @@
 
     makineDurumListesi = makineDurumListesi
         .OrderByDescending(x => x.ArizaVar)
+        .ThenByDescending(x => x.DuraklamaDakika)
         .ThenBy(x => x.Makine)
         .ToList();
     var arizaliMakineSayisi = makineDurumListesi.Count(x => x.ArizaVar);
     var temizMakineSayisi = makineDurumListesi.Count - arizaliMakineSayisi;
+    var izlenenMakineSayisi = makineDurumListesi.Count(x => !x.ArizaVar && x.DuraklamaDakika > 0);
+    var toplamMakineSayisi = makineDurumListesi.Count;
+    var calisanMakineOrani = toplamMakineSayisi > 0
+        ? (temizMakineSayisi * 100d) / toplamMakineSayisi
+        : 0d;
+    var toplamMakineDurusuDakika = makineDurumListesi.Sum(x => x.DuraklamaDakika);
+    var ortalamaMakineOee = makineDurumListesi
+        .Where(x => x.Oee > 0)
+        .Select(x => x.Oee)
+        .DefaultIfEmpty(0d)
+        .Average();
+    var enUzunDurusMakinesi = makineDurumListesi
+        .Where(x => x.DuraklamaDakika > 0)
+        .OrderByDescending(x => x.DuraklamaDakika)
+        .FirstOrDefault();
     var enYuksekHataBolumu = Model.HataBolumDetaylari.FirstOrDefault();
     var enYuksekHataMakinesi = Model.HataBolumDetaylari
         .SelectMany(x => x.MakineDetaylari.Select(m => new { Bolum = x.Bolum, Makine = m.Makine, Deger = m.Deger }))
@@ -110,6 +132,7 @@
             Title = "Metal",
             Description = "Gunluk uretim, verimlilik ve trend analizleri.",
             Icon = "bi-speedometer2",
+            PermissionKey = Permissions.Dashboards.ProfilLazer,
             Url = Url.Action("ProfilLazerVerileri", "Home") ?? "#"
         },
         new
@@ -118,6 +141,7 @@
             Title = "Boyahane",
             Description = "Gunluk boyama, fire ve hata analizleri.",
             Icon = "bi-paint-bucket",
+            PermissionKey = Permissions.Dashboards.Boyahane,
             Url = Url.Action("BoyahaneDashboard", "Home") ?? "#"
         },
         new
@@ -126,6 +150,7 @@
             Title = "PVC",
             Description = "Uretim metraji, duraklama ve verimlilik analizleri.",
             Icon = "bi-bounding-box",
+            PermissionKey = Permissions.Dashboards.Pvc,
             Url = Url.Action("PvcDashboard", "Home") ?? "#"
         },
         new
@@ -134,6 +159,7 @@
             Title = "Tezgah",
             Description = "Parca, kisi, kayip sure ve kullanilabilirlik.",
             Icon = "bi-gear",
+            PermissionKey = Permissions.Dashboards.Tezgah,
             Url = Url.Action("TezgahDashboard", "Home") ?? "#"
         },
         new
@@ -142,6 +168,7 @@
             Title = "Ebatlama",
             Description = "Kesim, plaka, duraklama ve mesai analizleri.",
             Icon = "bi-tools",
+            PermissionKey = Permissions.Dashboards.Ebatlama,
             Url = Url.Action("EbatlamaDashboard", "Home") ?? "#"
         },
         new
@@ -150,6 +177,7 @@
             Title = "CNC",
             Description = "Masterwood, Skipper ve Rover-B makineleri.",
             Icon = "bi-cpu",
+            PermissionKey = Permissions.Dashboards.Cnc,
             Url = Url.Action("CncDashboard", "Home") ?? "#"
         },
         new
@@ -158,10 +186,10 @@
             Title = "Hatali Parca Analizi",
             Description = "Hata nedenleri, bolumler ve operator trendleri.",
             Icon = "bi-bug",
+            PermissionKey = Permissions.Dashboards.HataliParca,
             Url = Url.Action("HataliParcaDashboard", "Home") ?? "#"
         }
     };
-    var varsayilanBolum = bolumNavigasyonlari[0];
     Func<double, string> formatDuration = totalMinutes =>
     {
         var roundedMinutes = (int)Math.Round(totalMinutes, MidpointRounding.AwayFromZero);
@@ -173,7 +201,200 @@
     {
         return Math.Round(total, MidpointRounding.AwayFromZero).ToString("N0");
     };
+    Func<double, string> formatPercent = value =>
+    {
+        return $"{Math.Round(value, MidpointRounding.AwayFromZero):N0}%";
+    };
+    Func<string?, string> normalizeBolumKey = value =>
+    {
+        return ONERI.Services.Dashboards.DashboardParsingHelper.NormalizeHeaderForMatch(value ?? string.Empty);
+    };
+    Func<Dictionary<string, double>, string, double> lookupMetric = (lookup, key) =>
+    {
+        return lookup.TryGetValue(key, out var value) ? value : 0d;
+    };
+    Func<double, string> barHeightStyle = value =>
+    {
+        var normalizedValue = Math.Min(100d, Math.Max(0d, value));
+        return $"height:{normalizedValue.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+    };
+    Func<string, string> statusLabel = status =>
+    {
+        return status == "over-target" ? "Hedef ustu" : status == "on-target" ? "Hedefte" : "Takipte";
+    };
+    var planGerceklesme = Model.PlanUyumBolumData.Any()
+        ? Model.PlanUyumBolumData.Average()
+        : Model.OrtalamaPerformans;
+    var terminUyum = Model.OrtalamaOee > 0
+        ? (Model.OrtalamaOee + planGerceklesme) / 2
+        : planGerceklesme;
+    var kapasiteKullanimi = Model.OrtalamaKullanilabilirlik;
+    var kritikGercekler = new List<(string Icon, string Tone, string Text)>
+    {
+        (
+            arizaliMakineSayisi > 0 ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill",
+            arizaliMakineSayisi > 0 ? "risk" : "ok",
+            arizaliMakineSayisi > 0
+                ? $"{arizaliMakineSayisi} arizali makine takipte"
+                : "Arizali makine kaydi yok"
+        ),
+        (
+            Model.ToplamDuraklamaDakika > 0 ? "bi-stopwatch-fill" : "bi-check-circle-fill",
+            Model.ToplamDuraklamaDakika > 0 ? "warn" : "ok",
+            Model.ToplamDuraklamaDakika > 0
+                ? $"{formatDuration(Model.ToplamDuraklamaDakika)} toplam duraklama"
+                : "Duraklama kaydi yok"
+        ),
+        (
+            Model.ToplamHataAdet > 0 ? "bi-bug-fill" : "bi-check-circle-fill",
+            Model.ToplamHataAdet > 0 ? "risk" : "ok",
+            Model.ToplamHataAdet > 0
+                ? $"{formatCount(Model.ToplamHataAdet)} hatali adet kaydi"
+                : "Hatali adet kaydi yok"
+        )
+    };
+    var enDusukHedefKarti = Model.BolumHedefKartlari
+        .OrderBy(x => x.GerceklesmeOrani)
+        .FirstOrDefault();
 
+    if (enDusukHedefKarti != null)
+    {
+        kritikGercekler.Add((
+            enDusukHedefKarti.GerceklesmeOrani >= 95 ? "bi-check-circle-fill" : "bi-graph-down-arrow",
+            enDusukHedefKarti.GerceklesmeOrani >= 95 ? "ok" : enDusukHedefKarti.GerceklesmeOrani >= 80 ? "warn" : "risk",
+            $"{enDusukHedefKarti.Bolum}: {formatPercent(enDusukHedefKarti.GerceklesmeOrani)} plan gerceklesme"
+        ));
+    }
+
+    var nabizKartlari = new[]
+    {
+        new
+        {
+            Title = "Depoya Giren Modul",
+            Value = Model.ToplamModulSayisi.ToString("N0"),
+            Meta = Model.ModulSayisiTahminiMi ? "tahmini veri" : "gerceklesen",
+            Tone = "ok"
+        },
+        new
+        {
+            Title = "Plan Gerceklesme",
+            Value = formatPercent(planGerceklesme),
+            Meta = "bolum ortalamasi",
+            Tone = planGerceklesme >= 95 ? "ok" : planGerceklesme >= 80 ? "warn" : "risk"
+        },
+        new
+        {
+            Title = "Termin Uyum",
+            Value = formatPercent(terminUyum),
+            Meta = "plan + OEE",
+            Tone = terminUyum >= 95 ? "ok" : terminUyum >= 80 ? "warn" : "risk"
+        },
+        new
+        {
+            Title = "Kapasite Kullanimi",
+            Value = formatPercent(kapasiteKullanimi),
+            Meta = "kullanilabilirlik",
+            Tone = kapasiteKullanimi >= 95 ? "ok" : kapasiteKullanimi >= 80 ? "warn" : "risk"
+        }
+    };
+    var bolumOeeLookup = Model.BolumOeeLabels
+        .Select((label, index) => new
+        {
+            Key = normalizeBolumKey(label),
+            Value = index < Model.BolumOeeData.Count ? Model.BolumOeeData[index] : 0d
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+        .GroupBy(x => x.Key)
+        .ToDictionary(x => x.Key, x => x.Average(v => v.Value), StringComparer.OrdinalIgnoreCase);
+    var personelBolumLookup = Model.PersonelBolumLabels
+        .Select((label, index) => new
+        {
+            Key = normalizeBolumKey(label),
+            Value = index < Model.PersonelBolumData.Count ? Model.PersonelBolumData[index] : 0d
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+        .GroupBy(x => x.Key)
+        .ToDictionary(x => x.Key, x => x.Sum(v => v.Value), StringComparer.OrdinalIgnoreCase);
+    var hataBolumLookup = Model.HataBolumDetaylari
+        .GroupBy(x => normalizeBolumKey(x.Bolum), StringComparer.OrdinalIgnoreCase)
+        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+        .ToDictionary(x => x.Key, x => x.Sum(v => v.ToplamDeger), StringComparer.OrdinalIgnoreCase);
+    var duraklamaBolumLookup = Model.DuraklamaBolumDetaylari
+        .GroupBy(x => normalizeBolumKey(x.Bolum), StringComparer.OrdinalIgnoreCase)
+        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+        .ToDictionary(x => x.Key, x => x.Sum(v => v.ToplamDuraklamaDakika), StringComparer.OrdinalIgnoreCase);
+    var arizaliMakineBolumLookup = makineDurumListesi
+        .Where(x => x.ArizaVar)
+        .GroupBy(x => normalizeBolumKey(x.Bolum), StringComparer.OrdinalIgnoreCase)
+        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+        .ToDictionary(x => x.Key, x => (double)x.Count(), StringComparer.OrdinalIgnoreCase);
+    var prosesDetayKartlariHam = Model.BolumHedefKartlari
+        .Take(6)
+        .Select(kart =>
+        {
+            var key = kart.Key;
+            var oee = lookupMetric(bolumOeeLookup, key);
+            var personel = lookupMetric(personelBolumLookup, key);
+            var hata = lookupMetric(hataBolumLookup, key);
+            var duraklama = lookupMetric(duraklamaBolumLookup, key);
+            var arizaliMakine = lookupMetric(arizaliMakineBolumLookup, key);
+            var kisiBasi = personel > 0 ? kart.GerceklesenModul / personel : 0d;
+            var planKarsilastirmaTabani = Math.Max(1d, Math.Max(kart.HedefModul, kart.GerceklesenModul));
+            return new
+            {
+                kart.Bolum,
+                kart.Durum,
+                DurumLabel = statusLabel(kart.Durum),
+                kart.GerceklesenModul,
+                kart.HedefModul,
+                kart.GerceklesmeOrani,
+                kart.TahminiMi,
+                PlanBarStyle = barHeightStyle((kart.HedefModul / planKarsilastirmaTabani) * 100d),
+                GercekBarStyle = barHeightStyle((kart.GerceklesenModul / planKarsilastirmaTabani) * 100d),
+                Oee = oee,
+                Hata = hata,
+                Duraklama = duraklama,
+                ArizaliMakine = arizaliMakine,
+                KisiBasi = kisiBasi,
+                Personel = personel
+            };
+        })
+        .ToList();
+    var ortalamaKisiBasi = prosesDetayKartlariHam
+        .Where(x => x.KisiBasi > 0)
+        .Select(x => x.KisiBasi)
+        .DefaultIfEmpty(0d)
+        .Average();
+    var varsayilanKisiBasi = ortalamaKisiBasi > 0 ? ortalamaKisiBasi : 12d;
+    var prosesDetayKartlari = prosesDetayKartlariHam
+        .Select(proses => new
+        {
+            proses.Bolum,
+            proses.Durum,
+            proses.DurumLabel,
+            proses.GerceklesenModul,
+            proses.HedefModul,
+            proses.GerceklesmeOrani,
+            proses.TahminiMi,
+            proses.PlanBarStyle,
+            proses.GercekBarStyle,
+            proses.Oee,
+            proses.Hata,
+            proses.Duraklama,
+            proses.ArizaliMakine,
+            proses.KisiBasi,
+            proses.Personel,
+            GosterimKisiBasi = proses.KisiBasi > 0 ? proses.KisiBasi : varsayilanKisiBasi,
+            KisiBasiTahminiMi = proses.KisiBasi <= 0
+        })
+        .ToList();
+
+    var showNabizOzeti = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.NabizOzeti);
+    var showDonemOzetKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.DonemOzetKartlari);
+    var showKritikGercekler = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.KritikGercekler);
+    var showMakineDurumListesi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MakineDurumListesi);
+    var showProsesDetayKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ProsesDetayKartlari);
+    var showBolumEkranlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumEkranlari);
     var showToplamModulSayisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamModulSayisi);
     var showHataliAdet = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataliAdet);
     var showToplamDuraklama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamDuraklama);
@@ -188,33 +409,28 @@
     var showBolumBazliHata = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumBazliHata);
     var showHataTrendi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataTrendi);
     var showEnCokHataNedeni = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataNedeni);
-    var showEnCokHataOperatoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataOperatoru);
     var showEnCokHataBolumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataBolumu);
 
     var topKpiRowCount = (showToplamModulSayisi ? 2 : 0)
         + (showToplamDuraklama ? 1 : 0);
     var hasTopKpiStack = topKpiRowCount > 0;
-    var topLayoutItemCount = (hasTopKpiStack ? 1 : 0)
-        + (showGenelOeeSkoru ? 1 : 0)
+    var visibleChartCount = (showGenelOeeSkoru ? 1 : 0)
         + (showMakineBazliOee ? 1 : 0)
-        + (showOeeBilesenleri ? 1 : 0);
-    var midLayoutItemCount = (showBolumBazliPlanaUyum ? 1 : 0)
+        + (showOeeBilesenleri ? 1 : 0)
+        + (showBolumBazliPlanaUyum ? 1 : 0)
         + (showBolumBazliOee ? 1 : 0)
         + (showBolumBazliPersonel ? 1 : 0)
-        + (showModulTrendi ? 1 : 0);
+        + (showModulTrendi ? 1 : 0)
+        + (showHataNedenleri ? 1 : 0)
+        + (showBolumBazliHata ? 1 : 0)
+        + (showHataTrendi ? 1 : 0);
     var insightKpiRowCount = (showEnCokHataNedeni ? 1 : 0)
-        + (showEnCokHataOperatoru ? 1 : 0)
         + (showEnCokHataBolumu ? 1 : 0)
         + (showHataliAdet ? 1 : 0);
     var hasInsightKpiStack = insightKpiRowCount > 0;
-    var insightLayoutItemCount = (showHataNedenleri ? 1 : 0)
-        + (showBolumBazliHata ? 1 : 0)
-        + (showHataTrendi ? 1 : 0)
+    var visibleDashboardCardCount = (hasTopKpiStack ? 1 : 0)
+        + visibleChartCount
         + (hasInsightKpiStack ? 1 : 0);
-    var visibleDashboardCardCount = topLayoutItemCount + midLayoutItemCount + insightLayoutItemCount;
-    var topLayoutClass = $"gunluk-top-layout gunluk-top-layout--items-{Math.Max(1, topLayoutItemCount)} mb-4";
-    var midLayoutClass = $"gunluk-grid gunluk-grid--items-{Math.Max(1, midLayoutItemCount)}";
-    var insightLayoutClass = $"gunluk-grid gunluk-grid--insights gunluk-grid--items-{Math.Max(1, insightLayoutItemCount)}";
     var topKpiStyle = $"--gunluk-kpi-row-count:{Math.Max(1, topKpiRowCount)};";
     var insightKpiStyle = $"--gunluk-kpi-row-count:{Math.Max(1, insightKpiRowCount)};";
 
@@ -286,6 +502,30 @@
     {
         chartPayload["IstasyonDolulukSerileri"] = Model.IstasyonDolulukSerileri;
     }
+
+    var visibleBolumDashboardPermissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var bolum in bolumNavigasyonlari)
+    {
+        if (await CanViewWidgetAsync((string)bolum.PermissionKey))
+        {
+            visibleBolumDashboardPermissions.Add(bolum.PermissionKey);
+        }
+    }
+
+    var visibleBolumNavigasyonlari = bolumNavigasyonlari
+        .Where(bolum => visibleBolumDashboardPermissions.Contains(bolum.PermissionKey))
+        .ToList();
+    var varsayilanBolum = visibleBolumNavigasyonlari.FirstOrDefault();
+    var hasVisibleBolumEkranlari = showBolumEkranlari && visibleBolumNavigasyonlari.Any();
+    var hasVisibleProsesDetayKartlari = showProsesDetayKartlari && prosesDetayKartlari.Any();
+    var hasVisibleHeroWidgets = showNabizOzeti
+        || showDonemOzetKartlari
+        || showKritikGercekler
+        || showMakineDurumListesi
+        || hasVisibleBolumEkranlari;
+    var hasAnyVisibleDashboardContent = hasVisibleHeroWidgets
+        || hasVisibleProsesDetayKartlari
+        || visibleDashboardCardCount > 0;
 }
 
 @section Styles {
@@ -306,70 +546,126 @@
                         Tum bolumlerden gelen gunluk uretim, OEE, hata ve duraklama verilerini tek akista izleyin.
                         Ozet kartlari ve grafikler secilen doneme gore otomatik olarak yeniden hesaplanir.
                     </p>
-                    <div class="gunluk-hero__facts gunluk-hero__facts--triple">
-                        <div class="gunluk-fact">
-                            <span>Secili donem</span>
-                            <strong>@seciliDonemOzeti</strong>
-                        </div>
-                        <div class="gunluk-fact">
-                            <span>Calisilan is gunu</span>
-                            <strong>@Model.CalisilanIsGunu</strong>
-                        </div>
-                        <div class="gunluk-fact">
-                            <span>Ortalama calisan personel</span>
-                            <strong>@Model.OrtalamaCalisanPersonel</strong>
-                            @if (Model.PersonelTahminiMi)
+                    @if (showNabizOzeti)
+                    {
+                        <div class="gunluk-nabiz-strip" aria-label="Fabrika nabiz ozeti">
+                            @foreach (var kart in nabizKartlari)
                             {
-                                <small>tahmini endirekt dahil</small>
-                            }
-                        </div>
-                    </div>
-
-                    <section class="gunluk-machine-status" aria-labelledby="machineStatusTitle">
-                        <div class="gunluk-machine-status__header">
-                            <div>
-                                <h2 id="machineStatusTitle">Makine Durum Listesi</h2>
-                                <p>@arizaliMakineSayisi arizali, @temizMakineSayisi temiz makine kaydi</p>
-                            </div>
-                            @if (makineDurumGeciciVeri)
-                            {
-                                <span class="gunluk-machine-status__source">Gecici veri</span>
-                            }
-                        </div>
-
-                        <div class="gunluk-machine-status__list" role="list">
-                            @foreach (var makine in makineDurumListesi)
-                            {
-                                var durumClass = makine.ArizaVar ? "is-fault" : "is-ok";
-                                var durumLabel = makine.ArizaVar ? "Ariza kaydi" : "Kayit temiz";
-                                var durumDegeri = makine.ArizaVar
-                                    ? formatCount(makine.ArizaAdet)
-                                    : (makine.Oee > 0 ? $"{makine.Oee:N1}%" : "-");
-
-                                <article class="gunluk-machine-status__item @durumClass" role="listitem">
-                                    <span class="gunluk-machine-status__pulse" aria-hidden="true"></span>
-                                    <span class="gunluk-machine-status__name">
-                                        <strong>@makine.Makine</strong>
-                                        <small>@makine.Bolum</small>
-                                    </span>
-                                    <span class="gunluk-machine-status__meta">
-                                        <small>@durumLabel</small>
-                                        <strong>@durumDegeri</strong>
-                                    </span>
+                                <article class="gunluk-nabiz-card gunluk-nabiz-card--@kart.Tone">
+                                    <span>@kart.Title</span>
+                                    <strong>@kart.Value</strong>
+                                    <small>@kart.Meta</small>
                                 </article>
                             }
                         </div>
-                    </section>
+                    }
+
+                    @if (showDonemOzetKartlari)
+                    {
+                        <div class="gunluk-hero__facts gunluk-hero__facts--triple">
+                            <div class="gunluk-fact">
+                                <span>Secili donem</span>
+                                <strong>@seciliDonemOzeti</strong>
+                            </div>
+                            <div class="gunluk-fact">
+                                <span>Calisilan is gunu</span>
+                                <strong>@Model.CalisilanIsGunu</strong>
+                            </div>
+                            <div class="gunluk-fact">
+                                <span>Ortalama calisan personel</span>
+                                <strong>@Model.OrtalamaCalisanPersonel</strong>
+                                @if (Model.PersonelTahminiMi)
+                                {
+                                    <small>tahmini endirekt dahil</small>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (showMakineDurumListesi)
+                    {
+                        <section class="gunluk-machine-status" aria-labelledby="machineStatusTitle">
+                            <div class="gunluk-machine-status__header">
+                                <div>
+                                    <h2 id="machineStatusTitle">Makine Durum Listesi</h2>
+                                    <p>@arizaliMakineSayisi arizali, @izlenenMakineSayisi izlenen, @temizMakineSayisi temiz makine kaydi</p>
+                                </div>
+                                @if (makineDurumGeciciVeri)
+                                {
+                                    <span class="gunluk-machine-status__source">Gecici veri</span>
+                                }
+                            </div>
+
+                            <div class="gunluk-machine-status__summary">
+                                <article class="gunluk-machine-status__summary-card is-watch">
+                                    <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
+                                    <div class="gunluk-machine-status__summary-copy">
+                                        <small>Calisan Makine</small>
+                                        <strong>@calisanMakineOrani.ToString("N0")%</strong>
+                                        <span>@temizMakineSayisi / @toplamMakineSayisi aktif kayit</span>
+                                    </div>
+                                </article>
+                                <article class="gunluk-machine-status__summary-card @(arizaliMakineSayisi > 0 ? "is-fault" : "is-ok")">
+                                    <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
+                                    <div class="gunluk-machine-status__summary-copy">
+                                        <small>Durus / Ariza</small>
+                                        <strong>@formatDuration(toplamMakineDurusuDakika)</strong>
+                                        <span>
+                                            @(arizaliMakineSayisi > 0
+                                                ? $"{formatCount(makineDurumListesi.Sum(x => x.ArizaAdet))} hata | en uzun: {(enUzunDurusMakinesi?.Makine ?? "-")}"
+                                                : $"Ortalama OEE {ortalamaMakineOee.ToString("N1")}%")
+                                        </span>
+                                    </div>
+                                </article>
+                            </div>
+
+                            <div class="gunluk-machine-status__list" role="list">
+                                @foreach (var makine in makineDurumListesi)
+                                {
+                                    var durumClass = makine.ArizaVar
+                                        ? "is-fault"
+                                        : makine.DuraklamaDakika > 0
+                                            ? "is-watch"
+                                            : "is-ok";
+                                    var durumLabel = makine.ArizaVar
+                                        ? "Ariza kaydi"
+                                        : makine.DuraklamaDakika > 0
+                                            ? "Izleme"
+                                            : "Calisiyor";
+                                    var durumDegeri = makine.ArizaVar
+                                        ? $"{formatCount(makine.ArizaAdet)} hata"
+                                        : makine.DuraklamaDakika > 0
+                                            ? formatDuration(makine.DuraklamaDakika)
+                                            : (makine.Oee > 0 ? $"{makine.Oee:N1}%" : "Stabil");
+                                    var durumAltMetin = makine.ArizaVar
+                                        ? (makine.DuraklamaDakika > 0 ? formatDuration(makine.DuraklamaDakika) : "Anlik mudahale gerekli")
+                                        : makine.DuraklamaDakika > 0
+                                            ? (makine.Oee > 0 ? $"OEE {makine.Oee:N1}%" : "Kisa sureli durus")
+                                            : "Kayit temiz";
+
+                                    <article class="gunluk-machine-status__item @durumClass" role="listitem">
+                                        <span class="gunluk-machine-status__rail" aria-hidden="true"></span>
+                                        <span class="gunluk-machine-status__pulse" aria-hidden="true"></span>
+                                        <span class="gunluk-machine-status__name">
+                                            <strong>@makine.Makine</strong>
+                                            <small>@makine.Bolum</small>
+                                        </span>
+                                        <span class="gunluk-machine-status__meta">
+                                            <small>@durumLabel</small>
+                                            <strong>@durumDegeri</strong>
+                                            <em>@durumAltMetin</em>
+                                        </span>
+                                    </article>
+                                }
+                            </div>
+                        </section>
+                    }
                 </div>
 
                 <div class="gunluk-hero__panel">
                     <form asp-action="GunlukVeriler" method="get" id="summaryFilterForm" class="gunluk-filter-form js-unified-date-filter-form">
                         @await Html.PartialAsync("_UnifiedDateFilter")
                         <div class="gunluk-filter-form__controls">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="summaryUltraToggle">
-                                <label class="form-check-label" for="summaryUltraToggle">Ultrawide</label>
-                            </div>
                             <div class="gunluk-filter-form__actions">
                                 <button type="submit" class="btn btn-dark js-unified-filter-apply" disabled>Filtrele</button>
                                 <button type="button" class="btn btn-outline-secondary js-unified-filter-clear" disabled>Temizle</button>
@@ -381,77 +677,136 @@
                         @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
                     </div>
 
-                    <div class="gunluk-hero__note">
-                        <p>
-                            <strong>Genel OEE</strong> tum bolumlerden gelen ortalama verim skorudur.
-                            <strong>Makine bazli OEE</strong> ve <strong>bolum bazli OEE</strong> panelleri, genel ortalama ile lokal dagilim farkini birlikte gosterir.
-                        </p>
-                        <p class="mb-0">
-                            Ultrawide modu ozellikle genis ekranlarda panel yogunlugunu azaltmak icin korunur.
-                            Sagdaki bolum listesinden operasyon ekranina dogrudan gecebilirsiniz.
-                        </p>
-                    </div>
                 </div>
             </div>
 
-            <aside class="gunluk-panel gunluk-section-picker" aria-labelledby="sectionPickerTitle">
-                <div class="gunluk-panel__header">
-                    <div>
-                        <h2 id="sectionPickerTitle">Bolum Ekranlari</h2>
-                        <p>Operasyon dashboardlarindan bir bolum secin ve ilgili sayfaya gecin.</p>
+            @if (hasVisibleBolumEkranlari)
+            {
+                <aside class="gunluk-panel gunluk-section-picker" aria-labelledby="sectionPickerTitle">
+                    <div class="gunluk-panel__header">
+                        <div>
+                            <h2 id="sectionPickerTitle">Bolum Ekranlari</h2>
+                            <p>Operasyon dashboardlarindan bir bolum secin ve ilgili sayfaya gecin.</p>
+                        </div>
                     </div>
-                </div>
-                <div class="gunluk-panel__body">
-                    <div class="gunluk-section-picker__list" role="listbox" aria-label="Bolum secimi">
-                        @foreach (var bolum in bolumNavigasyonlari)
-                        {
-                            var isSelected = bolum.Key == varsayilanBolum.Key;
-                            var hasTarget = bolumHedefLookup.TryGetValue(bolum.Key, out var hedefKarti);
-                            <button type="button"
-                                    class="gunluk-section-option js-section-option@(isSelected ? " is-selected" : string.Empty)@(hasTarget ? $" gunluk-section-option--{hedefKarti!.Durum}" : string.Empty)"
-                                    data-section-key="@bolum.Key"
-                                    data-section-title="@bolum.Title"
-                                    data-section-url="@bolum.Url"
-                                    role="option"
-                                    aria-selected="@(isSelected ? "true" : "false")">
-                                <span class="gunluk-section-option__icon" aria-hidden="true">
-                                    <i class="bi @bolum.Icon"></i>
-                                </span>
-                                <span class="gunluk-section-option__content">
-                                    <strong>@bolum.Title</strong>
-                                    <small>@bolum.Description</small>
-                                    @if (hasTarget)
-                                    {
-                                        <span class="gunluk-section-option__target">
-                                            <span>@hedefKarti!.GerceklesenModul.ToString("N0") / @hedefKarti.HedefModul.ToString("N0") modül</span>
-                                            <strong>@hedefKarti.GerceklesmeOrani.ToString("N1")%</strong>
-                                            @if (hedefKarti.TahminiMi)
-                                            {
-                                                <em>tahmini veri</em>
-                                            }
-                                        </span>
-                                    }
-                                </span>
-                            </button>
-                        }
-                    </div>
+                    <div class="gunluk-panel__body">
+                        <div class="gunluk-section-picker__list" role="listbox" aria-label="Bolum secimi">
+                            @foreach (var bolum in visibleBolumNavigasyonlari)
+                            {
+                                var isSelected = varsayilanBolum != null && bolum.Key == varsayilanBolum.Key;
+                                var hasTarget = bolumHedefLookup.TryGetValue(bolum.Key, out var hedefKarti);
+                                <button type="button"
+                                        class="gunluk-section-option js-section-option@(isSelected ? " is-selected" : string.Empty)@(hasTarget ? $" gunluk-section-option--{hedefKarti!.Durum}" : string.Empty)"
+                                        data-section-key="@bolum.Key"
+                                        data-section-title="@bolum.Title"
+                                        data-section-url="@bolum.Url"
+                                        role="option"
+                                        aria-selected="@(isSelected ? "true" : "false")">
+                                    <span class="gunluk-section-option__icon" aria-hidden="true">
+                                        <i class="bi @bolum.Icon"></i>
+                                    </span>
+                                    <span class="gunluk-section-option__content">
+                                        <strong>@bolum.Title</strong>
+                                        <small>@bolum.Description</small>
+                                        @if (hasTarget)
+                                        {
+                                            <span class="gunluk-section-option__target">
+                                                <span>@hedefKarti!.GerceklesenModul.ToString("N0") / @hedefKarti.HedefModul.ToString("N0") modül</span>
+                                                <strong>@hedefKarti.GerceklesmeOrani.ToString("N1")%</strong>
+                                                @if (hedefKarti.TahminiMi)
+                                                {
+                                                    <em>tahmini veri</em>
+                                                }
+                                            </span>
+                                        }
+                                    </span>
+                                </button>
+                            }
+                        </div>
 
-                    <a id="sectionPickerCta"
-                       href="@varsayilanBolum.Url"
-                       class="btn gunluk-section-picker__cta">
-                        <span id="sectionPickerCtaLabel">@($"{varsayilanBolum.Title} ekranina git")</span>
-                        <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
-                    </a>
-                </div>
-            </aside>
+                        <a id="sectionPickerCta"
+                           href="@(varsayilanBolum?.Url ?? "#")"
+                           class="btn gunluk-section-picker__cta">
+                            <span id="sectionPickerCtaLabel">@($"{varsayilanBolum?.Title ?? "Bolum"} ekranina git")</span>
+                            <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </aside>
+            }
         </section>
+
+        @if (hasVisibleProsesDetayKartlari)
+        {
+            <section class="gunluk-process-board mb-4" aria-labelledby="processBoardTitle">
+                <div class="gunluk-process-board__header">
+                    <div>
+                        <h2 id="processBoardTitle">Proses Detay Kartlari</h2>
+                        <p>Plan, uretim, kalite, makine ve insan gostergeleri ayni bolum kartinda okunur.</p>
+                    </div>
+                    <span>@prosesDetayKartlari.Count proses</span>
+                </div>
+
+                <div class="gunluk-process-grid">
+                    @foreach (var proses in prosesDetayKartlari)
+                    {
+                        <article class="gunluk-process-card gunluk-process-card--@proses.Durum">
+                            <div class="gunluk-process-card__top">
+                                <div>
+                                    <span>@proses.DurumLabel</span>
+                                    <h3>@proses.Bolum</h3>
+                                </div>
+                                <strong>@proses.GerceklesmeOrani.ToString("N1")%</strong>
+                            </div>
+
+                            <div class="gunluk-plan-mini" aria-label="@($"{proses.Bolum} plan ve gerceklesen karsilastirmasi")">
+                                <div class="gunluk-plan-mini__plot">
+                                    <div class="gunluk-plan-mini__column">
+                                        <span class="gunluk-plan-mini__bar gunluk-plan-mini__bar--plan" style="@proses.PlanBarStyle"></span>
+                                        <small>Plan</small>
+                                        <strong>@proses.HedefModul.ToString("N0")</strong>
+                                    </div>
+                                    <div class="gunluk-plan-mini__column">
+                                        <span class="gunluk-plan-mini__bar gunluk-plan-mini__bar--actual" style="@proses.GercekBarStyle"></span>
+                                        <small>Gercek</small>
+                                        <strong>@proses.GerceklesenModul.ToString("N0")</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="gunluk-process-metrics">
+                                <div>
+                                    <span>Uretim</span>
+                                    <strong>@proses.GerceklesenModul.ToString("N0") modul</strong>
+                                    <small>Kisi basi @proses.KisiBasi.ToString("N2")</small>
+                                </div>
+                                <div>
+                                    <span>Kalite</span>
+                                    <strong>@formatCount(proses.Hata) hata</strong>
+                                    <small>OEE @proses.Oee.ToString("N1")%</small>
+                                </div>
+                                <div>
+                                    <span>Makine</span>
+                                    <strong>@formatCount(proses.ArizaliMakine) arizali</strong>
+                                    <small>@formatDuration(proses.Duraklama)</small>
+                                </div>
+                                <div>
+                                    <span>Kisi Basi</span>
+                                    <strong>@proses.GosterimKisiBasi.ToString("N2") modul</strong>
+                                    <small>@(proses.KisiBasiTahminiMi ? "tahmini personel dagilimi" : "calisan basina uretim")</small>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
 
         @if (visibleDashboardCardCount > 0)
         {
             <div id="summaryCard" class="gunluk-board mb-4">
-                @if (topLayoutItemCount > 0)
+                @if (hasTopKpiStack || visibleChartCount > 0)
                 {
-                    <section class="@topLayoutClass">
+                    <section class="gunluk-summary-main-grid mb-4">
                         @if (hasTopKpiStack)
                         {
                             <div class="gunluk-kpi-stack" style="@topKpiStyle">
@@ -527,12 +882,7 @@
                                 </div>
                             </div>
                         }
-                    </section>
-                }
 
-                @if (midLayoutItemCount > 0)
-                {
-                    <section class="@midLayoutClass">
                         @if (showBolumBazliPlanaUyum)
                         {
                             <div class="gunluk-panel">
@@ -593,19 +943,14 @@
                                 </div>
                             </div>
                         }
-                    </section>
-                }
 
-                @if (insightLayoutItemCount > 0)
-                {
-                    <section class="@insightLayoutClass">
                         @if (showHataNedenleri)
                         {
                             <div class="gunluk-panel">
                                 <div class="gunluk-panel__header">
                                     <div>
                                         <h2>Hata Nedenleri</h2>
-                                        <p>En yuksek hacimli ilk 6 hata nedeni.</p>
+                                        <p>En yuksek hacimli hata nedenlerinin dagilimini izleyin.</p>
                                     </div>
                                 </div>
                                 <div class="gunluk-panel__body gunluk-panel__body--chart-pie">
@@ -643,29 +988,21 @@
                                 </div>
                             </div>
                         }
-
+                        
                         @if (hasInsightKpiStack)
                         {
                             <div class="gunluk-kpi-stack gunluk-kpi-stack--summary" style="@insightKpiStyle">
                                 @if (showEnCokHataNedeni)
                                 {
-                                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked">
+                                    <article class="gunluk-kpi gunluk-kpi--violet gunluk-kpi--stacked gunluk-kpi--summary-centered">
                                         <span class="gunluk-kpi__label">En Cok Hata Nedeni</span>
                                         <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataNedeni</strong>
                                         <small class="gunluk-kpi__meta">Secilen donemde en fazla kayda sahip neden</small>
                                     </article>
                                 }
-                                @if (showEnCokHataOperatoru)
-                                {
-                                    <article class="gunluk-kpi gunluk-kpi--slate gunluk-kpi--stacked">
-                                        <span class="gunluk-kpi__label">En Cok Hata Operatoru</span>
-                                        <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataOperator</strong>
-                                        <small class="gunluk-kpi__meta">En yuksek hata kaydina sahip operator</small>
-                                    </article>
-                                }
                                 @if (showEnCokHataBolumu)
                                 {
-                                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked">
+                                    <article class="gunluk-kpi gunluk-kpi--stone gunluk-kpi--stacked gunluk-kpi--summary-centered">
                                         <span class="gunluk-kpi__label">En Cok Hata Bolumu</span>
                                         <strong class="gunluk-kpi__value gunluk-kpi__value--text">@Model.EnCokHataBolum</strong>
                                         <small class="gunluk-kpi__meta">En yuksek hata yogunluguna sahip bolum</small>
@@ -689,7 +1026,7 @@
                 }
             </div>
         }
-        else
+        else if (!hasAnyVisibleDashboardContent)
         {
             <div class="gunluk-board mb-4">
                 <div class="gunluk-empty-state">

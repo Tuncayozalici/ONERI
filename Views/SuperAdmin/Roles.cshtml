@@ -44,6 +44,7 @@
                         <tr>
                             <th>Rol</th>
                             <th>Yetki Sayısı</th>
+                            <th>Kullanıcı</th>
                             <th class="text-end">İşlem</th>
                         </tr>
                     </thead>
@@ -53,6 +54,7 @@
                             <tr>
                                 <td>@role.Name</td>
                                 <td>@role.PermissionCount</td>
+                                <td>@role.UserCount</td>
                                 <td class="text-end">
                                     @if (role.IsSuperAdmin)
                                     {
@@ -60,7 +62,22 @@
                                     }
                                     else
                                     {
-                                        <a class="btn btn-sm btn-dark" asp-action="EditRole" asp-route-id="@role.Id">Düzenle</a>
+                                        <div class="d-inline-flex justify-content-end gap-2">
+                                            <a class="btn btn-sm btn-dark" asp-action="EditRole" asp-route-id="@role.Id">Düzenle</a>
+                                            <form asp-action="DeleteRole"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Bu rolü silmek istediğinize emin misiniz?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@role.Id" />
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        @(role.UserCount > 0 ? "disabled" : null)
+                                                        title="@(role.UserCount > 0 ? "Bu rol kullanıcıya atanmış; silmeden önce kullanıcıların rolünü değiştirin." : "Rolü sil")">
+                                                    Sil
+                                                </button>
+                                            </form>
+                                        </div>
                                     }
                                 </td>
                             </tr>

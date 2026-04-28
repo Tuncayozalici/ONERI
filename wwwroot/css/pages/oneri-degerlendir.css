@@ -17,3 +17,9 @@
     border: none;
     background: none;
 }
+
+.decision-reason-preview {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}

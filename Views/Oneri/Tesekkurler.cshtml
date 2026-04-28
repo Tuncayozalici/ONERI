@@ -23,11 +23,11 @@
 
                 <div class="my-4 p-3 rounded thanks-number">
                     <p class="text-muted mb-1">Takip Numaranız</p>
-                    <p class="h4 fw-bold text-dark">@Model.TrackingToken</p>
+                    <p class="h4 fw-bold text-dark">@Model.TakipKodu</p>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                    <a asp-controller="Oneri" asp-action="Sorgula" asp-route-token="@Model.TrackingToken" class="btn btn-dark btn-lg px-4 gap-3">Durumu Sorgula</a>
+                    <a asp-controller="Oneri" asp-action="Sorgula" asp-route-token="@Model.TakipKodu" class="btn btn-dark btn-lg px-4 gap-3">Durumu Sorgula</a>
                     <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-lg px-4">Ana Sayfaya Dön</a>
                 </div>
 

@@ -25,19 +25,19 @@ namespace ONERI.Controllers
             return RedirectToAction(nameof(Yeni));
         }
 
-        // GET: Oneri/Tesekkurler?token={trackingToken}
+        // GET: Oneri/Tesekkurler?token={takipKodu}
         // Başarılı bir gönderim sonrası gösterilecek sayfa.
         [AllowAnonymous]
         public async Task<IActionResult> Tesekkurler(string token)
         {
-            if (!Guid.TryParse(token, out var parsedToken))
+            if (!TryParseTakipKodu(token, out var takipKodu))
             {
                 return RedirectToAction(nameof(Yeni));
             }
 
             var oneri = await _context.Oneriler
                                       .AsNoTracking()
-                                      .FirstOrDefaultAsync(o => o.TrackingToken == parsedToken);
+                                      .FirstOrDefaultAsync(o => o.TakipKodu == takipKodu);
             if (oneri == null)
             {
                 return RedirectToAction(nameof(Yeni));
@@ -86,6 +86,9 @@ namespace ONERI.Controllers
                 _context.Add(oneri);
                 await _context.SaveChangesAsync();
 
+                oneri.TakipKodu = Math.Max(0, oneri.Id - 1);
+                await _context.SaveChangesAsync();
+
                 // İlgili bölüm yöneticisine e-posta gönderme mantığı...
                 var bolum = (oneri.Bolum ?? "").ToLower();
                 var yonetici = await _context.BolumYoneticileri
@@ -96,7 +99,7 @@ namespace ONERI.Controllers
                     // E-posta gönderme işlemi burada yapılabilir
                 }
 
-                return RedirectToAction(nameof(Tesekkurler), new { token = oneri.TrackingToken });
+                return RedirectToAction(nameof(Tesekkurler), new { token = oneri.TakipKodu });
             }
             
             // ModelState geçerli değilse, formu yeniden gösterirken Bölüm listesini tekrar doldur.
@@ -116,7 +119,7 @@ namespace ONERI.Controllers
         {
             if (!string.IsNullOrWhiteSpace(token))
             {
-                return await SorgulaByTrackingToken(token);
+                return await SorgulaByTakipKodu(token);
             }
 
             return View();
@@ -129,16 +132,16 @@ namespace ONERI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> SorgulaPost(string token)
         {
-            return await SorgulaByTrackingToken(token);
+            return await SorgulaByTakipKodu(token);
         }
 
-        private async Task<IActionResult> SorgulaByTrackingToken(string token)
+        private async Task<IActionResult> SorgulaByTakipKodu(string token)
         {
             ViewBag.SonToken = token;
 
-            if (string.IsNullOrWhiteSpace(token) || !Guid.TryParse(token, out var parsedToken))
+            if (!TryParseTakipKodu(token, out var takipKodu))
             {
-                ViewBag.Hata = "Lütfen geçerli bir takip numarası giriniz.";
+                ViewBag.Hata = "Lütfen geçerli bir takip numarası giriniz. Örnek: 0, 1, 2";
                 return View();
             }
 
@@ -146,7 +149,7 @@ namespace ONERI.Controllers
             var oneri = await _context.Oneriler
                                       .AsNoTracking()
                                       .Include(o => o.Degerlendirmeler) // Degerlendirmeler'i dahil et
-                                      .FirstOrDefaultAsync(o => o.TrackingToken == parsedToken);
+                                      .FirstOrDefaultAsync(o => o.TakipKodu == takipKodu);
 
             if (oneri == null)
             {
@@ -156,6 +159,18 @@ namespace ONERI.Controllers
 
             // Kayıt bulunduysa, sonucu sayfaya model olarak gönder
             return View(oneri);
+        }
+
+        private static bool TryParseTakipKodu(string? token, out int takipKodu)
+        {
+            takipKodu = 0;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            return int.TryParse(token.Trim(), out takipKodu) && takipKodu >= 0;
         }
 
 
@@ -246,6 +261,9 @@ namespace ONERI.Controllers
                 oneri.Durum = OneriDurum.PuanlamaRed; // Durumu "Puanla Reddedildi" yap.
             }
 
+            degerlendirme.KurulYorumu = NormalizeDecisionText(degerlendirme.KurulYorumu);
+            degerlendirme.KararGerekcesi = BuildKurulKararGerekcesi(degerlendirme);
+
             // Yeni oluşturulan değerlendirme kaydını veritabanına ekle.
             _context.Degerlendirmeler.Add(degerlendirme);
 
@@ -262,6 +280,39 @@ namespace ONERI.Controllers
 
             // İşlem bittikten sonra yöneticiyi ana panele yönlendir.
             return RedirectToAction("Index", "Admin");
+        }
+
+        private static string BuildKurulKararGerekcesi(Degerlendirme degerlendirme)
+        {
+            var sonuc = degerlendirme.ToplamPuan >= 60 ? "kabul edildi" : "puanlama nedeniyle reddedildi";
+            var esikAciklamasi = degerlendirme.ToplamPuan >= 60
+                ? "60 puan kabul eşiğini karşıladığı için"
+                : "60 puan kabul eşiğinin altında kaldığı için";
+
+            var kriterler = new[]
+            {
+                ("Gayret", degerlendirme.GayretPuani),
+                ("Orijinallik", degerlendirme.OrijinallikPuani),
+                ("Etki", degerlendirme.EtkiPuani),
+                ("Uygulanabilirlik", degerlendirme.UygulanabilirlikPuani)
+            };
+
+            var enGucluKriter = kriterler.OrderByDescending(x => x.Item2).First();
+            var gelistirilecekKriter = kriterler.OrderBy(x => x.Item2).First();
+
+            return $"Öneri toplam {degerlendirme.ToplamPuan}/100 puan aldı ve {esikAciklamasi} {sonuc}. " +
+                   $"En güçlü kriter {enGucluKriter.Item1} ({enGucluKriter.Item2}/25), geliştirilmesi gereken kriter {gelistirilecekKriter.Item1} ({gelistirilecekKriter.Item2}/25).";
+        }
+
+        private static string NormalizeDecisionText(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "";
+            }
+
+            var normalized = value.Trim();
+            return normalized.Length <= 1000 ? normalized : normalized[..1000];
         }
     }
 }

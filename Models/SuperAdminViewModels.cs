@@ -17,6 +17,7 @@ namespace ONERI.Models
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public int PermissionCount { get; set; }
+        public int UserCount { get; set; }
         public bool IsSuperAdmin { get; set; }
     }
 

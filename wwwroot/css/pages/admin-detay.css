@@ -60,6 +60,37 @@
     padding: 0.85rem 1rem;
 }
 
+.reason-date {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.score-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.score-summary > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: #f8f9fb;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+}
+
+.score-summary span {
+    color: #6c757d;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.score-summary strong {
+    color: #212529;
+}
+
 @media (max-width: 768px) {
     .meta-grid {
         grid-template-columns: 1fr;

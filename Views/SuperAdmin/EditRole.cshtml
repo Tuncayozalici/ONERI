@@ -5,20 +5,25 @@
     var gunlukDashboardPermissionKey = Permissions.Dashboards.GunlukVeriler;
     var gunlukPreviewWidgets = new[]
     {
+        new { Key = Permissions.GunlukVerilerWidgets.NabizOzeti, Title = "Fabrika Nabız Özeti", Description = "Üst özet kart şeridi", Tone = "cyan", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.DonemOzetKartlari, Title = "Dönem Özet Kartları", Description = "Seçili dönem, iş günü, personel", Tone = "slate", Shape = "kpi" },
+        new { Key = Permissions.GunlukVerilerWidgets.KritikGercekler, Title = "Kritik Gerçekler", Description = "Sağ panel kritik olay özeti", Tone = "rose", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.MakineDurumListesi, Title = "Makine Durum Listesi", Description = "Makine bazlı durum kartları", Tone = "green", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.ProsesDetayKartlari, Title = "Proses Detay Kartları", Description = "Bölüm bazlı detay kartları", Tone = "amber", Shape = "columns" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumEkranlari, Title = "Bölüm Ekranları", Description = "Dashboard geçiş alanı", Tone = "blue", Shape = "bars" },
         new { Key = Permissions.GunlukVerilerWidgets.ToplamModulSayisi, Title = "Depoya Giren Modül", Description = "Ana KPI", Tone = "cyan", Shape = "kpi" },
         new { Key = Permissions.GunlukVerilerWidgets.ToplamDuraklama, Title = "Toplam Duraklama", Description = "Duraklama KPI", Tone = "amber", Shape = "kpi" },
         new { Key = Permissions.GunlukVerilerWidgets.GenelOeeSkoru, Title = "Genel OEE Skoru", Description = "Yarım daire gösterge", Tone = "green", Shape = "gauge" },
         new { Key = Permissions.GunlukVerilerWidgets.MakineBazliOee, Title = "Makine Bazlı OEE", Description = "Sıralı makine grafiği", Tone = "green", Shape = "bars" },
-        new { Key = Permissions.GunlukVerilerWidgets.OeeBilesenleri, Title = "OEE Bileşenleri", Description = "Performans, kullanılabilirlik, kalite", Tone = "violet", Shape = "bars" },
+        new { Key = Permissions.GunlukVerilerWidgets.OeeBilesenleri, Title = "OEE Bileşenleri", Description = "Performans, kullanılabilirlik, kalite", Tone = "violet", Shape = "columns" },
         new { Key = Permissions.GunlukVerilerWidgets.BolumBazliPlanaUyum, Title = "Bölüm Bazlı Plana Uyum", Description = "Bölüm karşılaştırması", Tone = "green", Shape = "columns" },
-        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliOee, Title = "Bölüm Bazlı OEE", Description = "Bölüm ortalaması", Tone = "blue", Shape = "columns" },
+        new { Key = Permissions.GunlukVerilerWidgets.BolumBazliOee, Title = "Bölüm Bazlı OEE", Description = "Dikey sütun karşılaştırması", Tone = "blue", Shape = "columns" },
         new { Key = Permissions.GunlukVerilerWidgets.BolumBazliPersonel, Title = "Bölüm Bazlı Personel", Description = "Direkt/endirekt dağılım", Tone = "teal", Shape = "donut" },
         new { Key = Permissions.GunlukVerilerWidgets.ModulTrendi, Title = "Modül Trendi", Description = "Günlük hareket", Tone = "teal", Shape = "line" },
         new { Key = Permissions.GunlukVerilerWidgets.HataNedenleri, Title = "Hata Nedenleri", Description = "Hata nedeni dağılımı", Tone = "rose", Shape = "donut" },
         new { Key = Permissions.GunlukVerilerWidgets.BolumBazliHata, Title = "Bölüm Bazlı Hata", Description = "Hata adedi grafiği", Tone = "rose", Shape = "columns" },
         new { Key = Permissions.GunlukVerilerWidgets.HataTrendi, Title = "İstasyon Doluluk Karşılaştırması", Description = "Doluluk sıralaması", Tone = "violet", Shape = "bars" },
         new { Key = Permissions.GunlukVerilerWidgets.EnCokHataNedeni, Title = "En Çok Hata Nedeni", Description = "Özet kart", Tone = "violet", Shape = "kpi" },
-        new { Key = Permissions.GunlukVerilerWidgets.EnCokHataOperatoru, Title = "En Çok Hata Operatörü", Description = "Özet kart", Tone = "slate", Shape = "kpi" },
         new { Key = Permissions.GunlukVerilerWidgets.EnCokHataBolumu, Title = "En Çok Hata Bölümü", Description = "Özet kart", Tone = "green", Shape = "kpi" },
         new { Key = Permissions.GunlukVerilerWidgets.HataliAdet, Title = "Hatalı Adet", Description = "Toplam hata KPI", Tone = "rose", Shape = "kpi" }
     };

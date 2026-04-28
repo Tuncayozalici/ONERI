@@ -80,13 +80,14 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <label asp-for="KurulYorumu" class="form-label">Kurul Yorumu (Opsiyonel)</label>
-                        <textarea asp-for="KurulYorumu" class="form-control" rows="4" placeholder="Değerlendirme ile ilgili notlarınızı buraya yazın..."></textarea>
+                        <label asp-for="KurulYorumu" class="form-label">Kurul Yorumu</label>
+                        <textarea asp-for="KurulYorumu" class="form-control" rows="4" maxlength="1000" placeholder="Kararı destekleyen kurul notunu yazın..."></textarea>
                     </div>
                     <div class="col-md-4 text-center">
                         <label asp-for="ToplamPuan" class="form-label">Toplam Puan</label>
                         <input asp-for="ToplamPuan" id="total-score" class="form-control form-control-lg text-center display-4 fw-bold p-0 total-score-input" readonly>
                         <div id="decision" class="fw-bold mt-2 fs-5"></div>
+                        <div id="decision-reason" class="decision-reason-preview mt-2"></div>
                     </div>
                 </div>
 

@@ -15,6 +15,19 @@
             _ => "status-pill--neutral"
         };
     }
+
+    string GetStatusName(OneriDurum durum)
+    {
+        return durum switch
+        {
+            OneriDurum.Beklemede => "Beklemede",
+            OneriDurum.Onaylandi => "Yönetici Onayladı",
+            OneriDurum.KabulEdildi => "Kabul Edildi",
+            OneriDurum.Reddedildi => "Reddedildi",
+            OneriDurum.PuanlamaRed => "Puanlama Red",
+            _ => "Bilinmiyor"
+        };
+    }
 }
 
 @section Styles {
@@ -53,10 +66,10 @@
                             <label for="token" class="form-label fw-semibold">Takip Numaranız</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text"><i class="bi bi-hash"></i></span>
-                                <input type="text" id="token" name="token" class="form-control" placeholder="Örn: 13db2b51-4ba2-43ef-9e95-8ec2c456f9d1" value="@ViewBag.SonToken" required>
+                                <input type="number" id="token" name="token" class="form-control" min="0" step="1" placeholder="Örn: 0" value="@ViewBag.SonToken" required>
                                 <button class="btn btn-dark" type="submit"><i class="bi bi-search me-1"></i> Sorgula</button>
                             </div>
-                            <small class="text-muted">Takip numaranız teşekkür sayfasında size verilmiştir (GUID formatında).</small>
+                            <small class="text-muted">Takip numaranız teşekkür sayfasında size verilmiştir.</small>
                         </div>
                     </form>
 
@@ -72,9 +85,9 @@
                         <div class="result-header">
                             <div>
                                 <div class="result-title">Sorgu Sonucu</div>
-                                <h5>Takip No: @Model.TrackingToken</h5>
+                                <h5>Takip No: @Model.TakipKodu</h5>
                             </div>
-                            <span class="status-pill @GetBadgeClass(Model.Durum)">@Model.Durum.ToString()</span>
+                            <span class="status-pill @GetBadgeClass(Model.Durum)">@GetStatusName(Model.Durum)</span>
                         </div>
 
                         <div class="result-card__body">
@@ -94,6 +107,52 @@
                                 <div class="desc-box">@Model.Aciklama</div>
                             </div>
 
+                            @if (!string.IsNullOrWhiteSpace(Model.YoneticiKararGerekcesi))
+                            {
+                                <div class="content-section">
+                                    <label class="form-label small text-muted">Yönetici Karar Gerekçesi</label>
+                                    <div class="desc-box">
+                                        @Model.YoneticiKararGerekcesi
+                                        @if (Model.YoneticiKararTarihi.HasValue)
+                                        {
+                                            <div class="reason-date mt-2">@Model.YoneticiKararTarihi.Value.ToString("dd MMMM yyyy, HH:mm")</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @if (Model.YoneticiToplamPuan.HasValue)
+                            {
+                                <div class="review-box mb-3">
+                                    <div class="review-box__header">
+                                        <h6>Yönetici Puanlaması</h6>
+                                        <span class="review-box__subtitle">İlk değerlendirme özeti</span>
+                                    </div>
+                                    <div class="score-grid">
+                                        <div class="score-item">
+                                            <span>Gayret</span>
+                                            <strong>@Model.YoneticiGayretPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Orijinallik</span>
+                                            <strong>@Model.YoneticiOrijinallikPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Etki</span>
+                                            <strong>@Model.YoneticiEtkiPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Uygulanabilirlik</span>
+                                            <strong>@Model.YoneticiUygulanabilirlikPuani</strong>
+                                        </div>
+                                        <div class="score-item score-item--total">
+                                            <span>Toplam</span>
+                                            <strong>@Model.YoneticiToplamPuan</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
                             @if (Model.Degerlendirmeler != null && Model.Degerlendirmeler.Any())
                             {
                                 var degerlendirme = Model.Degerlendirmeler.First();
@@ -102,6 +161,14 @@
                                         <h6>Kurul Değerlendirmesi</h6>
                                         <span class="review-box__subtitle">İlk kayıtlı değerlendirme özeti</span>
                                     </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(degerlendirme.KararGerekcesi))
+                                    {
+                                        <div class="decision-reason mb-3">
+                                            <span>Karar Gerekçesi</span>
+                                            <strong>@degerlendirme.KararGerekcesi</strong>
+                                        </div>
+                                    }
 
                                     @if (!string.IsNullOrEmpty(degerlendirme.KurulYorumu))
                                     {
@@ -122,6 +189,10 @@
                                         <div class="score-item">
                                             <span>Etki</span>
                                             <strong>@degerlendirme.EtkiPuani</strong>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Uygulanabilirlik</span>
+                                            <strong>@degerlendirme.UygulanabilirlikPuani</strong>
                                         </div>
                                         <div class="score-item score-item--total">
                                             <span>Toplam</span>

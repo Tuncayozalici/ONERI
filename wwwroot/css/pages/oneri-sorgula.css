@@ -401,9 +401,30 @@ html[data-theme="dark"] .review-quote {
     border-color: rgba(43, 92, 168, 0.14);
 }
 
+.decision-reason {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.95rem 1rem;
+    border-radius: 14px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.18);
+}
+
+.decision-reason span,
+.reason-date {
+    color: var(--status-muted);
+    font-size: 0.82rem;
+}
+
+.decision-reason strong {
+    color: var(--status-text-strong);
+    font-weight: 600;
+}
+
 .score-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 0.85rem;
 }
 

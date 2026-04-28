@@ -26,6 +26,12 @@ namespace ONERI.Models.Authorization
 
         public static class GunlukVerilerWidgets
         {
+            public const string NabizOzeti = "dashboard.gunluk.widget.nabizozeti.view";
+            public const string DonemOzetKartlari = "dashboard.gunluk.widget.donemozeti.view";
+            public const string KritikGercekler = "dashboard.gunluk.widget.kritikgercekler.view";
+            public const string MakineDurumListesi = "dashboard.gunluk.widget.makinedurum.view";
+            public const string ProsesDetayKartlari = "dashboard.gunluk.widget.prosesdetay.view";
+            public const string BolumEkranlari = "dashboard.gunluk.widget.bolumekranlari.view";
             public const string ToplamModulSayisi = "dashboard.gunluk.widget.toplammodul.view";
             public const string HataliAdet = "dashboard.gunluk.widget.hataliadet.view";
             public const string ToplamDuraklama = "dashboard.gunluk.widget.toplamduraklama.view";
@@ -40,11 +46,16 @@ namespace ONERI.Models.Authorization
             public const string BolumBazliHata = "dashboard.gunluk.widget.bolumhata.view";
             public const string HataTrendi = "dashboard.gunluk.widget.hatatrendi.view";
             public const string EnCokHataNedeni = "dashboard.gunluk.widget.encokhatanedeni.view";
-            public const string EnCokHataOperatoru = "dashboard.gunluk.widget.encokhataoperatoru.view";
             public const string EnCokHataBolumu = "dashboard.gunluk.widget.encokhatabolumu.view";
 
             public static readonly IReadOnlyList<string> All = new List<string>
             {
+                NabizOzeti,
+                DonemOzetKartlari,
+                KritikGercekler,
+                MakineDurumListesi,
+                ProsesDetayKartlari,
+                BolumEkranlari,
                 ToplamModulSayisi,
                 HataliAdet,
                 ToplamDuraklama,
@@ -59,7 +70,6 @@ namespace ONERI.Models.Authorization
                 BolumBazliHata,
                 HataTrendi,
                 EnCokHataNedeni,
-                EnCokHataOperatoru,
                 EnCokHataBolumu
             };
         }
@@ -111,6 +121,12 @@ namespace ONERI.Models.Authorization
             new(Dashboards.Ebatlama, "Ebatlama Bölümü", "Dashboards"),
             new(Dashboards.HataliParca, "Hatalı Parça Analizi", "Dashboards"),
 
+            new(GunlukVerilerWidgets.NabizOzeti, "Günlük Veriler: Fabrika Nabız Özeti", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.DonemOzetKartlari, "Günlük Veriler: Dönem Özet Kartları", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.KritikGercekler, "Günlük Veriler: Kritik Gerçekler", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.MakineDurumListesi, "Günlük Veriler: Makine Durum Listesi", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.ProsesDetayKartlari, "Günlük Veriler: Proses Detay Kartları", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.BolumEkranlari, "Günlük Veriler: Bölüm Ekranları", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Depoya Giren Modül", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.HataliAdet, "Günlük Veriler: Hatalı Adet", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ToplamDuraklama, "Günlük Veriler: Toplam Duraklama", "Günlük Veriler Kartları"),
@@ -125,7 +141,6 @@ namespace ONERI.Models.Authorization
             new(GunlukVerilerWidgets.BolumBazliHata, "Günlük Veriler: Bölüm Bazlı Hata", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.HataTrendi, "Günlük Veriler: Hata Trendi", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.EnCokHataNedeni, "Günlük Veriler: En Çok Hata Nedeni", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.EnCokHataOperatoru, "Günlük Veriler: En Çok Hata Operatörü", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.EnCokHataBolumu, "Günlük Veriler: En Çok Hata Bölümü", "Günlük Veriler Kartları"),
 
             new(FikirAtolyesi.View, "Fikir Atölyesi", "Öneri Sistemi"),

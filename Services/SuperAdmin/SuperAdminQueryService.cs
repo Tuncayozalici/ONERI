@@ -81,12 +81,23 @@ public class SuperAdminQueryService : ISuperAdminQueryService
             })
             .ToDictionaryAsync(x => x.RoleId, x => x.Count, cancellationToken);
 
+        var userCountByRoleId = await _context.UserRoles
+            .AsNoTracking()
+            .GroupBy(ur => ur.RoleId)
+            .Select(g => new
+            {
+                RoleId = g.Key,
+                Count = g.Count()
+            })
+            .ToDictionaryAsync(x => x.RoleId, x => x.Count, cancellationToken);
+
         return roles
             .Select(r => new RoleListItemViewModel
             {
                 Id = r.Id,
                 Name = r.Name,
                 PermissionCount = permissionCountByRoleId.TryGetValue(r.Id, out var count) ? count : 0,
+                UserCount = userCountByRoleId.TryGetValue(r.Id, out var userCount) ? userCount : 0,
                 IsSuperAdmin = string.Equals(r.Name, Permissions.SuperAdminRole, StringComparison.OrdinalIgnoreCase)
             })
             .ToList();

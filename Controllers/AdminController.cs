@@ -22,6 +22,7 @@ namespace ONERI.Controllers
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IDashboardIngestionService _dashboardIngestionService;
         private readonly ILogger<AdminController> _logger;
+        private const int YoneticiKararEsigi = 60;
         private static readonly string[] GunlukCalismaDosyaAdaylari =
         {
             "Günlük Çalışma Verileri.xlsx",
@@ -58,7 +59,10 @@ namespace ONERI.Controllers
         public async Task<IActionResult> Index(string durum, string arama)
         {
             // Başlangıç sorgusu - veritabanından veri çekilmez.
-            var onerilerSorgusu = _context.Oneriler.OrderByDescending(o => o.Tarih).AsQueryable();
+            var onerilerSorgusu = _context.Oneriler
+                .Include(o => o.Degerlendirmeler)
+                .OrderByDescending(o => o.Tarih)
+                .AsQueryable();
 
             // Duruma göre filtreleme
             if (!string.IsNullOrEmpty(durum) && durum != "Tümü")
@@ -72,7 +76,7 @@ namespace ONERI.Controllers
                         onerilerSorgusu = onerilerSorgusu.Where(o => o.Durum == OneriDurum.Beklemede);
                         break;
                     case "Reddedilen":
-                        onerilerSorgusu = onerilerSorgusu.Where(o => o.Durum == OneriDurum.Reddedildi);
+                        onerilerSorgusu = onerilerSorgusu.Where(o => o.Durum == OneriDurum.Reddedildi || o.Durum == OneriDurum.PuanlamaRed);
                         break;
                 }
             }
@@ -100,7 +104,13 @@ namespace ONERI.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Permissions.OneriAdmin.Access)]
         [Authorize(Policy = Permissions.OneriAdmin.Approve)]
-        public async Task<IActionResult> Onayla(int id)
+        public async Task<IActionResult> Onayla(
+            int id,
+            string kararGerekcesi,
+            int? gayretPuani,
+            int? orijinallikPuani,
+            int? etkiPuani,
+            int? uygulanabilirlikPuani)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
             if (oneri == null)
@@ -108,7 +118,29 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
+            kararGerekcesi = NormalizeDecisionReason(kararGerekcesi);
+            if (string.IsNullOrWhiteSpace(kararGerekcesi))
+            {
+                TempData["Hata"] = "Onaylama işlemi için karar gerekçesi girilmelidir.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!TryResolveManagerScores(gayretPuani, orijinallikPuani, etkiPuani, uygulanabilirlikPuani, out var toplamPuan))
+            {
+                TempData["Hata"] = "Onaylama işlemi için tüm puanlar 0-25 aralığında girilmelidir.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (toplamPuan < YoneticiKararEsigi)
+            {
+                TempData["Hata"] = $"Toplam puan {toplamPuan}/100. {YoneticiKararEsigi} puan eşiğini geçmeyen öneri onaylanamaz.";
+                return RedirectToAction(nameof(Index));
+            }
+
             oneri.Durum = OneriDurum.Onaylandi;
+            oneri.YoneticiKararGerekcesi = kararGerekcesi;
+            oneri.YoneticiKararTarihi = DateTime.Now;
+            ApplyManagerScores(oneri, gayretPuani!.Value, orijinallikPuani!.Value, etkiPuani!.Value, uygulanabilirlikPuani!.Value, toplamPuan);
             _context.Update(oneri);
             await _context.SaveChangesAsync();
 
@@ -120,7 +152,13 @@ namespace ONERI.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Permissions.OneriAdmin.Access)]
         [Authorize(Policy = Permissions.OneriAdmin.Reject)]
-        public async Task<IActionResult> Reddet(int id)
+        public async Task<IActionResult> Reddet(
+            int id,
+            string kararGerekcesi,
+            int? gayretPuani,
+            int? orijinallikPuani,
+            int? etkiPuani,
+            int? uygulanabilirlikPuani)
         {
             var oneri = await _context.Oneriler.FindAsync(id);
             if (oneri == null)
@@ -128,7 +166,29 @@ namespace ONERI.Controllers
                 return NotFound();
             }
 
+            kararGerekcesi = NormalizeDecisionReason(kararGerekcesi);
+            if (string.IsNullOrWhiteSpace(kararGerekcesi))
+            {
+                TempData["Hata"] = "Reddetme işlemi için karar gerekçesi girilmelidir.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!TryResolveManagerScores(gayretPuani, orijinallikPuani, etkiPuani, uygulanabilirlikPuani, out var toplamPuan))
+            {
+                TempData["Hata"] = "Reddetme işlemi için tüm puanlar 0-25 aralığında girilmelidir.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (toplamPuan >= YoneticiKararEsigi)
+            {
+                TempData["Hata"] = $"Toplam puan {toplamPuan}/100. {YoneticiKararEsigi} puan eşiğini geçen öneri reddedilemez.";
+                return RedirectToAction(nameof(Index));
+            }
+
             oneri.Durum = OneriDurum.Reddedildi;
+            oneri.YoneticiKararGerekcesi = kararGerekcesi;
+            oneri.YoneticiKararTarihi = DateTime.Now;
+            ApplyManagerScores(oneri, gayretPuani!.Value, orijinallikPuani!.Value, etkiPuani!.Value, uygulanabilirlikPuani!.Value, toplamPuan);
             _context.Update(oneri);
             await _context.SaveChangesAsync();
 
@@ -226,12 +286,58 @@ namespace ONERI.Controllers
         [Authorize(Policy = Permissions.OneriAdmin.Detail)]
         public async Task<IActionResult> Detay(int id)
         {
-            var oneri = await _context.Oneriler.FindAsync(id);
+            var oneri = await _context.Oneriler
+                .Include(o => o.Degerlendirmeler)
+                .FirstOrDefaultAsync(o => o.Id == id);
             if (oneri == null)
             {
                 return NotFound();
             }
             return View(oneri);
+        }
+
+        private static string NormalizeDecisionReason(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "";
+            }
+
+            var normalized = value.Trim();
+            return normalized.Length <= 1000 ? normalized : normalized[..1000];
+        }
+
+        private static bool TryResolveManagerScores(
+            int? gayretPuani,
+            int? orijinallikPuani,
+            int? etkiPuani,
+            int? uygulanabilirlikPuani,
+            out int toplamPuan)
+        {
+            toplamPuan = 0;
+            var puanlar = new[] { gayretPuani, orijinallikPuani, etkiPuani, uygulanabilirlikPuani };
+            if (puanlar.Any(puan => !puan.HasValue || puan < 0 || puan > 25))
+            {
+                return false;
+            }
+
+            toplamPuan = puanlar.Sum(puan => puan!.Value);
+            return true;
+        }
+
+        private static void ApplyManagerScores(
+            Oneri oneri,
+            int gayretPuani,
+            int orijinallikPuani,
+            int etkiPuani,
+            int uygulanabilirlikPuani,
+            int toplamPuan)
+        {
+            oneri.YoneticiGayretPuani = gayretPuani;
+            oneri.YoneticiOrijinallikPuani = orijinallikPuani;
+            oneri.YoneticiEtkiPuani = etkiPuani;
+            oneri.YoneticiUygulanabilirlikPuani = uygulanabilirlikPuani;
+            oneri.YoneticiToplamPuan = toplamPuan;
         }
 
         // Görev 5: Silme (Sil Metodu)

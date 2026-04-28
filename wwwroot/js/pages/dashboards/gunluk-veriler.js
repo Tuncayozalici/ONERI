@@ -62,6 +62,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             textColor: isDarkTheme ? '#9aa8bd' : '#475569',
             strongTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
+            valueBadgeTextColor: isDarkTheme ? '#f8fbff' : '#1f2937',
+            valueBadgeBackground: isDarkTheme ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+            valueBadgeBorder: isDarkTheme ? 'rgba(148, 163, 184, 0.28)' : 'rgba(148, 163, 184, 0.28)',
             gridColor: isDarkTheme ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.28)',
             gaugePrimary: isDarkTheme ? '#34d399' : '#10b981',
             gaugePrimaryStrong: isDarkTheme ? '#22c55e' : '#059669',
@@ -180,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return instance;
     }
 
-    function createHorizontalValueLabelPlugin(palette) {
+    function createHorizontalValueLabelPlugin(palette, formatter) {
         return {
             id: 'gunlukHorizontalValueLabels',
             afterDatasetsDraw(chart) {
@@ -211,9 +214,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
 
                         const maximumFractionDigits = Math.abs(value - Math.round(value)) > 0.001 ? 1 : 0;
-                        const label = value.toLocaleString('tr-TR', {
-                            maximumFractionDigits: maximumFractionDigits
-                        });
+                        const label = typeof formatter === 'function'
+                            ? formatter(value)
+                            : value.toLocaleString('tr-TR', {
+                                maximumFractionDigits: maximumFractionDigits
+                            });
                         const barStartX = Math.min(bar.base, bar.x);
                         const barEndX = Math.max(bar.base, bar.x);
                         const barWidth = Math.max(0, barEndX - barStartX);
@@ -239,6 +244,39 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    function formatPercentValue(value) {
+        return value.toLocaleString('tr-TR', {
+            minimumFractionDigits: Math.abs(value - Math.round(value)) > 0.001 ? 1 : 0,
+            maximumFractionDigits: 1
+        }) + '%';
+    }
+
+    function buildSortedPairs(labels, values, direction, limit) {
+        const pairs = (Array.isArray(labels) ? labels : []).map(function (label, index) {
+            return {
+                label: label,
+                value: Number(Array.isArray(values) ? values[index] : 0) || 0
+            };
+        }).filter(function (item) {
+            return item.label && item.value > 0;
+        });
+
+        pairs.sort(function (first, second) {
+            return direction === 'asc'
+                ? first.value - second.value
+                : second.value - first.value;
+        });
+
+        const visiblePairs = Number.isFinite(limit) && limit > 0
+            ? pairs.slice(0, limit)
+            : pairs;
+
+        return {
+            labels: visiblePairs.map(function (item) { return item.label; }),
+            values: visiblePairs.map(function (item) { return item.value; })
+        };
+    }
+
     function createVerticalValueLabelPlugin(palette, formatter) {
         return {
             id: 'gunlukVerticalValueLabels',
@@ -258,6 +296,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
+                function drawRoundedRect(x, y, width, height, radius) {
+                    const safeRadius = Math.min(radius, width / 2, height / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(x + safeRadius, y);
+                    ctx.lineTo(x + width - safeRadius, y);
+                    ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+                    ctx.lineTo(x + width, y + height - safeRadius);
+                    ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+                    ctx.lineTo(x + safeRadius, y + height);
+                    ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+                    ctx.lineTo(x, y + safeRadius);
+                    ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+                    ctx.closePath();
+                }
+
                 chart.data.datasets.forEach(function (dataset, datasetIndex) {
                     const meta = chart.getDatasetMeta(datasetIndex);
                     if (!meta || meta.hidden || dataset.type === 'line') {
@@ -273,16 +326,24 @@ document.addEventListener('DOMContentLoaded', function () {
                         const label = typeof formatter === 'function'
                             ? formatter(value)
                             : value.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
-                        const barHeight = Math.abs(bar.base - bar.y);
+                        const labelWidth = ctx.measureText(label).width;
+                        const badgeWidth = labelWidth + 14;
+                        const badgeHeight = 22;
+                        const badgeX = Math.max(
+                            chartArea.left,
+                            Math.min(chartArea.right - badgeWidth, bar.x - (badgeWidth / 2))
+                        );
+                        const badgeY = Math.max(chartArea.top + 4, bar.y - badgeHeight - 8);
 
-                        if (barHeight >= 28) {
-                            ctx.fillStyle = '#ffffff';
-                            ctx.fillText(label, bar.x, bar.y + 15);
-                            return;
-                        }
+                        ctx.fillStyle = palette.valueBadgeBackground;
+                        drawRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 10);
+                        ctx.fill();
+                        ctx.strokeStyle = palette.valueBadgeBorder;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
 
-                        ctx.fillStyle = palette.textColor;
-                        ctx.fillText(label, bar.x, Math.max(chartArea.top + 10, bar.y - 10));
+                        ctx.fillStyle = palette.valueBadgeTextColor;
+                        ctx.fillText(label, badgeX + (badgeWidth / 2), badgeY + (badgeHeight / 2));
                     });
                 });
 
@@ -471,34 +532,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setupUltraToggle() {
         const summaryCard = document.getElementById('summaryCard');
-        const summaryToggle = document.getElementById('summaryUltraToggle');
         const hero = document.getElementById('gunlukHero');
         const page = document.getElementById('gunlukPage');
-        if (!summaryCard || !summaryToggle) {
-            return;
+        if (summaryCard) {
+            summaryCard.classList.add('summary-ultra');
         }
-
-        const saved = localStorage.getItem('summary_ultra');
-        const enabled = saved === '1';
-        summaryCard.classList.toggle('summary-ultra', enabled);
         if (hero) {
-            hero.classList.toggle('hero-ultra', enabled);
+            hero.classList.add('hero-ultra');
         }
         if (page) {
-            page.classList.toggle('page-ultra', enabled);
+            page.classList.add('page-ultra');
         }
-        summaryToggle.checked = enabled;
-
-        summaryToggle.addEventListener('change', function () {
-            summaryCard.classList.toggle('summary-ultra', summaryToggle.checked);
-            if (hero) {
-                hero.classList.toggle('hero-ultra', summaryToggle.checked);
-            }
-            if (page) {
-                page.classList.toggle('page-ultra', summaryToggle.checked);
-            }
-            localStorage.setItem('summary_ultra', summaryToggle.checked ? '1' : '0');
-        });
     }
 
     function setupSectionPicker() {
@@ -555,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             : null;
         const horizontalValueLabelPlugin = createHorizontalValueLabelPlugin(palette);
+        const horizontalPercentValueLabelPlugin = createHorizontalValueLabelPlugin(palette, formatPercentValue);
         const verticalPercentLabelPlugin = createVerticalValueLabelPlugin(palette, function (value) {
             return value.toLocaleString('tr-TR', {
                 minimumFractionDigits: 1,
@@ -616,16 +661,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const machineLabels = Array.isArray(data.MakineOeeLabels) ? data.MakineOeeLabels : [];
         const machineValues = (Array.isArray(data.MakineOeeData) ? data.MakineOeeData : []).map(clampPercent);
-        const machineAxisMax = getPercentAxisMax(machineValues);
-        const machinePalette = createRankGradientColors(machineValues.length);
+        const machinePairs = buildSortedPairs(machineLabels, machineValues, 'desc', 12);
+        const machineAxisMax = getPercentAxisMax(machinePairs.values);
+        const machinePalette = createRankGradientColors(machinePairs.values.length);
         createChart('makineOeeGrafigi', {
             type: 'bar',
             data: {
-                labels: machineLabels,
+                labels: machinePairs.labels,
                 datasets: [
                     {
                         label: 'Ortalama OEE (%)',
-                        data: machineValues,
+                        data: machinePairs.values,
                         backgroundColor: machinePalette.background,
                         borderColor: machinePalette.border,
                         borderWidth: 1,
@@ -663,8 +709,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
-        }, hasAnyData(machineValues), 'Makine bazli OEE verisi bulunamadi.');
+            plugins: [horizontalPercentLabelPlugin || horizontalPercentValueLabelPlugin]
+        }, hasAnyData(machinePairs.values), 'Makine bazli OEE verisi bulunamadi.');
 
         createChart('genelBilesenGrafigi', {
             type: 'bar',
@@ -687,10 +733,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
                         beginAtZero: true,
                         max: getPercentAxisMax([
                             data.OrtalamaPerformans,
@@ -706,34 +756,31 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
                     }
                 }
             },
-            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+            plugins: [verticalPercentLabelPlugin]
         }, true, '');
 
         const bolumOeeLabels = Array.isArray(data.BolumOeeLabels) ? data.BolumOeeLabels : [];
         const bolumOeeValues = (Array.isArray(data.BolumOeeData) ? data.BolumOeeData : []).map(clampPercent);
-        const bolumOeeAxisMax = getPercentAxisMax(bolumOeeValues);
+        const bolumOeePairs = buildSortedPairs(bolumOeeLabels, bolumOeeValues, 'desc', 10);
+        const bolumOeeAxisMax = getPercentAxisMax(bolumOeePairs.values);
         const bolumOeeAverage = bolumOeeValues.filter(function (value) { return value > 0; })
             .reduce(function (total, value, _, values) { return total + (value / values.length); }, 0);
         createChart('bolumOeeGrafigi', {
             type: 'bar',
             data: {
-                labels: bolumOeeLabels,
+                labels: bolumOeePairs.labels,
                 datasets: [
                     {
                         label: 'Ortalama OEE (%)',
-                        data: bolumOeeValues,
+                        data: bolumOeePairs.values,
                         backgroundColor: palette.oeeBar,
                         borderColor: palette.oeeBarBorder,
                         borderWidth: 1,
-                        borderRadius: 10
+                        borderRadius: 10,
+                        barThickness: 24
                     }
                 ]
             },
@@ -743,10 +790,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     x: {
                         grid: {
                             display: false
-                        },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: false
                         }
                     },
                     y: {
@@ -770,44 +813,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [
-                verticalPercentLabelPlugin,
-                createAverageLinePlugin(palette, bolumOeeAverage, 'Ortalama')
+                verticalPercentLabelPlugin
             ]
-        }, hasAnyData(bolumOeeValues), 'Bolum bazli OEE verisi bulunamadi.');
+        }, hasAnyData(bolumOeePairs.values), 'Bolum bazli OEE verisi bulunamadi.');
 
         const bolumHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
         const bolumHataValues = Array.isArray(data.BolumHataData) ? data.BolumHataData : [];
+        const bolumHataPairs = buildSortedPairs(bolumHataLabels, bolumHataValues, 'desc', 10);
         createChart('bolumHataGrafigi', {
             type: 'bar',
             data: {
-                labels: bolumHataLabels,
+                labels: bolumHataPairs.labels,
                 datasets: [
                     {
                         label: 'Hatali Adet',
-                        data: bolumHataValues,
+                        data: bolumHataPairs.values,
                         backgroundColor: palette.errorBar,
                         borderColor: palette.errorBarBorder,
                         borderWidth: 1,
-                        borderRadius: 10
+                        borderRadius: 10,
+                        barThickness: 24
                     }
                 ]
             },
             options: {
+                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: false
-                        }
-                    },
-                    y: {
                         beginAtZero: true,
                         grid: {
                             color: palette.gridColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
                         }
                     }
                 },
@@ -817,8 +858,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: [verticalValueLabelPlugin]
-        }, hasAnyData(bolumHataValues), 'Bolum bazli hata verisi bulunamadi.');
+            plugins: [horizontalValueLabelPlugin]
+        }, hasAnyData(bolumHataPairs.values), 'Bolum bazli hata verisi bulunamadi.');
 
         const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
         const direktPersonelValues = Array.isArray(data.DirektPersonelBolumData) ? data.DirektPersonelBolumData : [];
@@ -991,35 +1032,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const planUyumLabels = Array.isArray(data.PlanUyumBolumLabels) ? data.PlanUyumBolumLabels : [];
         const planUyumValues = (Array.isArray(data.PlanUyumBolumData) ? data.PlanUyumBolumData : []).map(clampPercent);
-        const planUyumAxisMax = getPercentAxisMax(planUyumValues);
+        const planUyumPairs = buildSortedPairs(planUyumLabels, planUyumValues, 'desc', 10);
+        const planUyumAxisMax = getPercentAxisMax(planUyumPairs.values);
         createChart('planUyumBolumGrafigi', {
             type: 'bar',
             data: {
-                labels: planUyumLabels,
+                labels: planUyumPairs.labels,
                 datasets: [
                     {
                         label: 'Plana Uyum (%)',
-                        data: planUyumValues,
+                        data: planUyumPairs.values,
                         backgroundColor: palette.componentBars[1],
                         borderColor: palette.componentBorders[1],
                         borderWidth: 1,
-                        borderRadius: 10
+                        borderRadius: 10,
+                        barThickness: 24
                     }
                 ]
             },
             options: {
+                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: false
-                        }
-                    },
-                    y: {
                         beginAtZero: true,
                         max: planUyumAxisMax,
                         ticks: {
@@ -1031,6 +1066,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
                     }
                 },
                 plugins: {
@@ -1039,28 +1079,59 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             },
-            plugins: [verticalPercentLabelPlugin]
-        }, hasAnyData(planUyumValues), 'Plana uyum verisi bulunamadi.');
+            plugins: [horizontalPercentLabelPlugin || horizontalPercentValueLabelPlugin]
+        }, hasAnyData(planUyumPairs.values), 'Plana uyum verisi bulunamadi.');
 
         const hataNedenLabels = Array.isArray(data.HataNedenLabels) ? data.HataNedenLabels : [];
         const hataNedenValues = Array.isArray(data.HataNedenData) ? data.HataNedenData : [];
+        const hataNedenPairs = buildSortedPairs(hataNedenLabels, hataNedenValues, 'desc', 8);
+        const hataNedenTotal = hataNedenPairs.values.reduce(function (total, value) {
+            return total + (Number(value) || 0);
+        }, 0);
         createChart('hataNedenGenelGrafigi', {
             type: 'doughnut',
             data: {
-                labels: hataNedenLabels,
+                labels: hataNedenPairs.labels,
                 datasets: [
                     {
-                        data: hataNedenValues,
-                        backgroundColor: palette.donutColors,
-                        borderWidth: 0
+                        data: hataNedenPairs.values,
+                        backgroundColor: hataNedenPairs.values.map(function (_, index) {
+                            return palette.donutColors[index % palette.donutColors.length] + 'cc';
+                        }),
+                        borderColor: hataNedenPairs.values.map(function (_, index) {
+                            return palette.donutColors[index % palette.donutColors.length];
+                        }),
+                        borderWidth: 2,
+                        hoverOffset: 8
                     }
                 ]
             },
             options: {
                 maintainAspectRatio: false,
-                cutout: '58%'
-            }
-        }, hasAnyData(hataNedenValues), 'Hata nedeni dagilimi icin veri bulunamadi.');
+                cutout: '52%',
+                radius: '92%',
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const value = Number(context.parsed || 0).toLocaleString('tr-TR');
+                                const total = hataNedenTotal || 1;
+                                const ratio = ((Number(context.parsed || 0) / total) * 100).toLocaleString('tr-TR', {
+                                    minimumFractionDigits: 1,
+                                    maximumFractionDigits: 1
+                                });
+                                return context.label + ': ' + value + ' (' + ratio + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [createDoughnutCenterPlugin(palette, hataNedenTotal, 'toplam hata')]
+        }, hasAnyData(hataNedenPairs.values), 'Hata nedeni dagilimi icin veri bulunamadi.');
 
         const modulTrendValues = Array.isArray(data.ModulTrendData) ? data.ModulTrendData : [];
         createChart('duraklamaTrendGrafigi', {
@@ -1120,7 +1191,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 interaction: {
                     mode: 'nearest',
@@ -1134,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         callbacks: {
                             label: function (context) {
                                 const item = occupancySummary[context.dataIndex];
-                                const average = Number(context.parsed.x || 0).toLocaleString('tr-TR', {
+                                const average = Number(context.parsed.y || 0).toLocaleString('tr-TR', {
                                     minimumFractionDigits: 1,
                                     maximumFractionDigits: 1
                                 });
@@ -1155,6 +1225,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 scales: {
                     x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
                         beginAtZero: true,
                         max: getPercentAxisMax(occupancyAverageValues),
                         ticks: {
@@ -1166,15 +1241,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: {
                             color: palette.gridColor
                         }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
                     }
                 }
             },
-            plugins: horizontalPercentLabelPlugin ? [horizontalPercentLabelPlugin] : []
+            plugins: [verticalPercentLabelPlugin]
         }, trendHasData && hasAnyData(occupancyAverageValues), 'Istasyon doluluk verisi bulunamadi.');
     }
 

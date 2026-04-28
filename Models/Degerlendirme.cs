@@ -26,6 +26,9 @@ namespace ONERI.Models
         public int ToplamPuan { get; set; }
 
         [MaxLength(1000)]
+        public string KararGerekcesi { get; set; } = "";
+
+        [MaxLength(1000)]
         public string KurulYorumu { get; set; } = "";
     }
 }

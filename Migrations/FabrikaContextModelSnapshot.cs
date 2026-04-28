@@ -262,6 +262,11 @@ namespace ONERI.Migrations
                     b.Property<int>("GayretPuani")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("KararGerekcesi")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("KurulYorumu")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -334,12 +339,40 @@ namespace ONERI.Migrations
                     b.Property<DateTime>("Tarih")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("TakipKodu")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("TrackingToken")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("YoneticiKararGerekcesi")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("YoneticiKararTarihi")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("YoneticiEtkiPuani")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YoneticiGayretPuani")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YoneticiOrijinallikPuani")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YoneticiToplamPuan")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YoneticiUygulanabilirlikPuani")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TrackingToken")
+                        .IsUnique();
+
+                    b.HasIndex("TakipKodu")
                         .IsUnique();
 
                     b.ToTable("Oneriler");

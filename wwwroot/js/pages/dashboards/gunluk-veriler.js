@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             return {
-                label: series.Bolum || ('Bolum ' + (index + 1)),
+                label: series.Bolum || ('Bölüm ' + (index + 1)),
                 average: positiveValues.length > 0
                     ? positiveValues.reduce(function (total, value) { return total + value; }, 0) / positiveValues.length
                     : 0,
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     palette.gaugeTargetZone,
                     palette.gaugeMuted
                 ],
-                labels: ['Gerceklesen OEE', 'Hedefe kalan alan', 'Hedef sonrasi alan']
+                labels: ['Gerçekleşen OEE', 'Hedefe kalan alan', 'Hedef sonrası alan']
             };
         }
 
@@ -507,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 palette.gaugePrimaryStrong,
                 palette.gaugeMuted
             ],
-            labels: ['Hedefe kadar OEE', 'Hedef ustu OEE', 'Kalan alan']
+            labels: ['Hedefe kadar OEE', 'Hedef üstü OEE', 'Kalan alan']
         };
     }
 
@@ -564,12 +564,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
             });
 
-            const title = option.dataset.sectionTitle || 'Bolum';
+            const title = option.dataset.sectionTitle || 'Bölüm';
             const url = option.dataset.sectionUrl || '#';
             const key = option.dataset.sectionKey || title;
 
             cta.setAttribute('href', url);
-            ctaLabel.textContent = title + ' ekranina git';
+            ctaLabel.textContent = title + ' ekranına git';
             localStorage.setItem('gunluk_selected_section', key);
         }
 
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [horizontalPercentLabelPlugin || horizontalPercentValueLabelPlugin]
-        }, hasAnyData(machinePairs.values), 'Makine bazli OEE verisi bulunamadi.');
+        }, hasAnyData(machinePairs.values), 'Makine bazlı OEE verisi bulunamadı.');
 
         createChart('genelBilesenGrafigi', {
             type: 'bar',
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
             plugins: [
                 verticalPercentLabelPlugin
             ]
-        }, hasAnyData(bolumOeePairs.values), 'Bolum bazli OEE verisi bulunamadi.');
+        }, hasAnyData(bolumOeePairs.values), 'Bölüm bazlı OEE verisi bulunamadı.');
 
         const bolumHataLabels = Array.isArray(data.BolumHataLabels) ? data.BolumHataLabels : [];
         const bolumHataValues = Array.isArray(data.BolumHataData) ? data.BolumHataData : [];
@@ -859,7 +859,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [horizontalValueLabelPlugin]
-        }, hasAnyData(bolumHataPairs.values), 'Bolum bazli hata verisi bulunamadi.');
+        }, hasAnyData(bolumHataPairs.values), 'Bölüm bazlı hata verisi bulunamadı.');
 
         const personelLabels = Array.isArray(data.PersonelBolumLabels) ? data.PersonelBolumLabels : [];
         const direktPersonelValues = Array.isArray(data.DirektPersonelBolumData) ? data.DirektPersonelBolumData : [];
@@ -928,7 +928,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 plugins: [createDoughnutCenterPlugin(palette, personelTotal, 'toplam')]
-            }, hasAnyData(roundedPersonelOzetValues), 'Personel ozet verisi bulunamadi.');
+            }, hasAnyData(roundedPersonelOzetValues), 'Personel özet verisi bulunamadı.');
         }
 
         function renderPersonelDetailChart(type) {
@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 plugins: [verticalValueLabelPlugin]
-            }, hasAnyData(values), title + ' bolum detayi bulunamadi.');
+            }, hasAnyData(values), title + ' bölüm detayı bulunamadı.');
         }
 
         if (personelBackButton) {
@@ -1080,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [horizontalPercentLabelPlugin || horizontalPercentValueLabelPlugin]
-        }, hasAnyData(planUyumPairs.values), 'Plana uyum verisi bulunamadi.');
+        }, hasAnyData(planUyumPairs.values), 'Plana uyum verisi bulunamadı.');
 
         const hataNedenLabels = Array.isArray(data.HataNedenLabels) ? data.HataNedenLabels : [];
         const hataNedenValues = Array.isArray(data.HataNedenData) ? data.HataNedenData : [];
@@ -1131,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [createDoughnutCenterPlugin(palette, hataNedenTotal, 'toplam hata')]
-        }, hasAnyData(hataNedenPairs.values), 'Hata nedeni dagilimi icin veri bulunamadi.');
+        }, hasAnyData(hataNedenPairs.values), 'Hata nedeni dağılımı için veri bulunamadı.');
 
         const modulTrendValues = Array.isArray(data.ModulTrendData) ? data.ModulTrendData : [];
         createChart('duraklamaTrendGrafigi', {
@@ -1169,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             }
-        }, trendHasData && hasAnyData(modulTrendValues), 'Depo modul trend verisi bulunamadi.');
+        }, trendHasData && hasAnyData(modulTrendValues), 'Depo modül trend verisi bulunamadı.');
 
         const istasyonDolulukSerileri = Array.isArray(data.IstasyonDolulukSerileri) ? data.IstasyonDolulukSerileri : [];
         const occupancySummary = buildOccupancySummary(istasyonDolulukSerileri, trendLabels, palette);
@@ -1218,7 +1218,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 });
                                 const moduleCount = Number(item.latestModuleCount || 0).toLocaleString('tr-TR');
                                 const latestLabel = item.latestLabel ? ' | Son gun: ' + item.latestLabel + ' ' + latest + '%' : '';
-                                return 'Ortalama: ' + average + '%' + latestLabel + ' | Modul: ' + moduleCount;
+                                return 'Ortalama: ' + average + '%' + latestLabel + ' | Modül: ' + moduleCount;
                             }
                         }
                     }
@@ -1245,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             plugins: [verticalPercentLabelPlugin]
-        }, trendHasData && hasAnyData(occupancyAverageValues), 'Istasyon doluluk verisi bulunamadi.');
+        }, trendHasData && hasAnyData(occupancyAverageValues), 'İstasyon doluluk verisi bulunamadı.');
     }
 
     setupUltraToggle();

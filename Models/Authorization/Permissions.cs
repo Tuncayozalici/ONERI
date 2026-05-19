@@ -28,10 +28,13 @@ namespace ONERI.Models.Authorization
         {
             public const string NabizOzeti = "dashboard.gunluk.widget.nabizozeti.view";
             public const string DonemOzetKartlari = "dashboard.gunluk.widget.donemozeti.view";
+            public const string UretimAkisi = "dashboard.gunluk.widget.uretimakisi.view";
+            public const string AkisPlanlama = "dashboard.gunluk.widget.akisplanlama.view";
             public const string KritikGercekler = "dashboard.gunluk.widget.kritikgercekler.view";
             public const string MakineDurumListesi = "dashboard.gunluk.widget.makinedurum.view";
             public const string ProsesDetayKartlari = "dashboard.gunluk.widget.prosesdetay.view";
             public const string BolumEkranlari = "dashboard.gunluk.widget.bolumekranlari.view";
+            public const string SshMusteriGercegi = "dashboard.gunluk.widget.sshmusteri.view";
             public const string ToplamModulSayisi = "dashboard.gunluk.widget.toplammodul.view";
             public const string HataliAdet = "dashboard.gunluk.widget.hataliadet.view";
             public const string ToplamDuraklama = "dashboard.gunluk.widget.toplamduraklama.view";
@@ -52,10 +55,13 @@ namespace ONERI.Models.Authorization
             {
                 NabizOzeti,
                 DonemOzetKartlari,
+                UretimAkisi,
+                AkisPlanlama,
                 KritikGercekler,
                 MakineDurumListesi,
                 ProsesDetayKartlari,
                 BolumEkranlari,
+                SshMusteriGercegi,
                 ToplamModulSayisi,
                 HataliAdet,
                 ToplamDuraklama,
@@ -123,10 +129,13 @@ namespace ONERI.Models.Authorization
 
             new(GunlukVerilerWidgets.NabizOzeti, "Günlük Veriler: Fabrika Nabız Özeti", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.DonemOzetKartlari, "Günlük Veriler: Dönem Özet Kartları", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.UretimAkisi, "Günlük Veriler: Üretim Akışı", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.AkisPlanlama, "Günlük Veriler: Akış / Planlama", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.KritikGercekler, "Günlük Veriler: Kritik Gerçekler", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.MakineDurumListesi, "Günlük Veriler: Makine Durum Listesi", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.MakineDurumListesi, "Günlük Veriler: Makine / Andon", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ProsesDetayKartlari, "Günlük Veriler: Proses Detay Kartları", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.BolumEkranlari, "Günlük Veriler: Bölüm Ekranları", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.SshMusteriGercegi, "Günlük Veriler: SSH / Müşteri Gerçeği", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Depoya Giren Modül", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.HataliAdet, "Günlük Veriler: Hatalı Adet", "Günlük Veriler Kartları"),
             new(GunlukVerilerWidgets.ToplamDuraklama, "Günlük Veriler: Toplam Duraklama", "Günlük Veriler Kartları"),

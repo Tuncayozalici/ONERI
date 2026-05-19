@@ -457,10 +457,13 @@
 
     var showNabizOzeti = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.NabizOzeti);
     var showDonemOzetKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.DonemOzetKartlari);
+    var showUretimAkisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.UretimAkisi);
+    var showAkisPlanlama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.AkisPlanlama);
     var showKritikGercekler = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.KritikGercekler);
     var showMakineDurumListesi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MakineDurumListesi);
     var showProsesDetayKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ProsesDetayKartlari);
     var showBolumEkranlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.BolumEkranlari);
+    var showSshMusteriGercegi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.SshMusteriGercegi);
     var showToplamModulSayisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamModulSayisi);
     var showHataliAdet = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataliAdet);
     var showToplamDuraklama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamDuraklama);
@@ -586,8 +589,11 @@
     var hasVisibleProsesDetayKartlari = showProsesDetayKartlari && prosesDetayKartlari.Any();
     var hasVisibleHeroWidgets = showNabizOzeti
         || showDonemOzetKartlari
+        || showUretimAkisi
+        || showAkisPlanlama
         || showKritikGercekler
         || showMakineDurumListesi
+        || showSshMusteriGercegi
         || hasVisibleBolumEkranlari;
     var hasAnyVisibleDashboardContent = hasVisibleHeroWidgets
         || hasVisibleProsesDetayKartlari
@@ -731,39 +737,42 @@
                         </section>
                     }
 
-                    <section class="gunluk-bottom-reality gunluk-bottom-reality--single" aria-label="Müşteri gerçeği">
-                        <article class="gunluk-pulse-panel gunluk-pulse-panel--customer">
-                            <div class="gunluk-pulse-panel__header">
-                                <div>
-                                    <h2>SSH / Müşteri Gerçeği</h2>
-                                    <p>Hata adetinin sevk hacmine göre etkisi</p>
+                    @if (showSshMusteriGercegi)
+                    {
+                        <section class="gunluk-bottom-reality gunluk-bottom-reality--single" aria-label="Müşteri gerçeği">
+                            <article class="gunluk-pulse-panel gunluk-pulse-panel--customer">
+                                <div class="gunluk-pulse-panel__header">
+                                    <div>
+                                        <h2>SSH / Müşteri Gerçeği</h2>
+                                        <p>Hata adetinin sevk hacmine göre etkisi</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="gunluk-customer-grid">
-                                <div class="gunluk-customer-score">
-                                    <strong>@sshAdet.ToString("N0") adet</strong>
-                                    <span>/ 1000 sevk</span>
-                                    <small>@sshOrani.ToString("N1") hata / 1000 modül</small>
+                                <div class="gunluk-customer-grid">
+                                    <div class="gunluk-customer-score">
+                                        <strong>@sshAdet.ToString("N0") adet</strong>
+                                        <span>/ 1000 sevk</span>
+                                        <small>@sshOrani.ToString("N1") hata / 1000 modül</small>
+                                    </div>
+                                    <div class="gunluk-customer-bars">
+                                        @foreach (var bar in musteriGercegiBars)
+                                        {
+                                            var width = maxMusteriGercegi > 0
+                                                ? (bar.Value / maxMusteriGercegi) * 100d
+                                                : 0d;
+                                            var widthStyle = $"width:{width.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+                                            var barTone = width >= 75 ? "risk" : width >= 45 ? "warn" : "ok";
+                                            <div class="gunluk-customer-bar gunluk-customer-bar--@barTone">
+                                                <span>@bar.Label</span>
+                                                <div aria-hidden="true"><i style="@widthStyle"></i></div>
+                                                <strong>@formatCount(bar.Value)</strong>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
-                                <div class="gunluk-customer-bars">
-                                    @foreach (var bar in musteriGercegiBars)
-                                    {
-                                        var width = maxMusteriGercegi > 0
-                                            ? (bar.Value / maxMusteriGercegi) * 100d
-                                            : 0d;
-                                        var widthStyle = $"width:{width.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
-                                        var barTone = width >= 75 ? "risk" : width >= 45 ? "warn" : "ok";
-                                        <div class="gunluk-customer-bar gunluk-customer-bar--@barTone">
-                                            <span>@bar.Label</span>
-                                            <div aria-hidden="true"><i style="@widthStyle"></i></div>
-                                            <strong>@formatCount(bar.Value)</strong>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </article>
+                            </article>
 
-                    </section>
+                        </section>
+                    }
                 </div>
 
                 <div class="gunluk-hero__panel">
@@ -781,95 +790,104 @@
                         @await Html.PartialAsync("_SelectedFilterPeriod", Model.RaporTarihi)
                     </div>
 
-                    <section class="gunluk-factory-pulse gunluk-factory-pulse--single" aria-label="Fabrika nabız detayları">
-                        <article class="gunluk-pulse-panel gunluk-pulse-panel--production">
-                            <div class="gunluk-pulse-panel__header">
-                                <div>
-                                    <h2>Üretim Akışı</h2>
-                                    <p>Bugün / bu ay</p>
+                    @if (showUretimAkisi)
+                    {
+                        <section class="gunluk-factory-pulse gunluk-factory-pulse--single" aria-label="Fabrika nabız detayları">
+                            <article class="gunluk-pulse-panel gunluk-pulse-panel--production">
+                                <div class="gunluk-pulse-panel__header">
+                                    <div>
+                                        <h2>Üretim Akışı</h2>
+                                        <p>Bugün / bu ay</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="gunluk-mini-kpis">
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--ok">
-                                    <span>Günlük üretim</span>
-                                    <strong>@gerceklesenModul.ToString("N0")</strong>
-                                    <small>modül</small>
+                                <div class="gunluk-mini-kpis">
+                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--ok">
+                                        <span>Günlük üretim</span>
+                                        <strong>@gerceklesenModul.ToString("N0")</strong>
+                                        <small>modül</small>
+                                    </div>
+                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                        <span>WIP</span>
+                                        <strong>@wipModul.ToString("N0")</strong>
+                                        <small>depoya geçmeyen</small>
+                                    </div>
                                 </div>
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                    <span>WIP</span>
-                                    <strong>@wipModul.ToString("N0")</strong>
-                                    <small>depoya geçmeyen</small>
-                                </div>
-                            </div>
-                            <div class="gunluk-plan-flow">
-                                <div class="gunluk-plan-flow__label">
-                                    <strong>Planlanan vs Gerçekleşen</strong>
-                                    <span>@planProgress.ToString("N0")%</span>
-                                </div>
-                                <div class="gunluk-plan-flow__bar" aria-hidden="true">
-                                    <span style="@planProgressStyle"></span>
-                                </div>
-                                <p>
-                                    Plan: @planlananModul.ToString("N0") modül
-                                    <span>Gerçek: @gerceklesenModul.ToString("N0") modül</span>
-                                    <span>Sapma: @planSapma.ToString("N0")</span>
-                                </p>
-                                <small>Kişi başı üretim: @kisiBasiUretim.ToString("N2") modül / gün</small>
-                            </div>
-                        </article>
-                    </section>
-
-                    <div class="gunluk-side-insights" aria-label="Sağ panel operasyon özeti">
-                        <article class="gunluk-pulse-panel gunluk-pulse-panel--planning">
-                            <div class="gunluk-pulse-panel__header">
-                                <div>
-                                    <h2>Akış / Planlama</h2>
-                                    <p>Plan dışı hareket ve stok baskısı</p>
-                                </div>
-                            </div>
-                            <div class="gunluk-planning-grid">
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
-                                    <span>Plan bozulma</span>
-                                    <strong>@planBozulmaOrani.ToString("N1")%</strong>
-                                    <small>revize iş / iş emri</small>
-                                </div>
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                    <span>Acil iş</span>
-                                    <strong>@acilIsSayisi.ToString("N0")</strong>
-                                    <small>adet</small>
-                                </div>
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                    <span>Plan bekleyen</span>
-                                    <strong>@planBekleyenModul.ToString("N0")</strong>
-                                    <small>modül</small>
-                                </div>
-                                <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
-                                    <span>MAM etkisi</span>
-                                    <strong>@formatMoneyMillion(mamStokEtkisi)</strong>
-                                    <small>yarı mamul / stok</small>
-                                </div>
-                            </div>
-                        </article>
-
-                        @if (showKritikGercekler)
-                        {
-                            <article class="gunluk-pulse-panel gunluk-pulse-panel--critical">
-                                <div class="gunluk-critical-header">
-                                    <span>Bugünün Kritik Gerçekleri</span>
-                                    <strong>@kritikGercekler.Count kayıt</strong>
-                                </div>
-                                <div class="gunluk-critical-list">
-                                    @foreach (var gercek in kritikGercekler)
-                                    {
-                                        <div class="gunluk-critical-item gunluk-critical-item--@gercek.Tone">
-                                            <i class="bi @gercek.Icon" aria-hidden="true"></i>
-                                            <span>@gercek.Text</span>
-                                        </div>
-                                    }
+                                <div class="gunluk-plan-flow">
+                                    <div class="gunluk-plan-flow__label">
+                                        <strong>Planlanan vs Gerçekleşen</strong>
+                                        <span>@planProgress.ToString("N0")%</span>
+                                    </div>
+                                    <div class="gunluk-plan-flow__bar" aria-hidden="true">
+                                        <span style="@planProgressStyle"></span>
+                                    </div>
+                                    <p>
+                                        Plan: @planlananModul.ToString("N0") modül
+                                        <span>Gerçek: @gerceklesenModul.ToString("N0") modül</span>
+                                        <span>Sapma: @planSapma.ToString("N0")</span>
+                                    </p>
+                                    <small>Kişi başı üretim: @kisiBasiUretim.ToString("N2") modül / gün</small>
                                 </div>
                             </article>
-                        }
-                    </div>
+                        </section>
+                    }
+
+                    @if (showAkisPlanlama || showKritikGercekler)
+                    {
+                        <div class="gunluk-side-insights" aria-label="Sağ panel operasyon özeti">
+                            @if (showAkisPlanlama)
+                            {
+                                <article class="gunluk-pulse-panel gunluk-pulse-panel--planning">
+                                    <div class="gunluk-pulse-panel__header">
+                                        <div>
+                                            <h2>Akış / Planlama</h2>
+                                            <p>Plan dışı hareket ve stok baskısı</p>
+                                        </div>
+                                    </div>
+                                    <div class="gunluk-planning-grid">
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
+                                            <span>Plan bozulma</span>
+                                            <strong>@planBozulmaOrani.ToString("N1")%</strong>
+                                            <small>revize iş / iş emri</small>
+                                        </div>
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                            <span>Acil iş</span>
+                                            <strong>@acilIsSayisi.ToString("N0")</strong>
+                                            <small>adet</small>
+                                        </div>
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                            <span>Plan bekleyen</span>
+                                            <strong>@planBekleyenModul.ToString("N0")</strong>
+                                            <small>modül</small>
+                                        </div>
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
+                                            <span>MAM etkisi</span>
+                                            <strong>@formatMoneyMillion(mamStokEtkisi)</strong>
+                                            <small>yarı mamul / stok</small>
+                                        </div>
+                                    </div>
+                                </article>
+                            }
+
+                            @if (showKritikGercekler)
+                            {
+                                <article class="gunluk-pulse-panel gunluk-pulse-panel--critical">
+                                    <div class="gunluk-critical-header">
+                                        <span>Bugünün Kritik Gerçekleri</span>
+                                        <strong>@kritikGercekler.Count kayıt</strong>
+                                    </div>
+                                    <div class="gunluk-critical-list">
+                                        @foreach (var gercek in kritikGercekler)
+                                        {
+                                            <div class="gunluk-critical-item gunluk-critical-item--@gercek.Tone">
+                                                <i class="bi @gercek.Icon" aria-hidden="true"></i>
+                                                <span>@gercek.Text</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
 
                 </div>
             </div>

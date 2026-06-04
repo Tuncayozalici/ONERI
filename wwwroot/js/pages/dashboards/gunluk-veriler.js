@@ -545,50 +545,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function setupSectionPicker() {
-        const options = Array.from(document.querySelectorAll('.js-section-option'));
-        const cta = document.getElementById('sectionPickerCta');
-        const ctaLabel = document.getElementById('sectionPickerCtaLabel');
-        if (options.length === 0 || !cta || !ctaLabel) {
-            return;
-        }
-
-        function applySelection(option) {
-            if (!option) {
-                return;
-            }
-
-            options.forEach(function (item) {
-                const isSelected = item === option;
-                item.classList.toggle('is-selected', isSelected);
-                item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-
-            const title = option.dataset.sectionTitle || 'Bölüm';
-            const url = option.dataset.sectionUrl || '#';
-            const key = option.dataset.sectionKey || title;
-
-            cta.setAttribute('href', url);
-            ctaLabel.textContent = title + ' ekranına git';
-            localStorage.setItem('gunluk_selected_section', key);
-        }
-
-        const savedKey = localStorage.getItem('gunluk_selected_section');
-        const initialOption = options.find(function (item) {
-            return item.dataset.sectionKey === savedKey;
-        }) || options.find(function (item) {
-            return item.classList.contains('is-selected');
-        }) || options[0];
-
-        options.forEach(function (option) {
-            option.addEventListener('click', function () {
-                applySelection(option);
-            });
-        });
-
-        applySelection(initialOption);
-    }
-
     function renderCharts() {
         const palette = getThemePalette();
         const horizontalPercentLabelPlugin = horizontalPercentLabelPluginFactory
@@ -1249,7 +1205,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     setupUltraToggle();
-    setupSectionPicker();
     renderCharts();
 
     let activeTheme = getThemeName();

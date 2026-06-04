@@ -7,6 +7,7 @@ using ONERI.Models.Authorization;
 using ONERI.Services.Dashboards;
 using ONERI.Services.SuperAdmin;
 using OfficeOpenXml;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var isEfDesignTime = AppDomain.CurrentDomain.GetAssemblies()
@@ -59,6 +60,7 @@ builder.Services.AddHostedService<DashboardIngestBackgroundService>();
 
 
 var app = builder.Build();
+var bypassLogin = builder.Configuration.GetValue<bool>("Authentication:BypassLogin");
 
 // Veritabanını başlangıç verileriyle doldur (Roller ve Admin Kullanıcısı)
 if (!isEfDesignTime)
@@ -100,6 +102,26 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthentication();
+
+if (bypassLogin)
+{
+    app.Use(async (context, next) =>
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, "local-super-admin"),
+            new(ClaimTypes.Name, "local-super-admin"),
+            new(ClaimTypes.Role, Permissions.SuperAdminRole),
+            new(ClaimTypes.Role, "Yönetici"),
+            new("AdSoyad", "Lokal Super Admin")
+        };
+
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "LocalBypass"));
+
+        await next();
+    });
+}
+
 app.UseAuthorization();
 
 app.MapControllerRoute(

@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ONERI.Models;
 using ONERI.Models.Authorization;
 using ONERI.Services.Dashboards;
@@ -11,11 +13,16 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly IDashboardQueryService _dashboardQueryService;
+    private readonly RoleManager<IdentityRole> _roleManager;
 
-    public HomeController(ILogger<HomeController> logger, IDashboardQueryService dashboardQueryService)
+    public HomeController(
+        ILogger<HomeController> logger,
+        IDashboardQueryService dashboardQueryService,
+        RoleManager<IdentityRole> roleManager)
     {
         _logger = logger;
         _dashboardQueryService = dashboardQueryService;
+        _roleManager = roleManager;
     }
 
     public IActionResult Index()
@@ -29,11 +36,12 @@ public class HomeController : Controller
     }
 
     [Authorize(Policy = Permissions.Dashboards.GunlukVeriler)]
-    public async Task<IActionResult> GunlukVeriler(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, CancellationToken cancellationToken)
+    public async Task<IActionResult> GunlukVeriler(DateTime? startDate, DateTime? endDate, DateTime? raporTarihi, DateTime? baslangicTarihi, DateTime? bitisTarihi, int? ay, int? yil, string? rolePreviewId, CancellationToken cancellationToken)
     {
         var filter = NormalizeDateFilter(startDate, endDate, raporTarihi, baslangicTarihi, bitisTarihi, ay, yil);
         var result = await _dashboardQueryService.GetGunlukVerilerAsync(filter.RaporTarihi, filter.BaslangicTarihi, filter.BitisTarihi, filter.Ay, filter.Yil, cancellationToken);
         ApplyViewBagValues(result.ViewBagValues);
+        await ApplyRolePreviewAsync(rolePreviewId);
         return View(result.Model);
     }
 
@@ -141,6 +149,65 @@ public class HomeController : Controller
         {
             ViewData[kvp.Key] = kvp.Value;
         }
+    }
+
+    private async Task ApplyRolePreviewAsync(string? rolePreviewId)
+    {
+        ViewData["RolePreviewEnabled"] = false;
+        ViewData["RolePreviewIsActive"] = false;
+        ViewData["RolePreviewOptions"] = new List<RolePreviewOptionViewModel>();
+        ViewData["RolePreviewPermissionKeys"] = new HashSet<string>(StringComparer.Ordinal);
+        ViewData["RolePreviewHasGunlukAccess"] = false;
+
+        if (!User.IsInRole(Permissions.SuperAdminRole))
+        {
+            return;
+        }
+
+        var roles = await _roleManager.Roles
+            .Where(role => role.Name != null && role.Name != Permissions.SuperAdminRole)
+            .OrderBy(role => role.Name)
+            .Select(role => new RolePreviewOptionViewModel
+            {
+                Id = role.Id,
+                Name = role.Name!
+            })
+            .ToListAsync();
+
+        ViewData["RolePreviewEnabled"] = true;
+        ViewData["RolePreviewOptions"] = roles;
+
+        if (string.IsNullOrWhiteSpace(rolePreviewId))
+        {
+            return;
+        }
+
+        var selectedRole = await _roleManager.FindByIdAsync(rolePreviewId);
+        if (selectedRole == null || string.IsNullOrWhiteSpace(selectedRole.Name) ||
+            string.Equals(selectedRole.Name, Permissions.SuperAdminRole, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var selectedRoleClaims = await _roleManager.GetClaimsAsync(selectedRole);
+        var selectedRolePermissionKeys = selectedRoleClaims
+            .Where(claim => claim.Type == Permissions.ClaimType)
+            .Select(claim => claim.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var legacyPermission in Permissions.GunlukVerilerWidgets.LegacyAll)
+        {
+            if (selectedRolePermissionKeys.Contains(legacyPermission))
+            {
+                selectedRolePermissionKeys.UnionWith(Permissions.GunlukVerilerWidgets.ExpandLegacyPermission(legacyPermission));
+            }
+        }
+
+        ViewData["RolePreviewIsActive"] = true;
+        ViewData["RolePreviewSelectedRoleId"] = selectedRole.Id;
+        ViewData["RolePreviewSelectedRoleName"] = selectedRole.Name;
+        ViewData["RolePreviewPermissionKeys"] = selectedRolePermissionKeys;
+        ViewData["RolePreviewHasGunlukAccess"] = selectedRolePermissionKeys.Contains(Permissions.Dashboards.GunlukVeriler);
     }
 
     private static (DateTime? RaporTarihi, DateTime? BaslangicTarihi, DateTime? BitisTarihi, int? Ay, int? Yil) NormalizeDateFilter(

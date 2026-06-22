@@ -60,7 +60,13 @@ builder.Services.AddHostedService<DashboardIngestBackgroundService>();
 
 
 var app = builder.Build();
-var bypassLogin = builder.Configuration.GetValue<bool>("Authentication:BypassLogin");
+var bypassLoginConfigured = builder.Configuration.GetValue<bool>("Authentication:BypassLogin");
+var bypassLogin = app.Environment.IsDevelopment() && bypassLoginConfigured;
+
+if (bypassLoginConfigured && !app.Environment.IsDevelopment())
+{
+    app.Logger.LogWarning("Authentication:BypassLogin sadece Development ortamında calisir. Normal Identity girisi kullanilacak.");
+}
 
 // Veritabanını başlangıç verileriyle doldur (Roller ve Admin Kullanıcısı)
 if (!isEfDesignTime)
@@ -105,6 +111,8 @@ app.UseAuthentication();
 
 if (bypassLogin)
 {
+    app.Logger.LogWarning("Authentication bypass aktif. Tum istekler lokal Super Admin kimligiyle calisacak.");
+
     app.Use(async (context, next) =>
     {
         var claims = new List<Claim>

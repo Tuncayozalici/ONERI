@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace ONERI.Models.Authorization
@@ -26,6 +27,8 @@ namespace ONERI.Models.Authorization
 
         public static class GunlukVerilerWidgets
         {
+            // Eski toplu yetkiler. Yeni rol ekranında tekil kart yetkileri gösterilir,
+            // bu anahtarlar mevcut veritabanı claim'lerini yeni yapıya taşımak için tutulur.
             public const string NabizOzeti = "dashboard.gunluk.widget.nabizozeti.view";
             public const string DonemOzetKartlari = "dashboard.gunluk.widget.donemozeti.view";
             public const string UretimAkisi = "dashboard.gunluk.widget.uretimakisi.view";
@@ -51,19 +54,102 @@ namespace ONERI.Models.Authorization
             public const string EnCokHataNedeni = "dashboard.gunluk.widget.encokhatanedeni.view";
             public const string EnCokHataBolumu = "dashboard.gunluk.widget.encokhatabolumu.view";
 
+            public const string GelenSiparisAdedi = "dashboard.gunluk.card.gelensiparis.view";
+            public const string ToplamSiparisModulAdedi = "dashboard.gunluk.card.siparismodul.view";
+            public const string SiparisPlanDurumu = "dashboard.gunluk.card.siparisplandurumu.view";
+            public const string TicariSiparisAdedi = "dashboard.gunluk.card.ticarisiparis.view";
+            public const string KaosEndeksi = "dashboard.gunluk.card.kaosendeksi.view";
+            public const string PlanGerceklesme = "dashboard.gunluk.card.plangerceklesme.view";
+            public const string TerminUyum = "dashboard.gunluk.card.terminuyum.view";
+            public const string KapasiteKullanimi = "dashboard.gunluk.card.kapasitekullanimi.view";
+            public const string CalisilanIsGunu = "dashboard.gunluk.card.calisilanisgunu.view";
+            public const string OrtalamaCalisanPersonel = "dashboard.gunluk.card.ortalamapersonel.view";
+            public const string GunlukUretim = "dashboard.gunluk.card.gunlukuretim.view";
+            public const string Wip = "dashboard.gunluk.card.wip.view";
+            public const string PlanlananGerceklesen = "dashboard.gunluk.card.planlanangerceklesen.view";
+            public const string PlanBozulma = "dashboard.gunluk.card.planbozulma.view";
+            public const string AcilIs = "dashboard.gunluk.card.acilis.view";
+            public const string PlanBekleyen = "dashboard.gunluk.card.planbekleyen.view";
+            public const string MamEtkisi = "dashboard.gunluk.card.mametkisi.view";
+            public const string SshHataAdedi = "dashboard.gunluk.card.sshhataadedi.view";
+            public const string SshBolumEtkisi = "dashboard.gunluk.card.sshbolumetkisi.view";
+            public const string CalisanMakineOrani = "dashboard.gunluk.card.calisanmakine.view";
+            public const string DurusAriza = "dashboard.gunluk.card.durusariza.view";
+            public const string MakineDurumKayitlari = "dashboard.gunluk.card.makinedurumkayitlari.view";
+            public const string DepoyaGirenModul = "dashboard.gunluk.card.depoagirismodul.view";
+            public const string EnTrendUrun = "dashboard.gunluk.card.entrendurun.view";
+
+            public const string ProsesDosemeKesim = "dashboard.gunluk.card.proses.dosemekesim.view";
+            public const string ProsesDosemeCnc = "dashboard.gunluk.card.proses.dosemecnc.view";
+            public const string ProsesSungerKesim = "dashboard.gunluk.card.proses.sungerkesim.view";
+            public const string ProsesDosemeDikim = "dashboard.gunluk.card.proses.dosemedikim.view";
+            public const string ProsesDosemeIskelet = "dashboard.gunluk.card.proses.dosemeiskelet.view";
+            public const string ProsesKanepeBeyazlama = "dashboard.gunluk.card.proses.kanepebeyazlama.view";
+            public const string ProsesKanepeDoseme = "dashboard.gunluk.card.proses.kanepedoseme.view";
+            public const string ProsesKanepeMontaj = "dashboard.gunluk.card.proses.kanepemontaj.view";
+            public const string ProsesMakamBeyazlama = "dashboard.gunluk.card.proses.makambeyazlama.view";
+            public const string ProsesMakamDoseme = "dashboard.gunluk.card.proses.makamdoseme.view";
+            public const string ProsesMakamMontaj = "dashboard.gunluk.card.proses.makammontaj.view";
+            public const string ProsesDosemePaketleme = "dashboard.gunluk.card.proses.dosemepaketleme.view";
+            public const string ProsesKesim = "dashboard.gunluk.card.proses.kesim.view";
+            public const string ProsesBantlama = "dashboard.gunluk.card.proses.bantlama.view";
+            public const string ProsesDelikCnc = "dashboard.gunluk.card.proses.delikcnc.view";
+            public const string ProsesKeson = "dashboard.gunluk.card.proses.keson.view";
+            public const string ProsesSacLazer = "dashboard.gunluk.card.proses.saclazer.view";
+            public const string ProsesProfilKesimEgim = "dashboard.gunluk.card.proses.profilkesimegim.view";
+            public const string ProsesKaynakTesviye = "dashboard.gunluk.card.proses.kaynaktesviye.view";
+            public const string ProsesBoya = "dashboard.gunluk.card.proses.boya.view";
+            public const string ProsesKurulum = "dashboard.gunluk.card.proses.kurulum.view";
+            public const string ProsesMontaj = "dashboard.gunluk.card.proses.montaj.view";
+
             public static readonly IReadOnlyList<string> All = new List<string>
             {
-                NabizOzeti,
-                DonemOzetKartlari,
-                UretimAkisi,
-                AkisPlanlama,
-                KritikGercekler,
-                MakineDurumListesi,
-                ProsesDetayKartlari,
-                BolumEkranlari,
-                SshMusteriGercegi,
-                ToplamModulSayisi,
-                HataliAdet,
+                GelenSiparisAdedi,
+                ToplamSiparisModulAdedi,
+                SiparisPlanDurumu,
+                TicariSiparisAdedi,
+                KaosEndeksi,
+                PlanGerceklesme,
+                TerminUyum,
+                KapasiteKullanimi,
+                CalisilanIsGunu,
+                OrtalamaCalisanPersonel,
+                GunlukUretim,
+                Wip,
+                PlanlananGerceklesen,
+                PlanBozulma,
+                AcilIs,
+                PlanBekleyen,
+                MamEtkisi,
+                SshHataAdedi,
+                SshBolumEtkisi,
+                CalisanMakineOrani,
+                DurusAriza,
+                MakineDurumKayitlari,
+                ProsesDosemeKesim,
+                ProsesDosemeCnc,
+                ProsesSungerKesim,
+                ProsesDosemeDikim,
+                ProsesDosemeIskelet,
+                ProsesKanepeBeyazlama,
+                ProsesKanepeDoseme,
+                ProsesKanepeMontaj,
+                ProsesMakamBeyazlama,
+                ProsesMakamDoseme,
+                ProsesMakamMontaj,
+                ProsesDosemePaketleme,
+                ProsesKesim,
+                ProsesBantlama,
+                ProsesDelikCnc,
+                ProsesKeson,
+                ProsesSacLazer,
+                ProsesProfilKesimEgim,
+                ProsesKaynakTesviye,
+                ProsesBoya,
+                ProsesKurulum,
+                ProsesMontaj,
+                DepoyaGirenModul,
+                EnTrendUrun,
                 ToplamDuraklama,
                 GenelOeeSkoru,
                 MakineBazliOee,
@@ -76,8 +162,101 @@ namespace ONERI.Models.Authorization
                 BolumBazliHata,
                 HataTrendi,
                 EnCokHataNedeni,
-                EnCokHataBolumu
+                EnCokHataBolumu,
+                HataliAdet
             };
+
+            public static readonly IReadOnlyList<string> LegacyAll = new List<string>
+            {
+                NabizOzeti,
+                DonemOzetKartlari,
+                UretimAkisi,
+                AkisPlanlama,
+                KritikGercekler,
+                MakineDurumListesi,
+                ProsesDetayKartlari,
+                BolumEkranlari,
+                SshMusteriGercegi,
+                ToplamModulSayisi
+            };
+
+            public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> LegacyExpansionMap =
+                new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+                {
+                    [NabizOzeti] = new[]
+                    {
+                        KaosEndeksi,
+                        PlanGerceklesme,
+                        TerminUyum,
+                        KapasiteKullanimi
+                    },
+                    [DonemOzetKartlari] = new[]
+                    {
+                        CalisilanIsGunu,
+                        OrtalamaCalisanPersonel
+                    },
+                    [UretimAkisi] = new[]
+                    {
+                        GunlukUretim,
+                        Wip,
+                        PlanlananGerceklesen
+                    },
+                    [AkisPlanlama] = new[]
+                    {
+                        PlanBozulma,
+                        AcilIs,
+                        PlanBekleyen,
+                        MamEtkisi
+                    },
+                    [MakineDurumListesi] = new[]
+                    {
+                        CalisanMakineOrani,
+                        DurusAriza,
+                        MakineDurumKayitlari
+                    },
+                    [ProsesDetayKartlari] = new[]
+                    {
+                        ProsesDosemeKesim,
+                        ProsesDosemeCnc,
+                        ProsesSungerKesim,
+                        ProsesDosemeDikim,
+                        ProsesDosemeIskelet,
+                        ProsesKanepeBeyazlama,
+                        ProsesKanepeDoseme,
+                        ProsesKanepeMontaj,
+                        ProsesMakamBeyazlama,
+                        ProsesMakamDoseme,
+                        ProsesMakamMontaj,
+                        ProsesDosemePaketleme,
+                        ProsesKesim,
+                        ProsesBantlama,
+                        ProsesDelikCnc,
+                        ProsesKeson,
+                        ProsesSacLazer,
+                        ProsesProfilKesimEgim,
+                        ProsesKaynakTesviye,
+                        ProsesBoya,
+                        ProsesKurulum,
+                        ProsesMontaj
+                    },
+                    [SshMusteriGercegi] = new[]
+                    {
+                        SshHataAdedi,
+                        SshBolumEtkisi
+                    },
+                    [ToplamModulSayisi] = new[]
+                    {
+                        DepoyaGirenModul,
+                        EnTrendUrun
+                    }
+                };
+
+            public static IReadOnlyCollection<string> ExpandLegacyPermission(string permissionKey)
+            {
+                return LegacyExpansionMap.TryGetValue(permissionKey, out var expandedPermissions)
+                    ? expandedPermissions
+                    : Array.Empty<string>();
+            }
         }
 
         public static class Oneri
@@ -127,30 +306,73 @@ namespace ONERI.Models.Authorization
             new(Dashboards.Ebatlama, "Ebatlama Bölümü", "Dashboards"),
             new(Dashboards.HataliParca, "Hatalı Parça Analizi", "Dashboards"),
 
-            new(GunlukVerilerWidgets.NabizOzeti, "Günlük Veriler: Fabrika Nabız Özeti", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.DonemOzetKartlari, "Günlük Veriler: Dönem Özet Kartları", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.UretimAkisi, "Günlük Veriler: Üretim Akışı", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.AkisPlanlama, "Günlük Veriler: Akış / Planlama", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.KritikGercekler, "Günlük Veriler: Kritik Gerçekler", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.MakineDurumListesi, "Günlük Veriler: Makine / Andon", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.ProsesDetayKartlari, "Günlük Veriler: Proses Detay Kartları", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.BolumEkranlari, "Günlük Veriler: Bölüm Ekranları", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.SshMusteriGercegi, "Günlük Veriler: SSH / Müşteri Gerçeği", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.ToplamModulSayisi, "Günlük Veriler: Depoya Giren Modül", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.HataliAdet, "Günlük Veriler: Hatalı Adet", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.ToplamDuraklama, "Günlük Veriler: Toplam Duraklama", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.GenelOeeSkoru, "Günlük Veriler: Genel OEE Skoru", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.MakineBazliOee, "Günlük Veriler: Makine Bazlı OEE", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.OeeBilesenleri, "Günlük Veriler: OEE Bileşenleri", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.BolumBazliPlanaUyum, "Günlük Veriler: Bölüm Bazlı Plana Uyum", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.BolumBazliOee, "Günlük Veriler: Bölüm Bazlı OEE", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.BolumBazliPersonel, "Günlük Veriler: Bölüm Bazlı Personel", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.ModulTrendi, "Günlük Veriler: Modül Trendi", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.HataNedenleri, "Günlük Veriler: Hata Nedenleri", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.BolumBazliHata, "Günlük Veriler: Bölüm Bazlı Hata", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.HataTrendi, "Günlük Veriler: Hata Trendi", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.EnCokHataNedeni, "Günlük Veriler: En Çok Hata Nedeni", "Günlük Veriler Kartları"),
-            new(GunlukVerilerWidgets.EnCokHataBolumu, "Günlük Veriler: En Çok Hata Bölümü", "Günlük Veriler Kartları"),
+            new(GunlukVerilerWidgets.GelenSiparisAdedi, "Gelen Sipariş Adedi", "Günlük Veriler - Sipariş Kartları"),
+            new(GunlukVerilerWidgets.ToplamSiparisModulAdedi, "Toplam Modül Adedi", "Günlük Veriler - Sipariş Kartları"),
+            new(GunlukVerilerWidgets.SiparisPlanDurumu, "Planlanan / Planlanmayan", "Günlük Veriler - Sipariş Kartları"),
+            new(GunlukVerilerWidgets.TicariSiparisAdedi, "Ticari Sipariş Adedi", "Günlük Veriler - Sipariş Kartları"),
+
+            new(GunlukVerilerWidgets.KaosEndeksi, "Kaos Endeksi", "Günlük Veriler - Fabrika Özeti"),
+            new(GunlukVerilerWidgets.PlanGerceklesme, "Plan Gerçekleşme", "Günlük Veriler - Fabrika Özeti"),
+            new(GunlukVerilerWidgets.TerminUyum, "Termin Uyum", "Günlük Veriler - Fabrika Özeti"),
+            new(GunlukVerilerWidgets.KapasiteKullanimi, "Kapasite Kullanımı", "Günlük Veriler - Fabrika Özeti"),
+            new(GunlukVerilerWidgets.CalisilanIsGunu, "Çalışılan İş Günü", "Günlük Veriler - Fabrika Özeti"),
+            new(GunlukVerilerWidgets.OrtalamaCalisanPersonel, "Ortalama Çalışan Personel", "Günlük Veriler - Fabrika Özeti"),
+
+            new(GunlukVerilerWidgets.GunlukUretim, "Günlük Üretim", "Günlük Veriler - Üretim Akışı"),
+            new(GunlukVerilerWidgets.Wip, "WIP", "Günlük Veriler - Üretim Akışı"),
+            new(GunlukVerilerWidgets.PlanlananGerceklesen, "Planlanan vs Gerçekleşen", "Günlük Veriler - Üretim Akışı"),
+
+            new(GunlukVerilerWidgets.PlanBozulma, "Plan Bozulma", "Günlük Veriler - Akış Planlama"),
+            new(GunlukVerilerWidgets.AcilIs, "Acil İş", "Günlük Veriler - Akış Planlama"),
+            new(GunlukVerilerWidgets.PlanBekleyen, "Plan Bekleyen", "Günlük Veriler - Akış Planlama"),
+            new(GunlukVerilerWidgets.MamEtkisi, "MAM Etkisi", "Günlük Veriler - Akış Planlama"),
+
+            new(GunlukVerilerWidgets.SshHataAdedi, "SSH Hata Adedi", "Günlük Veriler - SSH ve Makine"),
+            new(GunlukVerilerWidgets.SshBolumEtkisi, "SSH Bölüm Etkisi", "Günlük Veriler - SSH ve Makine"),
+            new(GunlukVerilerWidgets.CalisanMakineOrani, "Çalışan Makine", "Günlük Veriler - SSH ve Makine"),
+            new(GunlukVerilerWidgets.DurusAriza, "Duruş / Arıza", "Günlük Veriler - SSH ve Makine"),
+            new(GunlukVerilerWidgets.MakineDurumKayitlari, "Makine Durum Kayıtları", "Günlük Veriler - SSH ve Makine"),
+
+            new(GunlukVerilerWidgets.ProsesDosemeKesim, "Proses: Döşeme Kesim", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesDosemeCnc, "Proses: Döşeme CNC", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesSungerKesim, "Proses: Sünger Kesim", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesDosemeDikim, "Proses: Döşeme Dikim", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesDosemeIskelet, "Proses: Döşeme İskelet", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKanepeBeyazlama, "Proses: Kanepe Beyazlama", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKanepeDoseme, "Proses: Kanepe Döşeme", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKanepeMontaj, "Proses: Kanepe Montaj", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesMakamBeyazlama, "Proses: Makam Beyazlama", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesMakamDoseme, "Proses: Makam Döşeme", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesMakamMontaj, "Proses: Makam Montaj", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesDosemePaketleme, "Proses: Döşeme Paketleme", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKesim, "Proses: Kesim", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesBantlama, "Proses: Bantlama", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesDelikCnc, "Proses: Delik - CNC", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKeson, "Proses: Keson", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesSacLazer, "Proses: Saç Lazer", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesProfilKesimEgim, "Proses: Profil Kesim Eğim", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKaynakTesviye, "Proses: Kaynak Tesviye", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesBoya, "Proses: Boya", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesKurulum, "Proses: Kurulum", "Günlük Veriler - Proses Kartları"),
+            new(GunlukVerilerWidgets.ProsesMontaj, "Proses: Montaj", "Günlük Veriler - Proses Kartları"),
+
+            new(GunlukVerilerWidgets.DepoyaGirenModul, "Depoya Giren Modül", "Günlük Veriler - KPI Kartları"),
+            new(GunlukVerilerWidgets.EnTrendUrun, "En Trend Ürün", "Günlük Veriler - KPI Kartları"),
+            new(GunlukVerilerWidgets.ToplamDuraklama, "Toplam Duraklama", "Günlük Veriler - KPI Kartları"),
+            new(GunlukVerilerWidgets.EnCokHataNedeni, "En Çok Hata Nedeni", "Günlük Veriler - KPI Kartları"),
+            new(GunlukVerilerWidgets.EnCokHataBolumu, "En Çok Hata Bölümü", "Günlük Veriler - KPI Kartları"),
+            new(GunlukVerilerWidgets.HataliAdet, "Hatalı Adet", "Günlük Veriler - KPI Kartları"),
+
+            new(GunlukVerilerWidgets.GenelOeeSkoru, "Genel OEE Skoru", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.MakineBazliOee, "Makine Bazlı OEE", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.OeeBilesenleri, "OEE Bileşenleri", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliPlanaUyum, "Bölüm Bazlı Plana Uyum", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliOee, "Bölüm Bazlı OEE", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliPersonel, "Bölüm Bazlı Personel", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.ModulTrendi, "Modül Trendi", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.HataNedenleri, "Hata Nedenleri", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.BolumBazliHata, "Bölüm Bazlı Hata", "Günlük Veriler - Grafik Kartları"),
+            new(GunlukVerilerWidgets.HataTrendi, "İstasyon Doluluk Karşılaştırması", "Günlük Veriler - Grafik Kartları"),
 
             new(FikirAtolyesi.View, "Fikir Atölyesi", "Öneri Sistemi"),
             new(Oneri.Create, "Yeni Öneri Oluştur", "Öneri Sistemi"),

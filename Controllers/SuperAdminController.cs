@@ -81,7 +81,7 @@ namespace ONERI.Controllers
                 });
             }
 
-            foreach (var permission in Permissions.All.OrderBy(p => p.Group).ThenBy(p => p.Name))
+            foreach (var permission in Permissions.All)
             {
                 model.ExtraPermissions.Add(new PermissionOptionViewModel
                 {
@@ -489,7 +489,7 @@ namespace ONERI.Controllers
                 RoleName = role.Name
             };
 
-            foreach (var permission in Permissions.All.OrderBy(p => p.Group).ThenBy(p => p.Name))
+            foreach (var permission in Permissions.All)
             {
                 model.Permissions.Add(new PermissionOptionViewModel
                 {
@@ -581,8 +581,6 @@ namespace ONERI.Controllers
                 .ToHashSet();
 
             model.ExtraPermissions = Permissions.All
-                .OrderBy(p => p.Group)
-                .ThenBy(p => p.Name)
                 .Select(p => new PermissionOptionViewModel
                 {
                     Key = p.Key,

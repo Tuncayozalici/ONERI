@@ -101,29 +101,33 @@ namespace ONERI.Data
             // Geriye donuk uyumluluk:
             // Gunluk Veriler sayfasina erisimi olan mevcut rol ve kullanicilar,
             // yeni kart bazli izinler nedeniyle bos dashboard gormesin.
-            var gunlukWidgetPermissions = Permissions.GunlukVerilerWidgets.All;
-
             foreach (var role in roleManager.Roles)
             {
                 var existingClaims = await roleManager.GetClaimsAsync(role);
-                var hasGunlukDashboardAccess = existingClaims.Any(c =>
-                    c.Type == Permissions.ClaimType &&
-                    string.Equals(c.Value, Permissions.Dashboards.GunlukVeriler, StringComparison.Ordinal));
+                var existingPermissionValues = existingClaims
+                    .Where(c => c.Type == Permissions.ClaimType)
+                    .Select(c => c.Value)
+                    .ToHashSet(StringComparer.Ordinal);
+                var permissionsToEnsure = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var legacyPermission in Permissions.GunlukVerilerWidgets.LegacyAll)
+                {
+                    if (existingPermissionValues.Contains(legacyPermission))
+                    {
+                        permissionsToEnsure.UnionWith(Permissions.GunlukVerilerWidgets.ExpandLegacyPermission(legacyPermission));
+                    }
+                }
 
-                if (!hasGunlukDashboardAccess)
+                if (permissionsToEnsure.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var widgetPermission in gunlukWidgetPermissions)
+                foreach (var widgetPermission in permissionsToEnsure)
                 {
-                    var alreadyHasWidgetPermission = existingClaims.Any(c =>
-                        c.Type == Permissions.ClaimType &&
-                        string.Equals(c.Value, widgetPermission, StringComparison.Ordinal));
-
-                    if (!alreadyHasWidgetPermission)
+                    if (!existingPermissionValues.Contains(widgetPermission))
                     {
                         await roleManager.AddClaimAsync(role, new Claim(Permissions.ClaimType, widgetPermission));
+                        existingPermissionValues.Add(widgetPermission);
                     }
                 }
             }
@@ -132,24 +136,30 @@ namespace ONERI.Data
             foreach (var user in users)
             {
                 var existingClaims = await userManager.GetClaimsAsync(user);
-                var hasDirectGunlukDashboardAccess = existingClaims.Any(c =>
-                    c.Type == Permissions.ClaimType &&
-                    string.Equals(c.Value, Permissions.Dashboards.GunlukVeriler, StringComparison.Ordinal));
+                var existingPermissionValues = existingClaims
+                    .Where(c => c.Type == Permissions.ClaimType)
+                    .Select(c => c.Value)
+                    .ToHashSet(StringComparer.Ordinal);
+                var permissionsToEnsure = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var legacyPermission in Permissions.GunlukVerilerWidgets.LegacyAll)
+                {
+                    if (existingPermissionValues.Contains(legacyPermission))
+                    {
+                        permissionsToEnsure.UnionWith(Permissions.GunlukVerilerWidgets.ExpandLegacyPermission(legacyPermission));
+                    }
+                }
 
-                if (!hasDirectGunlukDashboardAccess)
+                if (permissionsToEnsure.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var widgetPermission in gunlukWidgetPermissions)
+                foreach (var widgetPermission in permissionsToEnsure)
                 {
-                    var alreadyHasWidgetPermission = existingClaims.Any(c =>
-                        c.Type == Permissions.ClaimType &&
-                        string.Equals(c.Value, widgetPermission, StringComparison.Ordinal));
-
-                    if (!alreadyHasWidgetPermission)
+                    if (!existingPermissionValues.Contains(widgetPermission))
                     {
                         await userManager.AddClaimAsync(user, new Claim(Permissions.ClaimType, widgetPermission));
+                        existingPermissionValues.Add(widgetPermission);
                     }
                 }
             }

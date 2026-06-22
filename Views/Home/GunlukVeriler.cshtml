@@ -2,9 +2,21 @@
 @model ONERI.Models.GenelFabrikaOzetViewModel
 @{
     ViewData["Title"] = "Günlük Veriler Panosu";
+    var rolePreviewEnabled = (bool?)ViewBag.RolePreviewEnabled == true;
+    var rolePreviewIsActive = (bool?)ViewBag.RolePreviewIsActive == true;
+    var rolePreviewHasGunlukAccess = (bool?)ViewBag.RolePreviewHasGunlukAccess == true;
+    var rolePreviewOptions = ViewBag.RolePreviewOptions as List<RolePreviewOptionViewModel> ?? new List<RolePreviewOptionViewModel>();
+    var selectedRolePreviewId = (string?)ViewBag.RolePreviewSelectedRoleId ?? string.Empty;
+    var selectedRolePreviewName = (string?)ViewBag.RolePreviewSelectedRoleName ?? string.Empty;
+    var rolePreviewPermissionKeys = ViewBag.RolePreviewPermissionKeys as HashSet<string> ?? new HashSet<string>(StringComparer.Ordinal);
 
     async Task<bool> CanViewWidgetAsync(string permissionKey)
     {
+        if (rolePreviewIsActive)
+        {
+            return rolePreviewHasGunlukAccess && rolePreviewPermissionKeys.Contains(permissionKey);
+        }
+
         return User.IsInRole(Permissions.SuperAdminRole)
             || (await AuthorizationService.AuthorizeAsync(User, null, permissionKey)).Succeeded;
     }
@@ -298,6 +310,7 @@
     {
         new
         {
+            PermissionKey = Permissions.GunlukVerilerWidgets.KaosEndeksi,
             Title = "Kaos Endeksi",
             Value = $"{Math.Min(100, Math.Max(0, (int)Math.Round((100 - terminUyum) + planBozulmaOrani + (arizaliMakineSayisi * 4), MidpointRounding.AwayFromZero)))} / 100",
             Meta = terminUyum >= 90 ? "kontrol altında" : "risk",
@@ -305,6 +318,7 @@
         },
         new
         {
+            PermissionKey = Permissions.GunlukVerilerWidgets.PlanGerceklesme,
             Title = "Plan Gerçekleşme",
             Value = formatPercent(planGerceklesme),
             Meta = planGerceklesme >= 95 ? "hedefte" : "revizyon ihtiyacı",
@@ -312,6 +326,7 @@
         },
         new
         {
+            PermissionKey = Permissions.GunlukVerilerWidgets.TerminUyum,
             Title = "Termin Uyum",
             Value = formatPercent(terminUyum),
             Meta = terminUyum >= 95 ? "stabil" : "düşüş var",
@@ -319,6 +334,7 @@
         },
         new
         {
+            PermissionKey = Permissions.GunlukVerilerWidgets.KapasiteKullanimi,
             Title = "Kapasite Kullanımı",
             Value = formatPercent(kapasiteKullanimi),
             Meta = kapasiteKullanimi >= 95 ? "tam kullanım" : "atıl kapasite",
@@ -358,28 +374,28 @@
         .ToDictionary(x => x.Key, x => (double)x.Count(), StringComparer.OrdinalIgnoreCase);
     var prosesDetayBasliklari = new[]
     {
-        new { Bolum = "Döşeme kesim", DataKeys = new[] { "Döşeme kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
-        new { Bolum = "Döşeme CNC", DataKeys = new[] { "Döşeme CNC", "CNC" }, NavigationKey = "cnc" },
-        new { Bolum = "Sünger kesim", DataKeys = new[] { "Sünger kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
-        new { Bolum = "Döşeme dikim", DataKeys = new[] { "Döşeme dikim" }, NavigationKey = "pvc" },
-        new { Bolum = "Döşeme iskelet", DataKeys = new[] { "Döşeme iskelet", "Metal" }, NavigationKey = "metal" },
-        new { Bolum = "Kanepe beyazlama", DataKeys = new[] { "Kanepe beyazlama", "Boyahane" }, NavigationKey = "boyahane" },
-        new { Bolum = "Kanepe döşeme", DataKeys = new[] { "Kanepe döşeme", "PVC" }, NavigationKey = "pvc" },
-        new { Bolum = "Kanepe montaj", DataKeys = new[] { "Kanepe montaj" }, NavigationKey = "tezgah" },
-        new { Bolum = "Makam beyazlama", DataKeys = new[] { "Makam beyazlama", "Boyahane" }, NavigationKey = "boyahane" },
-        new { Bolum = "Makam döşeme", DataKeys = new[] { "Makam döşeme", "PVC" }, NavigationKey = "pvc" },
-        new { Bolum = "Makam montaj", DataKeys = new[] { "Makam montaj" }, NavigationKey = "tezgah" },
-        new { Bolum = "Döşeme paketleme", DataKeys = new[] { "Döşeme paketleme" }, NavigationKey = "pvc" },
-        new { Bolum = "Kesim", DataKeys = new[] { "Kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
-        new { Bolum = "Bantlama", DataKeys = new[] { "Bantlama", "PVC" }, NavigationKey = "pvc" },
-        new { Bolum = "Delik - CNC", DataKeys = new[] { "Delik - CNC", "CNC" }, NavigationKey = "cnc" },
-        new { Bolum = "Keson", DataKeys = new[] { "Keson", "Tezgah" }, NavigationKey = "tezgah" },
-        new { Bolum = "Saç lazer", DataKeys = new[] { "Saç lazer", "Metal" }, NavigationKey = "metal" },
-        new { Bolum = "Profil kesim eğim", DataKeys = new[] { "Profil kesim eğim", "Metal" }, NavigationKey = "metal" },
-        new { Bolum = "Kaynak tesviye", DataKeys = new[] { "Kaynak tesviye", "Metal" }, NavigationKey = "metal" },
-        new { Bolum = "Boya", DataKeys = new[] { "Boya", "Boyahane" }, NavigationKey = "boyahane" },
-        new { Bolum = "Kurulum", DataKeys = new[] { "Kurulum" }, NavigationKey = "tezgah" },
-        new { Bolum = "Montaj", DataKeys = new[] { "Montaj" }, NavigationKey = "tezgah" }
+        new { Bolum = "Döşeme kesim", DataKeys = new[] { "Döşeme kesim", "Ebatlama" }, NavigationKey = "ebatlama", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDosemeKesim },
+        new { Bolum = "Döşeme CNC", DataKeys = new[] { "Döşeme CNC", "CNC" }, NavigationKey = "cnc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDosemeCnc },
+        new { Bolum = "Sünger kesim", DataKeys = new[] { "Sünger kesim", "Ebatlama" }, NavigationKey = "ebatlama", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesSungerKesim },
+        new { Bolum = "Döşeme dikim", DataKeys = new[] { "Döşeme dikim" }, NavigationKey = "pvc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDosemeDikim },
+        new { Bolum = "Döşeme iskelet", DataKeys = new[] { "Döşeme iskelet", "Metal" }, NavigationKey = "metal", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDosemeIskelet },
+        new { Bolum = "Kanepe beyazlama", DataKeys = new[] { "Kanepe beyazlama", "Boyahane" }, NavigationKey = "boyahane", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKanepeBeyazlama },
+        new { Bolum = "Kanepe döşeme", DataKeys = new[] { "Kanepe döşeme", "PVC" }, NavigationKey = "pvc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKanepeDoseme },
+        new { Bolum = "Kanepe montaj", DataKeys = new[] { "Kanepe montaj" }, NavigationKey = "tezgah", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKanepeMontaj },
+        new { Bolum = "Makam beyazlama", DataKeys = new[] { "Makam beyazlama", "Boyahane" }, NavigationKey = "boyahane", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesMakamBeyazlama },
+        new { Bolum = "Makam döşeme", DataKeys = new[] { "Makam döşeme", "PVC" }, NavigationKey = "pvc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesMakamDoseme },
+        new { Bolum = "Makam montaj", DataKeys = new[] { "Makam montaj" }, NavigationKey = "tezgah", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesMakamMontaj },
+        new { Bolum = "Döşeme paketleme", DataKeys = new[] { "Döşeme paketleme" }, NavigationKey = "pvc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDosemePaketleme },
+        new { Bolum = "Kesim", DataKeys = new[] { "Kesim", "Ebatlama" }, NavigationKey = "ebatlama", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKesim },
+        new { Bolum = "Bantlama", DataKeys = new[] { "Bantlama", "PVC" }, NavigationKey = "pvc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesBantlama },
+        new { Bolum = "Delik - CNC", DataKeys = new[] { "Delik - CNC", "CNC" }, NavigationKey = "cnc", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesDelikCnc },
+        new { Bolum = "Keson", DataKeys = new[] { "Keson", "Tezgah" }, NavigationKey = "tezgah", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKeson },
+        new { Bolum = "Saç lazer", DataKeys = new[] { "Saç lazer", "Metal" }, NavigationKey = "metal", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesSacLazer },
+        new { Bolum = "Profil kesim eğim", DataKeys = new[] { "Profil kesim eğim", "Metal" }, NavigationKey = "metal", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesProfilKesimEgim },
+        new { Bolum = "Kaynak tesviye", DataKeys = new[] { "Kaynak tesviye", "Metal" }, NavigationKey = "metal", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKaynakTesviye },
+        new { Bolum = "Boya", DataKeys = new[] { "Boya", "Boyahane" }, NavigationKey = "boyahane", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesBoya },
+        new { Bolum = "Kurulum", DataKeys = new[] { "Kurulum" }, NavigationKey = "tezgah", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesKurulum },
+        new { Bolum = "Montaj", DataKeys = new[] { "Montaj" }, NavigationKey = "tezgah", PermissionKey = Permissions.GunlukVerilerWidgets.ProsesMontaj }
     };
     var prosesDetayKartlariHam = prosesDetayBasliklari
         .Select(tanim =>
@@ -414,6 +430,7 @@
             {
                 tanim.Bolum,
                 tanim.NavigationKey,
+                tanim.PermissionKey,
                 Durum = durum,
                 GerceklesenModul = gerceklesenModul,
                 HedefModul = hedefModul,
@@ -441,6 +458,7 @@
         {
             proses.Bolum,
             proses.NavigationKey,
+            proses.PermissionKey,
             proses.Durum,
             proses.GerceklesenModul,
             proses.HedefModul,
@@ -461,14 +479,30 @@
         })
         .ToList();
 
-    var showNabizOzeti = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.NabizOzeti);
-    var showDonemOzetKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.DonemOzetKartlari);
-    var showUretimAkisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.UretimAkisi);
-    var showAkisPlanlama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.AkisPlanlama);
-    var showMakineDurumListesi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MakineDurumListesi);
-    var showProsesDetayKartlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ProsesDetayKartlari);
-    var showSshMusteriGercegi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.SshMusteriGercegi);
-    var showToplamModulSayisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamModulSayisi);
+    var showGelenSiparisAdedi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.GelenSiparisAdedi);
+    var showToplamSiparisModulAdedi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamSiparisModulAdedi);
+    var showSiparisPlanDurumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.SiparisPlanDurumu);
+    var showTicariSiparisAdedi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.TicariSiparisAdedi);
+    var showKaosEndeksi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.KaosEndeksi);
+    var showPlanGerceklesme = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.PlanGerceklesme);
+    var showTerminUyum = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.TerminUyum);
+    var showKapasiteKullanimi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.KapasiteKullanimi);
+    var showCalisilanIsGunu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.CalisilanIsGunu);
+    var showOrtalamaCalisanPersonel = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.OrtalamaCalisanPersonel);
+    var showGunlukUretim = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.GunlukUretim);
+    var showWip = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.Wip);
+    var showPlanlananGerceklesen = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.PlanlananGerceklesen);
+    var showPlanBozulma = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.PlanBozulma);
+    var showAcilIs = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.AcilIs);
+    var showPlanBekleyen = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.PlanBekleyen);
+    var showMamEtkisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MamEtkisi);
+    var showSshHataAdedi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.SshHataAdedi);
+    var showSshBolumEtkisi = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.SshBolumEtkisi);
+    var showCalisanMakineOrani = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.CalisanMakineOrani);
+    var showDurusAriza = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.DurusAriza);
+    var showMakineDurumKayitlari = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.MakineDurumKayitlari);
+    var showDepoyaGirenModul = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.DepoyaGirenModul);
+    var showEnTrendUrun = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnTrendUrun);
     var showHataliAdet = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.HataliAdet);
     var showToplamDuraklama = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.ToplamDuraklama);
     var showGenelOeeSkoru = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.GenelOeeSkoru);
@@ -484,7 +518,40 @@
     var showEnCokHataNedeni = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataNedeni);
     var showEnCokHataBolumu = await CanViewWidgetAsync(Permissions.GunlukVerilerWidgets.EnCokHataBolumu);
 
-    var topKpiRowCount = (showToplamModulSayisi ? 2 : 0)
+    var visibleNabizPermissionKeys = new HashSet<string>(StringComparer.Ordinal)
+    {
+        showKaosEndeksi ? Permissions.GunlukVerilerWidgets.KaosEndeksi : string.Empty,
+        showPlanGerceklesme ? Permissions.GunlukVerilerWidgets.PlanGerceklesme : string.Empty,
+        showTerminUyum ? Permissions.GunlukVerilerWidgets.TerminUyum : string.Empty,
+        showKapasiteKullanimi ? Permissions.GunlukVerilerWidgets.KapasiteKullanimi : string.Empty
+    };
+    visibleNabizPermissionKeys.Remove(string.Empty);
+
+    var visibleProsesPermissions = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var proses in prosesDetayKartlari)
+    {
+        if (await CanViewWidgetAsync(proses.PermissionKey))
+        {
+            visibleProsesPermissions.Add(proses.PermissionKey);
+        }
+    }
+    var visibleProsesDetayKartlari = prosesDetayKartlari
+        .Where(proses => visibleProsesPermissions.Contains(proses.PermissionKey))
+        .ToList();
+
+    var showAnySiparisKartlari = showGelenSiparisAdedi
+        || showToplamSiparisModulAdedi
+        || showSiparisPlanDurumu
+        || showTicariSiparisAdedi;
+    var showAnyNabizKartlari = visibleNabizPermissionKeys.Count > 0;
+    var showAnyDonemOzetKartlari = showCalisilanIsGunu || showOrtalamaCalisanPersonel;
+    var showAnyUretimAkisi = showGunlukUretim || showWip || showPlanlananGerceklesen;
+    var showAnyAkisPlanlama = showPlanBozulma || showAcilIs || showPlanBekleyen || showMamEtkisi;
+    var showAnySshMusteriGercegi = showSshHataAdedi || showSshBolumEtkisi;
+    var showAnyMakineDurum = showCalisanMakineOrani || showDurusAriza || showMakineDurumKayitlari;
+
+    var topKpiRowCount = (showDepoyaGirenModul ? 1 : 0)
+        + (showEnTrendUrun ? 1 : 0)
         + (showToplamDuraklama ? 1 : 0);
     var hasTopKpiStack = topKpiRowCount > 0;
     var visibleChartCount = (showGenelOeeSkoru ? 1 : 0)
@@ -588,14 +655,15 @@
     var visibleBolumNavigasyonlari = bolumNavigasyonlari
         .Where(bolum => visibleBolumDashboardPermissions.Contains(bolum.PermissionKey))
         .ToList();
-    var prosesKartSayisi = prosesDetayKartlari.Count;
-    var hasVisibleProsesDetayKartlari = showProsesDetayKartlari && prosesKartSayisi > 0;
-    var hasVisibleHeroWidgets = showNabizOzeti
-        || showDonemOzetKartlari
-        || showUretimAkisi
-        || showAkisPlanlama
-        || showMakineDurumListesi
-        || showSshMusteriGercegi;
+    var prosesKartSayisi = visibleProsesDetayKartlari.Count;
+    var hasVisibleProsesDetayKartlari = prosesKartSayisi > 0;
+    var hasVisibleHeroWidgets = showAnySiparisKartlari
+        || showAnyNabizKartlari
+        || showAnyDonemOzetKartlari
+        || showAnyUretimAkisi
+        || showAnyAkisPlanlama
+        || showAnyMakineDurum
+        || showAnySshMusteriGercegi;
     var hasAnyVisibleDashboardContent = hasVisibleHeroWidgets
         || hasVisibleProsesDetayKartlari
         || visibleDashboardCardCount > 0;
@@ -607,6 +675,56 @@
 
 <div id="gunlukPage" class="gunluk-page">
     <div class="container py-4 py-lg-5">
+        @if (rolePreviewEnabled && rolePreviewOptions.Count > 0)
+        {
+            <section class="gunluk-role-preview-bar mb-3" aria-label="Rol görünümü seçimi">
+                <form asp-action="GunlukVeriler" method="get" class="gunluk-role-preview-bar__form">
+                    @foreach (var queryItem in Context.Request.Query)
+                    {
+                        if (string.Equals(queryItem.Key, "rolePreviewId", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        foreach (var value in queryItem.Value)
+                        {
+                            <input type="hidden" name="@queryItem.Key" value="@value" />
+                        }
+                    }
+
+                    <div class="gunluk-role-preview-bar__copy">
+                        <span>Admin rol görünümü</span>
+                        <strong>Bu panoyu seçili rolün yetkileriyle ön izle.</strong>
+                    </div>
+                    <div class="gunluk-role-preview-bar__control">
+                        <label for="rolePreviewId">Rol seç</label>
+                        <select id="rolePreviewId"
+                                name="rolePreviewId"
+                                class="form-select"
+                                onchange="this.form.submit()">
+                            <option value="">Kendi yetkilerim</option>
+                            @foreach (var roleOption in rolePreviewOptions)
+                            {
+                                <option value="@roleOption.Id" selected="@(string.Equals(roleOption.Id, selectedRolePreviewId, StringComparison.Ordinal))">
+                                    @roleOption.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    @if (rolePreviewIsActive)
+                    {
+                        <div class="gunluk-role-preview-bar__state @(rolePreviewHasGunlukAccess ? "is-active" : "is-blocked")">
+                            <i class="bi @(rolePreviewHasGunlukAccess ? "bi-eye" : "bi-lock")" aria-hidden="true"></i>
+                            <span>
+                                @selectedRolePreviewName
+                                @(rolePreviewHasGunlukAccess ? "rolüyle görüntüleniyor" : "rolünde Günlük Veriler erişimi yok")
+                            </span>
+                        </div>
+                    }
+                </form>
+            </section>
+        }
+
         <section id="gunlukHero" class="gunluk-hero mb-4">
             <div class="gunluk-hero__main">
                 <div class="gunluk-hero__content">
@@ -614,34 +732,49 @@
                         <i class="bi bi-activity"></i>
                         FABRİKA ÖZETİ
                     </div>
-                    <div class="gunluk-order-strip" aria-label="Sipariş özeti">
-                        <article class="gunluk-order-card">
-                            <span>Gelen sipariş adedi</span>
-                            <strong>@gelenSiparisAdedi.ToString("N0")</strong>
-                        </article>
-                        <article class="gunluk-order-card">
-                            <span>Toplam modül adedi</span>
-                            <strong>@gelenSiparisModulAdedi.ToString("N0")</strong>
-                        </article>
-                        <article class="gunluk-order-card gunluk-order-card--split">
-                            <div>
-                                <span>Planlanan</span>
-                                <strong>@planlananSiparisAdedi.ToString("N0")</strong>
-                            </div>
-                            <div>
-                                <span>Planlanmayan</span>
-                                <strong>@planlanmayanSiparisAdedi.ToString("N0")</strong>
-                            </div>
-                        </article>
-                        <article class="gunluk-order-card">
-                            <span>Ticari sipariş adedi</span>
-                            <strong>@ticariSiparisAdedi.ToString("N0")</strong>
-                        </article>
-                    </div>
-                    @if (showNabizOzeti)
+                    @if (showAnySiparisKartlari)
+                    {
+                        <div class="gunluk-order-strip" aria-label="Sipariş özeti">
+                            @if (showGelenSiparisAdedi)
+                            {
+                                <article class="gunluk-order-card">
+                                    <span>Gelen sipariş adedi</span>
+                                    <strong>@gelenSiparisAdedi.ToString("N0")</strong>
+                                </article>
+                            }
+                            @if (showToplamSiparisModulAdedi)
+                            {
+                                <article class="gunluk-order-card">
+                                    <span>Toplam modül adedi</span>
+                                    <strong>@gelenSiparisModulAdedi.ToString("N0")</strong>
+                                </article>
+                            }
+                            @if (showSiparisPlanDurumu)
+                            {
+                                <article class="gunluk-order-card gunluk-order-card--split">
+                                    <div>
+                                        <span>Planlanan</span>
+                                        <strong>@planlananSiparisAdedi.ToString("N0")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Planlanmayan</span>
+                                        <strong>@planlanmayanSiparisAdedi.ToString("N0")</strong>
+                                    </div>
+                                </article>
+                            }
+                            @if (showTicariSiparisAdedi)
+                            {
+                                <article class="gunluk-order-card">
+                                    <span>Ticari sipariş adedi</span>
+                                    <strong>@ticariSiparisAdedi.ToString("N0")</strong>
+                                </article>
+                            }
+                        </div>
+                    }
+                    @if (showAnyNabizKartlari)
                     {
                         <div class="gunluk-nabiz-strip" aria-label="Fabrika nabız özeti">
-                            @foreach (var kart in nabizKartlari)
+                            @foreach (var kart in nabizKartlari.Where(kart => visibleNabizPermissionKeys.Contains(kart.PermissionKey)))
                             {
                                 <article class="gunluk-nabiz-card gunluk-nabiz-card--@kart.Tone">
                                     <span>@kart.Title</span>
@@ -651,21 +784,27 @@
                         </div>
                     }
 
-                    @if (showDonemOzetKartlari)
+                    @if (showAnyDonemOzetKartlari)
                     {
                         <div class="gunluk-hero__facts">
-                            <div class="gunluk-fact">
-                                <span>Çalışılan iş günü</span>
-                                <strong>@Model.CalisilanIsGunu</strong>
-                            </div>
-                            <div class="gunluk-fact">
-                                <span>Ortalama çalışan personel</span>
-                                <strong>@Model.OrtalamaCalisanPersonel</strong>
-                            </div>
+                            @if (showCalisilanIsGunu)
+                            {
+                                <div class="gunluk-fact">
+                                    <span>Çalışılan iş günü</span>
+                                    <strong>@Model.CalisilanIsGunu</strong>
+                                </div>
+                            }
+                            @if (showOrtalamaCalisanPersonel)
+                            {
+                                <div class="gunluk-fact">
+                                    <span>Ortalama çalışan personel</span>
+                                    <strong>@Model.OrtalamaCalisanPersonel</strong>
+                                </div>
+                            }
                         </div>
                     }
 
-                    @if (showUretimAkisi)
+                    @if (showAnyUretimAkisi)
                     {
                         <section class="gunluk-factory-pulse gunluk-factory-pulse--single" aria-label="Fabrika nabız detayları">
                             <article class="gunluk-pulse-panel gunluk-pulse-panel--production">
@@ -675,35 +814,47 @@
                                         <p>Bugün / bu ay</p>
                                     </div>
                                 </div>
-                                <div class="gunluk-mini-kpis">
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--ok">
-                                        <span>Günlük üretim</span>
-                                        <strong>@gerceklesenModul.ToString("N0")</strong>
+                                @if (showGunlukUretim || showWip)
+                                {
+                                    <div class="gunluk-mini-kpis">
+                                        @if (showGunlukUretim)
+                                        {
+                                            <div class="gunluk-mini-kpi gunluk-mini-kpi--ok">
+                                                <span>Günlük üretim</span>
+                                                <strong>@gerceklesenModul.ToString("N0")</strong>
+                                            </div>
+                                        }
+                                        @if (showWip)
+                                        {
+                                            <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                                <span>WIP</span>
+                                                <strong>@wipModul.ToString("N0")</strong>
+                                            </div>
+                                        }
                                     </div>
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                        <span>WIP</span>
-                                        <strong>@wipModul.ToString("N0")</strong>
+                                }
+                                @if (showPlanlananGerceklesen)
+                                {
+                                    <div class="gunluk-plan-flow">
+                                        <div class="gunluk-plan-flow__label">
+                                            <strong>Planlanan vs Gerçekleşen</strong>
+                                            <span>@planProgress.ToString("N0")%</span>
+                                        </div>
+                                        <div class="gunluk-plan-flow__bar" aria-hidden="true">
+                                            <span style="@planProgressStyle"></span>
+                                        </div>
+                                        <p>
+                                            Plan: @planlananModul.ToString("N0") modül
+                                            <span>Gerçek: @gerceklesenModul.ToString("N0") modül</span>
+                                            <span>Sapma: @planSapma.ToString("N0")</span>
+                                        </p>
                                     </div>
-                                </div>
-                                <div class="gunluk-plan-flow">
-                                    <div class="gunluk-plan-flow__label">
-                                        <strong>Planlanan vs Gerçekleşen</strong>
-                                        <span>@planProgress.ToString("N0")%</span>
-                                    </div>
-                                    <div class="gunluk-plan-flow__bar" aria-hidden="true">
-                                        <span style="@planProgressStyle"></span>
-                                    </div>
-                                    <p>
-                                        Plan: @planlananModul.ToString("N0") modül
-                                        <span>Gerçek: @gerceklesenModul.ToString("N0") modül</span>
-                                        <span>Sapma: @planSapma.ToString("N0")</span>
-                                    </p>
-                                </div>
+                                }
                             </article>
                         </section>
                     }
 
-                    @if (showAkisPlanlama)
+                    @if (showAnyAkisPlanlama)
                     {
                         <div class="gunluk-side-insights" aria-label="Sol panel operasyon özeti">
                             <article class="gunluk-pulse-panel gunluk-pulse-panel--planning">
@@ -714,28 +865,40 @@
                                     </div>
                                 </div>
                                 <div class="gunluk-planning-grid">
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
-                                        <span>Plan bozulma</span>
-                                        <strong>@planBozulmaOrani.ToString("N0")%</strong>
-                                    </div>
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                        <span>Acil iş</span>
-                                        <strong>@acilIsSayisi.ToString("N0")</strong>
-                                    </div>
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
-                                        <span>Plan bekleyen</span>
-                                        <strong>@planBekleyenModul.ToString("N0")</strong>
-                                    </div>
-                                    <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
-                                        <span>MAM etkisi</span>
-                                        <strong>@formatMoneyMillion(mamStokEtkisi)</strong>
-                                    </div>
+                                    @if (showPlanBozulma)
+                                    {
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
+                                            <span>Plan bozulma</span>
+                                            <strong>@planBozulmaOrani.ToString("N0")%</strong>
+                                        </div>
+                                    }
+                                    @if (showAcilIs)
+                                    {
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                            <span>Acil iş</span>
+                                            <strong>@acilIsSayisi.ToString("N0")</strong>
+                                        </div>
+                                    }
+                                    @if (showPlanBekleyen)
+                                    {
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--warn">
+                                            <span>Plan bekleyen</span>
+                                            <strong>@planBekleyenModul.ToString("N0")</strong>
+                                        </div>
+                                    }
+                                    @if (showMamEtkisi)
+                                    {
+                                        <div class="gunluk-mini-kpi gunluk-mini-kpi--risk">
+                                            <span>MAM etkisi</span>
+                                            <strong>@formatMoneyMillion(mamStokEtkisi)</strong>
+                                        </div>
+                                    }
                                 </div>
                             </article>
                         </div>
                     }
 
-                    @if (showSshMusteriGercegi)
+                    @if (showAnySshMusteriGercegi)
                     {
                         <section class="gunluk-bottom-reality gunluk-bottom-reality--single" aria-label="Müşteri gerçeği">
                             <article class="gunluk-pulse-panel gunluk-pulse-panel--customer">
@@ -745,26 +908,32 @@
                                         <p>Hata adetinin sevk hacmine göre etkisi</p>
                                     </div>
                                 </div>
-                                <div class="gunluk-customer-grid">
-                                    <div class="gunluk-customer-score">
-                                        <strong>@sshAdet.ToString("N0") adet</strong>
-                                        <span>/ 1000 sevk</span>
-                                    </div>
-                                    <div class="gunluk-customer-bars">
-                                        @foreach (var bar in musteriGercegiBars)
-                                        {
-                                            var width = maxMusteriGercegi > 0
-                                                ? (bar.Value / maxMusteriGercegi) * 100d
-                                                : 0d;
-                                            var widthStyle = $"width:{width.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
-                                            var barTone = width >= 75 ? "risk" : width >= 45 ? "warn" : "ok";
-                                            <div class="gunluk-customer-bar gunluk-customer-bar--@barTone">
-                                                <span>@bar.Label</span>
-                                                <div aria-hidden="true"><i style="@widthStyle"></i></div>
-                                                <strong>@formatCount(bar.Value)</strong>
-                                            </div>
-                                        }
-                                    </div>
+                                <div class="gunluk-customer-grid @(showSshHataAdedi && showSshBolumEtkisi ? "" : "gunluk-customer-grid--single")">
+                                    @if (showSshHataAdedi)
+                                    {
+                                        <div class="gunluk-customer-score">
+                                            <strong>@sshAdet.ToString("N0") adet</strong>
+                                            <span>/ 1000 sevk</span>
+                                        </div>
+                                    }
+                                    @if (showSshBolumEtkisi)
+                                    {
+                                        <div class="gunluk-customer-bars">
+                                            @foreach (var bar in musteriGercegiBars)
+                                            {
+                                                var width = maxMusteriGercegi > 0
+                                                    ? (bar.Value / maxMusteriGercegi) * 100d
+                                                    : 0d;
+                                                var widthStyle = $"width:{width.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)}%;";
+                                                var barTone = width >= 75 ? "risk" : width >= 45 ? "warn" : "ok";
+                                                <div class="gunluk-customer-bar gunluk-customer-bar--@barTone">
+                                                    <span>@bar.Label</span>
+                                                    <div aria-hidden="true"><i style="@widthStyle"></i></div>
+                                                    <strong>@formatCount(bar.Value)</strong>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                             </article>
                         </section>
@@ -783,7 +952,7 @@
                         </div>
                     </form>
 
-                    @if (showMakineDurumListesi)
+                    @if (showAnyMakineDurum)
                     {
                         <section class="gunluk-machine-status" aria-labelledby="machineStatusTitle">
                             <div class="gunluk-machine-status__header">
@@ -797,62 +966,74 @@
                                 }
                             </div>
 
-                            <div class="gunluk-machine-status__summary">
-                                <article class="gunluk-machine-status__summary-card is-watch">
-                                    <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
-                                    <div class="gunluk-machine-status__summary-copy">
-                                        <small>Çalışan Makine</small>
-                                        <strong>@calisanMakineOrani.ToString("N0")%</strong>
-                                    </div>
-                                </article>
-                                <article class="gunluk-machine-status__summary-card @(arizaliMakineSayisi > 0 ? "is-fault" : "is-ok")">
-                                    <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
-                                    <div class="gunluk-machine-status__summary-copy">
-                                        <small>Duruş / Arıza</small>
-                                        <strong>@formatDuration(toplamMakineDurusuDakika)</strong>
-                                    </div>
-                                </article>
-                            </div>
+                            @if (showCalisanMakineOrani || showDurusAriza)
+                            {
+                                <div class="gunluk-machine-status__summary">
+                                    @if (showCalisanMakineOrani)
+                                    {
+                                        <article class="gunluk-machine-status__summary-card is-watch">
+                                            <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
+                                            <div class="gunluk-machine-status__summary-copy">
+                                                <small>Çalışan Makine</small>
+                                                <strong>@calisanMakineOrani.ToString("N0")%</strong>
+                                            </div>
+                                        </article>
+                                    }
+                                    @if (showDurusAriza)
+                                    {
+                                        <article class="gunluk-machine-status__summary-card @(arizaliMakineSayisi > 0 ? "is-fault" : "is-ok")">
+                                            <span class="gunluk-machine-status__summary-accent" aria-hidden="true"></span>
+                                            <div class="gunluk-machine-status__summary-copy">
+                                                <small>Duruş / Arıza</small>
+                                                <strong>@formatDuration(toplamMakineDurusuDakika)</strong>
+                                            </div>
+                                        </article>
+                                    }
+                                </div>
+                            }
 
-                            <div class="gunluk-machine-status__list" role="list">
-                                @foreach (var makine in makineDurumListesi)
-                                {
-                                    var durumClass = makine.ArizaVar
-                                        ? "is-fault"
-                                        : makine.DuraklamaDakika > 0
-                                            ? "is-watch"
-                                            : "is-ok";
-                                    var durumLabel = makine.ArizaVar
-                                        ? "Arıza kaydı"
-                                        : makine.DuraklamaDakika > 0
-                                            ? "İzleme"
-                                            : "Çalışıyor";
-                                    var durumDegeri = makine.ArizaVar
-                                        ? $"{formatCount(makine.ArizaAdet)} hata"
-                                        : makine.DuraklamaDakika > 0
-                                            ? formatDuration(makine.DuraklamaDakika)
-                                            : (makine.Oee > 0 ? $"{makine.Oee:N1}%" : "Stabil");
-                                    var durumAltMetin = makine.ArizaVar
-                                        ? (makine.DuraklamaDakika > 0 ? formatDuration(makine.DuraklamaDakika) : "Anlık müdahale gerekli")
-                                        : makine.DuraklamaDakika > 0
-                                            ? (makine.Oee > 0 ? $"OEE {makine.Oee:N1}%" : "Kısa süreli duruş")
-                                            : "Kayıt temiz";
+                            @if (showMakineDurumKayitlari)
+                            {
+                                <div class="gunluk-machine-status__list" role="list">
+                                    @foreach (var makine in makineDurumListesi)
+                                    {
+                                        var durumClass = makine.ArizaVar
+                                            ? "is-fault"
+                                            : makine.DuraklamaDakika > 0
+                                                ? "is-watch"
+                                                : "is-ok";
+                                        var durumLabel = makine.ArizaVar
+                                            ? "Arıza kaydı"
+                                            : makine.DuraklamaDakika > 0
+                                                ? "İzleme"
+                                                : "Çalışıyor";
+                                        var durumDegeri = makine.ArizaVar
+                                            ? $"{formatCount(makine.ArizaAdet)} hata"
+                                            : makine.DuraklamaDakika > 0
+                                                ? formatDuration(makine.DuraklamaDakika)
+                                                : (makine.Oee > 0 ? $"{makine.Oee:N1}%" : "Stabil");
+                                        var durumAltMetin = makine.ArizaVar
+                                            ? (makine.DuraklamaDakika > 0 ? formatDuration(makine.DuraklamaDakika) : "Anlık müdahale gerekli")
+                                            : makine.DuraklamaDakika > 0
+                                                ? (makine.Oee > 0 ? $"OEE {makine.Oee:N1}%" : "Kısa süreli duruş")
+                                                : "Kayıt temiz";
 
-                                    <article class="gunluk-machine-status__item @durumClass" role="listitem">
-                                        <span class="gunluk-machine-status__rail" aria-hidden="true"></span>
-                                        <span class="gunluk-machine-status__pulse" aria-hidden="true"></span>
-                                        <span class="gunluk-machine-status__name">
-                                            <strong>@makine.Makine</strong>
-                                            <small>@makine.Bolum</small>
-                                        </span>
-                                        <span class="gunluk-machine-status__meta">
-                                            <small>@durumLabel</small>
-                                            <strong>@durumDegeri</strong>
-                                            <em>@durumAltMetin</em>
-                                        </span>
-                                    </article>
-                                }
-                            </div>
+                                        <article class="gunluk-machine-status__item @durumClass" role="listitem">
+                                            <span class="gunluk-machine-status__rail" aria-hidden="true"></span>
+                                            <span class="gunluk-machine-status__pulse" aria-hidden="true"></span>
+                                            <span class="gunluk-machine-status__name">
+                                                <strong>@makine.Makine</strong>
+                                                <small>@makine.Bolum</small>
+                                            </span>
+                                            <span class="gunluk-machine-status__meta">
+                                                <small>@durumLabel</small>
+                                                <strong>@durumDegeri</strong>
+                                                <em>@durumAltMetin</em>
+                                            </span>
+                                        </article>
+                                    }
+                                </div>
+                            }
                         </section>
                     }
 
@@ -872,7 +1053,7 @@
                 </div>
 
                 <div class="gunluk-process-grid">
-                    @foreach (var proses in prosesDetayKartlari)
+                    @foreach (var proses in visibleProsesDetayKartlari)
                     {
                         var prosesNavigasyon = visibleBolumNavigasyonlari
                             .FirstOrDefault(bolum => string.Equals(bolum.Key, proses.NavigationKey, StringComparison.OrdinalIgnoreCase));
@@ -998,7 +1179,7 @@
                         @if (hasTopKpiStack)
                         {
                             <div class="gunluk-kpi-stack" style="@topKpiStyle">
-                                @if (showToplamModulSayisi)
+                                @if (showDepoyaGirenModul)
                                 {
                                     <article class="gunluk-kpi gunluk-kpi--cyan gunluk-kpi--stacked gunluk-kpi--depot-module">
                                         <span class="gunluk-kpi__label">Depoya Giren Modul</span>
@@ -1011,6 +1192,9 @@
                                             }
                                         </small>
                                     </article>
+                                }
+                                @if (showEnTrendUrun)
+                                {
                                     <article class="gunluk-kpi gunluk-kpi--blue gunluk-kpi--stacked gunluk-kpi--trend-product">
                                         <span class="gunluk-kpi__label">En Trend Ürün</span>
                                         <strong class="gunluk-kpi__value">@enTrendUrunAdi</strong>

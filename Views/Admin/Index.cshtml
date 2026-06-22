@@ -237,130 +237,133 @@
                                     </div>
                                 </td>
                             </tr>
-
-                            <div class="modal fade" id="aciklamaModal-@item.Id" tabindex="-1" aria-labelledby="modalLabel-@item.Id" aria-hidden="true">
-                                <div class="modal-dialog modal-lg modal-dialog-centered">
-                                    <div class="modal-content modal-content-soft">
-                                        <div class="modal-header border-0">
-                                            <h5 class="modal-title" id="modalLabel-@item.Id">@item.Konu</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body p-4">
-                                            <p><strong>Öneren:</strong> @(string.IsNullOrEmpty(item.OnerenKisi) ? "Anonim" : item.OnerenKisi)</p>
-                                            <p><strong>Bölüm:</strong> @(item.CalistigiBolum ?? "Belirtilmemiş")</p>
-                                            <p><strong>Tarih:</strong> @item.Tarih.ToString("f")</p>
-                                            <hr>
-                                            <p class="mt-3">@item.Aciklama</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @if (item.Durum == OneriDurum.Beklemede)
-                            {
-                                @if (canApprove)
-                                {
-                                    <div class="modal fade" id="onayModal-@item.Id" tabindex="-1" aria-labelledby="onayModalLabel-@item.Id" aria-hidden="true">
-                                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                                            <div class="modal-content modal-content-soft">
-                                                <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="approve" data-threshold="60">
-                                                    @Html.AntiForgeryToken()
-                                                    <div class="modal-header border-0">
-                                                        <h5 class="modal-title" id="onayModalLabel-@item.Id">Onay Gerekçesi</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body p-4">
-                                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin kurula gönderilme nedenini yazın.</p>
-                                                        <div class="manager-score-grid mb-3">
-                                                            <div>
-                                                                <label class="form-label" for="onayGayret-@item.Id">Gayret</label>
-                                                                <input id="onayGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="onayOrijinallik-@item.Id">Orijinallik</label>
-                                                                <input id="onayOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="onayEtki-@item.Id">Etki</label>
-                                                                <input id="onayEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="onayUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
-                                                                <input id="onayUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                        </div>
-                                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
-                                                            <span>Toplam</span>
-                                                            <strong>0/100</strong>
-                                                            <small>Puanları girin.</small>
-                                                        </div>
-                                                        <label class="form-label" for="onayGerekce-@item.Id">Karar Gerekçesi</label>
-                                                        <textarea id="onayGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri uygulanabilir görünüyor ve bölüm verimliliğine katkı potansiyeli taşıyor."></textarea>
-                                                    </div>
-                                                    <div class="modal-footer border-0">
-                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
-                                                        <button type="submit" class="btn btn-success js-manager-submit"><i class="bi bi-check-lg me-1"></i> Onayla</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-
-                                @if (canReject)
-                                {
-                                    <div class="modal fade" id="redModal-@item.Id" tabindex="-1" aria-labelledby="redModalLabel-@item.Id" aria-hidden="true">
-                                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                                            <div class="modal-content modal-content-soft">
-                                                <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="reject" data-threshold="60">
-                                                    @Html.AntiForgeryToken()
-                                                    <div class="modal-header border-0">
-                                                        <h5 class="modal-title" id="redModalLabel-@item.Id">Red Gerekçesi</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body p-4">
-                                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin reddedilme nedenini yazın.</p>
-                                                        <div class="manager-score-grid mb-3">
-                                                            <div>
-                                                                <label class="form-label" for="redGayret-@item.Id">Gayret</label>
-                                                                <input id="redGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="redOrijinallik-@item.Id">Orijinallik</label>
-                                                                <input id="redOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="redEtki-@item.Id">Etki</label>
-                                                                <input id="redEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                            <div>
-                                                                <label class="form-label" for="redUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
-                                                                <input id="redUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
-                                                            </div>
-                                                        </div>
-                                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
-                                                            <span>Toplam</span>
-                                                            <strong>0/100</strong>
-                                                            <small>Puanları girin.</small>
-                                                        </div>
-                                                        <label class="form-label" for="redGerekce-@item.Id">Karar Gerekçesi</label>
-                                                        <textarea id="redGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri mevcut süreçle çakışıyor, uygulanabilirlik için ek veri gerekiyor veya kapsam öneri kriterlerini karşılamıyor."></textarea>
-                                                    </div>
-                                                    <div class="modal-footer border-0">
-                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
-                                                        <button type="submit" class="btn btn-danger js-manager-submit"><i class="bi bi-x-lg me-1"></i> Reddet</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
                         }
                     </tbody>
                 </table>
             </div>
         </div>
+
+        @foreach (var item in Model)
+        {
+            <div class="modal fade" id="aciklamaModal-@item.Id" tabindex="-1" aria-labelledby="modalLabel-@item.Id" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content modal-content-soft">
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title" id="modalLabel-@item.Id">@item.Konu</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p><strong>Öneren:</strong> @(string.IsNullOrEmpty(item.OnerenKisi) ? "Anonim" : item.OnerenKisi)</p>
+                            <p><strong>Bölüm:</strong> @(item.CalistigiBolum ?? "Belirtilmemiş")</p>
+                            <p><strong>Tarih:</strong> @item.Tarih.ToString("f")</p>
+                            <hr>
+                            <p class="mt-3">@item.Aciklama</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (item.Durum == OneriDurum.Beklemede)
+            {
+                @if (canApprove)
+                {
+                    <div class="modal fade" id="onayModal-@item.Id" tabindex="-1" aria-labelledby="onayModalLabel-@item.Id" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content modal-content-soft">
+                                <form asp-controller="Admin" asp-action="Onayla" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="approve" data-threshold="60" autocomplete="off">
+                                    @Html.AntiForgeryToken()
+                                    <div class="modal-header border-0">
+                                        <h5 class="modal-title" id="onayModalLabel-@item.Id">Onay Gerekçesi</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin kurula gönderilme nedenini yazın.</p>
+                                        <div class="manager-score-grid mb-3">
+                                            <div>
+                                                <label class="form-label" for="onayGayret-@item.Id">Gayret</label>
+                                                <input id="onayGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="onayOrijinallik-@item.Id">Orijinallik</label>
+                                                <input id="onayOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="onayEtki-@item.Id">Etki</label>
+                                                <input id="onayEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="onayUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
+                                                <input id="onayUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                        </div>
+                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
+                                            <span>Toplam</span>
+                                            <strong>0/100</strong>
+                                            <small>Puanları girin.</small>
+                                        </div>
+                                        <label class="form-label" for="onayGerekce-@item.Id">Karar Gerekçesi</label>
+                                        <textarea id="onayGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri uygulanabilir görünüyor ve bölüm verimliliğine katkı potansiyeli taşıyor."></textarea>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                                        <button type="submit" class="btn btn-success js-manager-submit"><i class="bi bi-check-lg me-1"></i> Onayla</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (canReject)
+                {
+                    <div class="modal fade" id="redModal-@item.Id" tabindex="-1" aria-labelledby="redModalLabel-@item.Id" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content modal-content-soft">
+                                <form asp-controller="Admin" asp-action="Reddet" asp-route-id="@item.Id" method="post" class="js-manager-decision-form" data-decision="reject" data-threshold="60" autocomplete="off">
+                                    @Html.AntiForgeryToken()
+                                    <div class="modal-header border-0">
+                                        <h5 class="modal-title" id="redModalLabel-@item.Id">Red Gerekçesi</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <p class="mb-3"><strong>@item.Konu</strong> önerisinin reddedilme nedenini yazın.</p>
+                                        <div class="manager-score-grid mb-3">
+                                            <div>
+                                                <label class="form-label" for="redGayret-@item.Id">Gayret</label>
+                                                <input id="redGayret-@item.Id" name="gayretPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="redOrijinallik-@item.Id">Orijinallik</label>
+                                                <input id="redOrijinallik-@item.Id" name="orijinallikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="redEtki-@item.Id">Etki</label>
+                                                <input id="redEtki-@item.Id" name="etkiPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="redUygulanabilirlik-@item.Id">Uygulanabilirlik</label>
+                                                <input id="redUygulanabilirlik-@item.Id" name="uygulanabilirlikPuani" class="form-control js-manager-score" type="number" min="0" max="25" required>
+                                            </div>
+                                        </div>
+                                        <div class="manager-decision-summary mb-3 js-manager-decision-summary" aria-live="polite">
+                                            <span>Toplam</span>
+                                            <strong>0/100</strong>
+                                            <small>Puanları girin.</small>
+                                        </div>
+                                        <label class="form-label" for="redGerekce-@item.Id">Karar Gerekçesi</label>
+                                        <textarea id="redGerekce-@item.Id" name="kararGerekcesi" class="form-control" rows="4" maxlength="1000" required placeholder="Örn: Öneri mevcut süreçle çakışıyor, uygulanabilirlik için ek veri gerekiyor veya kapsam öneri kriterlerini karşılamıyor."></textarea>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                                        <button type="submit" class="btn btn-danger js-manager-submit"><i class="bi bi-x-lg me-1"></i> Reddet</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        }
     </div>
 </div>
 
@@ -418,7 +421,6 @@
             document.querySelectorAll('.js-manager-decision-form').forEach(function (form) {
                 var scoreInputs = Array.from(form.querySelectorAll('.js-manager-score'));
                 var summary = form.querySelector('.js-manager-decision-summary');
-                var submitButton = form.querySelector('.js-manager-submit');
                 var decision = form.dataset.decision;
                 var threshold = Number(form.dataset.threshold || 60);
 
@@ -475,24 +477,29 @@
                         }
                     }
 
-                    if (submitButton) {
-                        submitButton.disabled = !isAllowed;
-                    }
-
                     return isAllowed;
+                }
+
+                function refreshState() {
+                    resolveState();
+                    window.setTimeout(resolveState, 0);
+                    window.setTimeout(resolveState, 100);
                 }
 
                 scoreInputs.forEach(function (input) {
                     input.addEventListener('input', resolveState);
+                    input.addEventListener('change', resolveState);
                 });
 
-                form.addEventListener('submit', function (event) {
-                    if (!resolveState()) {
-                        event.preventDefault();
-                    }
-                });
+                var modal = form.closest('.modal');
+                if (modal) {
+                    modal.addEventListener('shown.bs.modal', refreshState);
+                }
 
-                resolveState();
+                form.addEventListener('submit', resolveState);
+
+                refreshState();
+                window.addEventListener('pageshow', refreshState);
             });
         })();
     </script>

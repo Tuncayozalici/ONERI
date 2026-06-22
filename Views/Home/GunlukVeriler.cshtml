@@ -356,28 +356,71 @@
         .GroupBy(x => normalizeBolumKey(x.Bolum), StringComparer.OrdinalIgnoreCase)
         .Where(x => !string.IsNullOrWhiteSpace(x.Key))
         .ToDictionary(x => x.Key, x => (double)x.Count(), StringComparer.OrdinalIgnoreCase);
-    var prosesDetayKartlariHam = Model.BolumHedefKartlari
-        .Take(6)
-        .Select(kart =>
+    var prosesDetayBasliklari = new[]
+    {
+        new { Bolum = "Döşeme kesim", DataKeys = new[] { "Döşeme kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
+        new { Bolum = "Döşeme CNC", DataKeys = new[] { "Döşeme CNC", "CNC" }, NavigationKey = "cnc" },
+        new { Bolum = "Sünger kesim", DataKeys = new[] { "Sünger kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
+        new { Bolum = "Döşeme dikim", DataKeys = new[] { "Döşeme dikim" }, NavigationKey = "pvc" },
+        new { Bolum = "Döşeme iskelet", DataKeys = new[] { "Döşeme iskelet", "Metal" }, NavigationKey = "metal" },
+        new { Bolum = "Kanepe beyazlama", DataKeys = new[] { "Kanepe beyazlama", "Boyahane" }, NavigationKey = "boyahane" },
+        new { Bolum = "Kanepe döşeme", DataKeys = new[] { "Kanepe döşeme", "PVC" }, NavigationKey = "pvc" },
+        new { Bolum = "Kanepe montaj", DataKeys = new[] { "Kanepe montaj" }, NavigationKey = "tezgah" },
+        new { Bolum = "Makam beyazlama", DataKeys = new[] { "Makam beyazlama", "Boyahane" }, NavigationKey = "boyahane" },
+        new { Bolum = "Makam döşeme", DataKeys = new[] { "Makam döşeme", "PVC" }, NavigationKey = "pvc" },
+        new { Bolum = "Makam montaj", DataKeys = new[] { "Makam montaj" }, NavigationKey = "tezgah" },
+        new { Bolum = "Döşeme paketleme", DataKeys = new[] { "Döşeme paketleme" }, NavigationKey = "pvc" },
+        new { Bolum = "Kesim", DataKeys = new[] { "Kesim", "Ebatlama" }, NavigationKey = "ebatlama" },
+        new { Bolum = "Bantlama", DataKeys = new[] { "Bantlama", "PVC" }, NavigationKey = "pvc" },
+        new { Bolum = "Delik - CNC", DataKeys = new[] { "Delik - CNC", "CNC" }, NavigationKey = "cnc" },
+        new { Bolum = "Keson", DataKeys = new[] { "Keson", "Tezgah" }, NavigationKey = "tezgah" },
+        new { Bolum = "Saç lazer", DataKeys = new[] { "Saç lazer", "Metal" }, NavigationKey = "metal" },
+        new { Bolum = "Profil kesim eğim", DataKeys = new[] { "Profil kesim eğim", "Metal" }, NavigationKey = "metal" },
+        new { Bolum = "Kaynak tesviye", DataKeys = new[] { "Kaynak tesviye", "Metal" }, NavigationKey = "metal" },
+        new { Bolum = "Boya", DataKeys = new[] { "Boya", "Boyahane" }, NavigationKey = "boyahane" },
+        new { Bolum = "Kurulum", DataKeys = new[] { "Kurulum" }, NavigationKey = "tezgah" },
+        new { Bolum = "Montaj", DataKeys = new[] { "Montaj" }, NavigationKey = "tezgah" }
+    };
+    var prosesDetayKartlariHam = prosesDetayBasliklari
+        .Select(tanim =>
         {
-            var key = kart.Key;
-            var oee = lookupMetric(bolumOeeLookup, key);
-            var personel = lookupMetric(personelBolumLookup, key);
-            var hata = lookupMetric(hataBolumLookup, key);
-            var duraklama = lookupMetric(duraklamaBolumLookup, key);
-            var arizaliMakine = lookupMetric(arizaliMakineBolumLookup, key);
-            var kisiBasi = personel > 0 ? kart.GerceklesenModul / personel : 0d;
-            var planKarsilastirmaTabani = Math.Max(1d, Math.Max(kart.HedefModul, kart.GerceklesenModul));
+            BolumHedefKartiViewModel? kart = null;
+            foreach (var dataKey in tanim.DataKeys)
+            {
+                if (bolumHedefLookup.TryGetValue(normalizeBolumKey(dataKey), out var eslesenKart))
+                {
+                    kart = eslesenKart;
+                    break;
+                }
+            }
+
+            var key = normalizeBolumKey(tanim.Bolum);
+            var metricKeys = tanim.DataKeys.Select(normalizeBolumKey).Append(key).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var oee = metricKeys
+                .Select(metricKey => lookupMetric(bolumOeeLookup, metricKey))
+                .FirstOrDefault(value => value > 0);
+            var personel = metricKeys.Sum(metricKey => lookupMetric(personelBolumLookup, metricKey));
+            var hata = metricKeys.Sum(metricKey => lookupMetric(hataBolumLookup, metricKey));
+            var duraklama = metricKeys.Sum(metricKey => lookupMetric(duraklamaBolumLookup, metricKey));
+            var arizaliMakine = metricKeys.Sum(metricKey => lookupMetric(arizaliMakineBolumLookup, metricKey));
+            var gerceklesenModul = kart?.GerceklesenModul ?? 0;
+            var hedefModul = kart?.HedefModul ?? 0;
+            var gerceklesmeOrani = kart?.GerceklesmeOrani ?? 0d;
+            var durum = kart?.Durum ?? "under-target";
+            var tahminiMi = kart?.TahminiMi ?? false;
+            var kisiBasi = personel > 0 ? gerceklesenModul / personel : 0d;
+            var planKarsilastirmaTabani = Math.Max(1d, Math.Max(hedefModul, gerceklesenModul));
             return new
             {
-                kart.Bolum,
-                kart.Durum,
-                kart.GerceklesenModul,
-                kart.HedefModul,
-                kart.GerceklesmeOrani,
-                kart.TahminiMi,
-                PlanBarStyle = barHeightStyle((kart.HedefModul / planKarsilastirmaTabani) * 100d),
-                GercekBarStyle = barHeightStyle((kart.GerceklesenModul / planKarsilastirmaTabani) * 100d),
+                tanim.Bolum,
+                tanim.NavigationKey,
+                Durum = durum,
+                GerceklesenModul = gerceklesenModul,
+                HedefModul = hedefModul,
+                GerceklesmeOrani = gerceklesmeOrani,
+                TahminiMi = tahminiMi,
+                PlanBarStyle = barHeightStyle((hedefModul / planKarsilastirmaTabani) * 100d),
+                GercekBarStyle = barHeightStyle((gerceklesenModul / planKarsilastirmaTabani) * 100d),
                 Oee = oee,
                 Hata = hata,
                 Duraklama = duraklama,
@@ -397,6 +440,7 @@
         .Select(proses => new
         {
             proses.Bolum,
+            proses.NavigationKey,
             proses.Durum,
             proses.GerceklesenModul,
             proses.HedefModul,
@@ -410,7 +454,9 @@
             proses.ArizaliMakine,
             proses.KisiBasi,
             proses.Personel,
-            GosterimKisiBasi = proses.KisiBasi > 0 ? proses.KisiBasi : varsayilanKisiBasi,
+            GosterimKisiBasi = proses.GerceklesenModul > 0
+                ? (proses.KisiBasi > 0 ? proses.KisiBasi : varsayilanKisiBasi)
+                : 0d,
             KisiBasiTahminiMi = proses.KisiBasi <= 0
         })
         .ToList();
@@ -542,9 +588,7 @@
     var visibleBolumNavigasyonlari = bolumNavigasyonlari
         .Where(bolum => visibleBolumDashboardPermissions.Contains(bolum.PermissionKey))
         .ToList();
-    var kaliteNavigasyon = visibleBolumNavigasyonlari
-        .FirstOrDefault(bolum => string.Equals(bolum.Key, "hatali-parca", StringComparison.OrdinalIgnoreCase));
-    var prosesKartSayisi = prosesDetayKartlari.Count + (kaliteNavigasyon is not null ? 1 : 0);
+    var prosesKartSayisi = prosesDetayKartlari.Count;
     var hasVisibleProsesDetayKartlari = showProsesDetayKartlari && prosesKartSayisi > 0;
     var hasVisibleHeroWidgets = showNabizOzeti
         || showDonemOzetKartlari
@@ -831,9 +875,12 @@
                     @foreach (var proses in prosesDetayKartlari)
                     {
                         var prosesNavigasyon = visibleBolumNavigasyonlari
-                            .FirstOrDefault(bolum => string.Equals(bolum.Key, normalizeBolumKey(proses.Bolum), StringComparison.OrdinalIgnoreCase));
+                            .FirstOrDefault(bolum => string.Equals(bolum.Key, proses.NavigationKey, StringComparison.OrdinalIgnoreCase));
                         var seed = stableSeed(proses.Bolum);
-                        var planYuzde = Math.Min(100d, Math.Max(75d, proses.GerceklesmeOrani >= 100 ? 96d : Math.Ceiling(proses.GerceklesmeOrani / 5d) * 5d));
+                        var hasProcessData = proses.HedefModul > 0 || proses.GerceklesenModul > 0 || proses.Oee > 0 || proses.Hata > 0 || proses.Duraklama > 0;
+                        var planYuzde = proses.HedefModul > 0
+                            ? Math.Min(100d, Math.Max(75d, proses.GerceklesmeOrani >= 100 ? 96d : Math.Ceiling(proses.GerceklesmeOrani / 5d) * 5d))
+                            : 0d;
                         var gosterimGerceklesenModul = Math.Min(proses.GerceklesenModul, proses.HedefModul);
                         var gercekYuzde = proses.HedefModul > 0
                             ? Math.Min(100d, Math.Max(0d, (gosterimGerceklesenModul * 100d) / proses.HedefModul))
@@ -841,7 +888,9 @@
                         var gosterimKisiBasi = proses.GerceklesenModul > 0
                             ? proses.GosterimKisiBasi * (gosterimGerceklesenModul / Math.Max(1d, proses.GerceklesenModul))
                             : proses.GosterimKisiBasi;
-                        var uretimKalite = Math.Min(99d, Math.Max(70d, proses.Hata > 0 ? 100d - (proses.Hata / Math.Max(1d, gosterimGerceklesenModul) * 100d) : Math.Max(88d, proses.Oee)));
+                        var uretimKalite = hasProcessData
+                            ? Math.Min(99d, Math.Max(70d, proses.Hata > 0 ? 100d - (proses.Hata / Math.Max(1d, gosterimGerceklesenModul) * 100d) : Math.Max(88d, proses.Oee)))
+                            : 0d;
                         var kaizenSayisi = Math.Max(1, (seed % 4) + 1);
                         var fiveS = 68 + (seed % 21);
                         var polivalans = 52 + (seed % 27);
@@ -936,68 +985,6 @@
                         </a>
                     }
 
-                    @if (kaliteNavigasyon is not null)
-                    {
-                        var kaliteOrani = Model.ToplamModulSayisi > 0
-                            ? Math.Max(0d, 100d - ((Model.ToplamHataAdet / Math.Max(1d, Model.ToplamModulSayisi)) * 100d))
-                            : Model.OrtalamaKalite;
-                        var kaliteDurum = kaliteOrani >= 98d ? "over-target" : kaliteOrani >= 95d ? "on-target" : "under-target";
-                        <a class="gunluk-process-card gunluk-process-card--@kaliteDurum gunluk-process-card--quality"
-                           href="@kaliteNavigasyon.Url"
-                           aria-label="Kalite proses ekranına git">
-                            <div class="gunluk-process-card__top">
-                                <div>
-                                    <h3>Proses: Kalite</h3>
-                                </div>
-                            </div>
-
-                            <div class="gunluk-process-quality">
-                                <span class="gunluk-process-quality__icon" aria-hidden="true">
-                                    <i class="bi bi-bug"></i>
-                                </span>
-                                <div>
-                                    <h4>Hatalı Parça Analizi</h4>
-                                    <p>Hata nedenleri, bölümler ve operatör trendlerine geçin.</p>
-                                </div>
-                            </div>
-
-                            <div class="gunluk-process-metrics">
-                                <div class="gunluk-process-metrics__left">
-                                    <section class="gunluk-process-section">
-                                        <h4>Hata</h4>
-                                        <div class="gunluk-process-pair">
-                                            <span>Hatalı parça adedi</span>
-                                            <strong>@Model.ToplamHataAdet.ToString("N0") adet</strong>
-                                        </div>
-                                        <div class="gunluk-process-pair">
-                                            <span>En çok hata bölümü</span>
-                                            <strong>@(enYuksekHataBolumu?.Bolum ?? "-")</strong>
-                                        </div>
-                                    </section>
-                                    <section class="gunluk-process-section">
-                                        <h4>Kalite</h4>
-                                        <div class="gunluk-process-pair">
-                                            <span>Kalite başarı oranı</span>
-                                            <strong>@kaliteOrani.ToString("N0")%</strong>
-                                        </div>
-                                        <div class="gunluk-process-pair">
-                                            <span>Hata veren makine</span>
-                                            <strong>@(enYuksekHataMakinesi?.Makine ?? "-")</strong>
-                                        </div>
-                                    </section>
-                                </div>
-                                <section class="gunluk-process-section gunluk-process-section--lean">
-                                    <h4>Analiz</h4>
-                                    <div class="gunluk-lean-grid">
-                                        <div class="gunluk-process-pair">
-                                            <span>Analiz sayfası</span>
-                                            <strong>Aç</strong>
-                                        </div>
-                                    </div>
-                                </section>
-                            </div>
-                        </a>
-                    }
                 </div>
             </section>
         }
